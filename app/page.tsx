@@ -8,7 +8,6 @@ export default function HomePage() {
   return (
     <>
       <AuthForm/>
-      <Welcome />
       <RecipesList/>
       <CalendarViews/>
       <ColorSchemeToggle />
