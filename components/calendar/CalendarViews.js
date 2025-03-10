@@ -15,7 +15,7 @@ import {
   Text,
 } from "@mantine/core";
 
-const CalendarViews = ({ user, campID }) => {
+const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible }) => {
   const [calendarData, setCalendarData] = useState(null);
   const [activeView, setActiveView] = useState("daily");
 
