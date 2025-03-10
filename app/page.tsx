@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import { Welcome } from '../components/Welcome/Welcome';
-import Nav from '../components/Navbar/Navbar';
+import Nav from '../components/navbar/Nav';
 import AuthForm from '../components/auth/AuthForm';
 import CalendarViews from '../components/calendar/CalendarViews';
 import RecipesList from '../components/Recipes/RecipeList';
