@@ -15,7 +15,7 @@ import {
   Text,
 } from "@mantine/core";
 
-const CalendarViews = () => {
+const CalendarViews = ({ user, campID }) => {
   const [calendarData, setCalendarData] = useState(null);
   const [activeView, setActiveView] = useState("daily");
 
@@ -26,12 +26,15 @@ const CalendarViews = () => {
   const [dayModalExistingData, setDayModalExistingData] = useState(null);
 
   useEffect(() => {
-    const calendarRef = ref(database, "camps/scooter/calendar");
-    const unsubscribe = onValue(calendarRef, (snapshot) => {
-      setCalendarData(snapshot.val());
-    });
-    return () => unsubscribe();
-  }, []);
+    const calendarRef = ref(database, "camps/" + campID + "/calendar");
+    get(calendarRef)
+      .then((snapshot) => {
+        setCalendarData(snapshot.val());
+      })
+      .catch((error) => {
+        console.error("Error fetching calendar data:", error);
+      });
+  }, [campID]);
 
   // Handler for the global "Add Next Day" button.
   const handleGlobalAddDay = () => {
@@ -58,9 +61,13 @@ const CalendarViews = () => {
   return (
     <div>
       <div style={{ marginBottom: "16px" }}>
+        <div>Schedule View: </div>
         <Button onClick={() => setActiveView("daily")}>Daily</Button>
-        <Button onClick={() => setActiveView("shifts")}>Shifts</Button>
         <Button onClick={() => setActiveView("calendar")}>Calendar</Button>
+      </div>
+
+      <div style={{ marginBottom: "16px" }}>
+        <div>Quick Actions: </div>
         <Button onClick={handleGlobalAddDay}>Add Next Day</Button>
       </div>
 
@@ -86,6 +93,8 @@ const CalendarViews = () => {
 
       {/* AddDay/Modify modal appears here. */}
       <AddDay
+        user={user}
+        campID={campID}
         data={calendarData}
         initialDate={addDayInitialDate}
         standardShiftLength={3}
@@ -201,7 +210,7 @@ const CalendarView = ({ data, onAddDay, onModifyDay }) => {
                 : ""}
             </div>
             {/* Show Breakfast Title & Dinner Title */}
-            <div>{dayData && dayData.breakfastTitle}</div>
+            <div>.{dayData && dayData.breakfastTitle}</div>
             <div>{dayData && dayData.dinnerTitle}</div>
             {/* If tasks exist for this date, list them */}
             {dayData && dayData.tasks && (
@@ -229,25 +238,27 @@ const CalendarView = ({ data, onAddDay, onModifyDay }) => {
               </ul>
             )}
             {/* Show "Add Data" if no data exists, else show "Modify Data" */}
-            {dayData ? (
-              <Button
-                size="xs"
-                mt="sm"
-                onClick={() => onModifyDay(formattedDate, dayData)}
-                style={{ position: "absolute", bottom: "4px", right: "4px" }}
-              >
-                Modify Data
-              </Button>
-            ) : (
-              <Button
-                size="xs"
-                mt="sm"
-                onClick={() => onAddDay(formattedDate)}
-                style={{ position: "absolute", bottom: "4px", right: "4px" }}
-              >
-                Add Data
-              </Button>
-            )}
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
+              {dayData ? (
+                <Button
+                  size="xs"
+                  mt="sm"
+                  onClick={() => onModifyDay(formattedDate, dayData)}
+                  style={{ width: '100%' }} // Make button full width if desired
+                >
+                  Modify Data
+                </Button>
+              ) : (
+                <Button
+                  size="xs"
+                  mt="sm"
+                  onClick={() => onAddDay(formattedDate)}
+                  style={{ width: '100%' }} // Make button full width if desired
+                >
+                  Add Data
+                </Button>
+              )}
+            </div>
           </div>
         );
       })}
@@ -256,6 +267,8 @@ const CalendarView = ({ data, onAddDay, onModifyDay }) => {
 };
 
 const AddDay = ({
+  user,
+  campID,
   data,
   initialDate,
   standardShiftLength = 3,
@@ -372,11 +385,12 @@ const AddDay = ({
   // Handler for adding a new task.
   const handleAddTask = () => {
     if (newTaskDescription.trim() === "") return;
+    alert("USER: " + JSON.stringify(user, null, 2));
     const newTask = {
       id: Date.now(), // Temporary unique ID
       description: newTaskDescription,
       assignedTo: newTaskAssignedTo,
-      author: "Author", // Replace with logged-in user's name later
+      author: user.uid,
       completed: false,
     };
     setTasks((prev) => [...prev, newTask]);
@@ -409,7 +423,8 @@ const AddDay = ({
     };
 
     try {
-      await set(ref(database, `camps/scooter/calendar/${date}`), newData);
+      alert(campID)
+      await set(ref(database, `camps/` + campID + `/calendar/${date}`), newData); // change scooter to your campID 
       alert("Data added successfully!");
       if (mode === "add" && resetAfterSubmit) {
         const currentDate = new Date(date);

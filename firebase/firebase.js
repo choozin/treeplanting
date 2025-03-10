@@ -1,23 +1,25 @@
 // firebase.js
 
+'use client';
+
 import { initializeApp } from "firebase/app";
-import { 
-    getAuth, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
+import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
     signOut,
-    onAuthStateChanged 
+    onAuthStateChanged
 } from "firebase/auth";
 import { getDatabase, ref, set } from "firebase/database";
 
 // Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyCuREPU2wVAoKNCJisvKlaz6xGCpHNCagQ",
-  authDomain: "treeplanting-fefa5.firebaseapp.com",
-  projectId: "treeplanting-fefa5",
-  storageBucket: "treeplanting-fefa5.firebasestorage.app",
-  messagingSenderId: "391625607665",
-  appId: "1:391625607665:web:9f2e194c1224a18ec61c50"
+    apiKey: "AIzaSyCuREPU2wVAoKNCJisvKlaz6xGCpHNCagQ",
+    authDomain: "treeplanting-fefa5.firebaseapp.com",
+    projectId: "treeplanting-fefa5",
+    storageBucket: "treeplanting-fefa5.firebasestorage.app",
+    messagingSenderId: "391625607665",
+    appId: "1:391625607665:web:9f2e194c1224a18ec61c50"
 };
 
 // Initialize Firebase
@@ -25,28 +27,55 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 
-// Function to register a user and store their info in Realtime Database
-const registerUser = async (email, password, isAdmin = false) => {
-  try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+// Function to register a user (self-registration) with role initialized as 1
+const registerUser = async (email, password, name) => {
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-      // Assign role based on isAdmin flag
-      const role = isAdmin ? "admin" : "user";
+        await set(ref(database, `users/${user.uid}`), {
+            email: user.email,
+            name: name,
+            role: 1, // Default role set to 1
+            createdAt: new Date().toISOString()
+        });
 
-      // Store user in database using UID as the key
-      await set(ref(database, `users/${user.uid}`), {
-          email: user.email,
-          role: role, // Assign role
-          createdAt: new Date().toISOString()
-      });
+        alert(`Registration successful for ${user.email}`);
+        return user;
+    } catch (error) {
+        alert("Registration error: " + error.message);
+        return null;
+    }
+};
 
-      console.log(`User registered: ${user.email} as ${role}`);
-      return user;
-  } catch (error) {
-      console.error("Registration error:", error.message);
-      return null;
-  }
+// Function to register another user with a selected role
+const registerOtherUser = async (email, name, role) => {
+    try {
+        const defaultPassword = "password";
+        const currentUser = auth.currentUser; // Store currently logged-in user
+
+        const userCredential = await createUserWithEmailAndPassword(auth, email, defaultPassword);
+        const newUser = userCredential.user;
+
+        await set(ref(database, `users/${newUser.uid}`), {
+            email: newUser.email,
+            name: name,
+            role: role,
+            createdAt: new Date().toISOString()
+        });
+
+        alert(`User ${email} registered successfully with role ${role}`);
+
+        // Restore original logged-in user
+        if (currentUser) {
+            await auth.updateCurrentUser(currentUser);
+        }
+
+        return newUser;
+    } catch (error) {
+        alert("Registration error: " + error.message);
+        return null;
+    }
 };
 
 
@@ -73,5 +102,5 @@ const logoutUser = async () => {
 };
 
 // Export everything
-export { app, auth, database, registerUser, loginUser, logoutUser, onAuthStateChanged };
+export { app, auth, database, registerUser, registerOtherUser, loginUser, logoutUser, onAuthStateChanged };
 
