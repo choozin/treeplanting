@@ -5,7 +5,7 @@ import { database } from "../../firebase/firebase";
 import { ref, get, set, update, push } from "firebase/database";
 import md5 from "md5";
 
-const UserManagement = ({ currentUser }) => {
+const UserManagement = ({ currentUser, campID }) => {
     const [newUserEmail, setNewUserEmail] = useState("");
     const [newUserName, setNewUserName] = useState("");
     const [newUserRole, setNewUserRole] = useState("");
@@ -89,7 +89,7 @@ const UserManagement = ({ currentUser }) => {
             {/* Camp Selection */}
             <label>
                 Select Camp:
-                <select value={selectedCamp} onChange={(e) => setSelectedCamp(e.target.value)}>
+                <select value={campID ? campID : selectedCamp} onChange={(e) => setSelectedCamp(e.target.value)}>
                     <option value="" disabled>Select a camp</option>
                     {availableCamps.map((campID) => (
                         <option key={campID} value={campID}>{campID}</option>

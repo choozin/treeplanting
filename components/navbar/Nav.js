@@ -10,7 +10,6 @@ import {
     onAuthStateChanged
 } from "../../firebase/firebase";
 import { ref, get, set, update } from "firebase/database"; // Import only what’s needed
-import AuthForm from "../auth/AuthForm";
 
 import { IconBulb, IconCheckbox, IconPlus, IconSearch, IconUser } from "@tabler/icons-react";
 import {
@@ -219,7 +218,7 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData }) => {
 
 const CampSelector = ({ user, userData, campID, onCampSelect }) => {
     const [camps, setCamps] = useState({});
-    const [selectedCamp, setSelectedCamp] = useState("");
+    const [selectedCamp, setSelectedCamp] = useState(campID);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 

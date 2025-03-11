@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import { Welcome } from '../components/Welcome/Welcome';
 import Nav from '../components/navbar/Nav';
-import AuthForm from '../components/auth/AuthForm';
+import UserManagement from '../components/auth/UserManagement';
 import CalendarViews from '../components/calendar/CalendarViews';
 import RecipesList from '../components/Recipes/RecipeList';
 import { set } from 'firebase/database';
@@ -19,6 +19,7 @@ export default function HomePage() {
 
   const [isCalendarVisible, setIsCalendarVisible] = useState(true);
   const [isRecipesListVisible, setIsRecipesListVisible] = useState(false);
+  const [isUserManagementVisible, setIsUserManagementVisible] = useState(false);
 
   return (
     <>
@@ -26,10 +27,13 @@ export default function HomePage() {
       {isCalendarVisible && <CalendarViews user={user} campID={campID} isCalendarVisible={isCalendarVisible} setIsCalendarVisible={setIsCalendarVisible} />}
       {isRecipesListVisible &&
         <div>
-          <RecipesList isRecipesListVisible={isRecipesListVisible} setIsRecipesListVisible={setIsRecipesListVisible}/>
+          <RecipesList isRecipesListVisible={isRecipesListVisible} setIsRecipesListVisible={setIsRecipesListVisible} />
         </div>
       }
       <ColorSchemeToggle />
+      {isUserManagementVisible &&
+        <UserManagement currentUser={user} campID={campID} />
+      }
     </>
   );
 }

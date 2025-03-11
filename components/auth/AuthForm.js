@@ -710,8 +710,9 @@ const AuthForm = ({ user, setUser, userData, setUserData, campID, setCampID }) =
 
     return (
         <div>
+            test
             <PrintDBButton />
-            <UserManagement currentUserRole={userData ? userData.role : 1} />
+            <UserManagement currentUserRole={userData ? userData.role : 9} />
             <CampSelector user={user} userData={userData} campID={campID} onCampSelect={setCampID} />
         </div>
     );

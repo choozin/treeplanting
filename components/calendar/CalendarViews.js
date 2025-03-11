@@ -178,90 +178,86 @@ const CalendarView = ({ data, onAddDay, onModifyDay }) => {
   };
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(7, 1fr)",
-        gap: "8px",
-      }}
-    >
-      {calendarDays.map((date, index) => {
-        const formattedDate = formatDate(date);
-        // Check if there's data for this date
-        const dayData = data[formattedDate];
-        return (
-          <div
-            key={index}
-            style={{
-              border: "1px solid #ccc",
-              padding: "8px",
-              minHeight: "100px",
-              position: "relative",
-              minWidth: 0, // Allow the cell to shrink and prevent expansion
-            }}
-          >
-            {/* Display the day of the month with shift info if available */}
-            <div style={{ fontWeight: "bold" }}>
-              {date.getDate()}{" "}
-              {dayData && dayData.shiftDay !== undefined
-                ? dayData.shiftDay === 0
-                  ? "(Day Off)"
-                  : `(Day ${dayData.shiftDay})`
-                : ""}
-            </div>
-            {/* Show Breakfast Title & Dinner Title */}
-            <div>.{dayData && dayData.breakfastTitle}</div>
-            <div>{dayData && dayData.dinnerTitle}</div>
-            {/* If tasks exist for this date, list them */}
-            {dayData && dayData.tasks && (
-              <ul
+    <div style={{ overflowX: "auto" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, minmax(100px, 1fr))", // each column will be at least 100px
+          gap: "8px",
+        }}
+      >
+        {calendarDays.map((date, index) => {
+          const formattedDate = formatDate(date);
+          const dayData = data[formattedDate];
+          return (
+            <div
+              key={index}
+              style={{
+                border: "1px solid #ccc",
+                padding: "8px",
+                minHeight: "100px",
+                position: "relative",
+              }}
+            >
+              <div style={{ fontWeight: "bold" }}>
+                {date.getDate()}{" "}
+                {dayData && dayData.shiftDay !== undefined
+                  ? dayData.shiftDay === 0
+                    ? "(Day Off)"
+                    : `(Day ${dayData.shiftDay})`
+                  : ""}
+              </div>
+              <div>{dayData && dayData.breakfastTitle}</div>
+              <div>{dayData && dayData.dinnerTitle}</div>
+              {dayData && dayData.tasks && (
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {Object.entries(dayData.tasks).map(([taskId, task]) => (
+                    <li
+                      key={taskId}
+                      style={{
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        width: "100%",
+                      }}
+                    >
+                      {task.description} ({task.author})
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div
                 style={{
-                  listStyle: "none",
-                  padding: 0,
-                  margin: 0,
+                  width: "100%",
+                  display: "flex",
+                  justifyContent: "center",
+                  marginTop: "8px",
                 }}
               >
-                {Object.entries(dayData.tasks).map(([taskId, task]) => (
-                  <li
-                    key={taskId}
-                    style={{
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      width: "100%",
-                      display: "block",
-                    }}
+                {dayData ? (
+                  <Button
+                    size="xs"
+                    mt="sm"
+                    onClick={() => onModifyDay(formattedDate, dayData)}
+                    style={{ width: "100%" }}
                   >
-                    {task.description} ({task.author})
-                  </li>
-                ))}
-              </ul>
-            )}
-            {/* Show "Add Data" if no data exists, else show "Modify Data" */}
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
-              {dayData ? (
-                <Button
-                  size="xs"
-                  mt="sm"
-                  onClick={() => onModifyDay(formattedDate, dayData)}
-                  style={{ width: '100%' }} // Make button full width if desired
-                >
-                  Modify Data
-                </Button>
-              ) : (
-                <Button
-                  size="xs"
-                  mt="sm"
-                  onClick={() => onAddDay(formattedDate)}
-                  style={{ width: '100%' }} // Make button full width if desired
-                >
-                  Add Data
-                </Button>
-              )}
+                    Modify Data
+                  </Button>
+                ) : (
+                  <Button
+                    size="xs"
+                    mt="sm"
+                    onClick={() => onAddDay(formattedDate)}
+                    style={{ width: "100%" }}
+                  >
+                    Add Data
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };
