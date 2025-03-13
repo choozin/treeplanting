@@ -5,7 +5,7 @@ import { database } from "../../firebase/firebase";
 import { ref, get, set, update, push } from "firebase/database";
 import md5 from "md5";
 
-const UserManagement = ({ currentUser, campID }) => {
+const UserManagement = ({ currentUser, campID, handleComponentChange }) => {
     const [newUserEmail, setNewUserEmail] = useState("");
     const [newUserName, setNewUserName] = useState("");
     const [newUserRole, setNewUserRole] = useState("");
