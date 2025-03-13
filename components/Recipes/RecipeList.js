@@ -12,7 +12,7 @@ import { ref, onValue, get } from "firebase/database";
 import { auth, database, logoutUser } from "../../firebase/firebase";
 
 // RecipeList component
-const RecipeList = ({ isRecipesListVisible, setIsRecipesListVisible }) => {
+const RecipeList = ({ isRecipesListVisible, setIsRecipesListVisible, handleComponentChange }) => {
     const originalRecipes = [
         {
             recipeName: "Penne Bake w/ Italian Sausage",

@@ -15,9 +15,27 @@ import {
   Text,
 } from "@mantine/core";
 
-const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible }) => {
+const mealDifficultyColors = (difficulty) => {
+  switch (difficulty) {
+    case "1":
+      return "blue";
+    case "2":
+      return "green";
+    case "3":
+      return "yellow";
+    case "4":
+      return "orange";
+    case "5":
+      return "red";
+    default:
+      return "black";
+  }
+}
+
+
+const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible, handleComponentChange }) => {
   const [calendarData, setCalendarData] = useState(null);
-  const [activeView, setActiveView] = useState("daily");
+  const [activeView, setActiveView] = useState("calendar");
 
   // State to control the AddDay/Modify modal (for both global and cell buttons)
   const [addDayModalOpen, setAddDayModalOpen] = useState(false);
@@ -26,18 +44,24 @@ const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible }
   const [dayModalExistingData, setDayModalExistingData] = useState(null);
 
   useEffect(() => {
+    if (!campID) return; // Ensure campID is available before subscribing
     const calendarRef = ref(database, "camps/" + campID + "/calendar");
-    get(calendarRef)
-      .then((snapshot) => {
+    const unsubscribe = onValue(
+      calendarRef,
+      (snapshot) => {
         setCalendarData(snapshot.val());
-      })
-      .catch((error) => {
+      },
+      (error) => {
         console.error("Error fetching calendar data:", error);
-      });
+      }
+    );
+
+    // Clean up the listener when the component unmounts or campID changes
+    return () => unsubscribe();
   }, [campID]);
 
-  // Handler for the global "Add Next Day" button.
-  const handleGlobalAddDay = () => {
+  // Handler for the "Add Next Day" button.
+  const handleAddDay = () => {
     setDayModalMode("add");
     if (calendarData) {
       const dates = Object.keys(calendarData);
@@ -59,51 +83,57 @@ const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible }
   };
 
   return (
-    <div>
-      <div style={{ marginBottom: "16px" }}>
-        <div>Schedule View: </div>
-        <Button onClick={() => setActiveView("daily")}>Daily</Button>
-        <Button onClick={() => setActiveView("calendar")}>Calendar</Button>
-      </div>
+    campID ? (
+      <div>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ marginBottom: "16px" }}>
+            <div>Schedule View: </div>
+            {activeView === "daily" ? <Button onClick={() => setActiveView("calendar")}>Switch to Calendar</Button> :
+              <Button onClick={() => setActiveView("daily")}>Switch to Daily</Button>}
+          </div>
 
-      <div style={{ marginBottom: "16px" }}>
-        <div>Quick Actions: </div>
-        <Button onClick={handleGlobalAddDay}>Add Next Day</Button>
-      </div>
+          <div style={{ marginBottom: "16px" }}>
+            <div>Quick Actions: </div>
+            <Button onClick={handleAddDay}>Add Next Day</Button>
+          </div>
+        </div>
 
-      {activeView === "daily" && <DailyView data={calendarData} />}
-      {activeView === "shifts" && <div>Shifts view coming soon</div>}
-      {activeView === "calendar" && (
-        <CalendarView
+        {activeView === "daily" && <DailyView data={calendarData} />}
+        {activeView === "shifts" && <div>Shifts view coming soon</div>}
+        {activeView === "calendar" && (
+          <CalendarView
+            data={calendarData}
+            onAddDay={(date) => {
+              setDayModalMode("add");
+              setAddDayInitialDate(date);
+              setDayModalExistingData(null);
+              setAddDayModalOpen(true);
+            }}
+            onModifyDay={(date, existingData) => {
+              setDayModalMode("modify");
+              setAddDayInitialDate(date);
+              setDayModalExistingData(existingData);
+              setAddDayModalOpen(true);
+            }}
+          />
+        )}
+
+        {/* AddDay/Modify modal appears here. */}
+        <AddDay
+          user={user}
+          campID={campID}
           data={calendarData}
-          onAddDay={(date) => {
-            setDayModalMode("add");
-            setAddDayInitialDate(date);
-            setDayModalExistingData(null);
-            setAddDayModalOpen(true);
-          }}
-          onModifyDay={(date, existingData) => {
-            setDayModalMode("modify");
-            setAddDayInitialDate(date);
-            setDayModalExistingData(existingData);
-            setAddDayModalOpen(true);
-          }}
+          initialDate={addDayInitialDate}
+          standardShiftLength={3}
+          opened={addDayModalOpen}
+          onClose={() => setAddDayModalOpen(false)}
+          mode={dayModalMode}
+          existingData={dayModalExistingData}
         />
-      )}
-
-      {/* AddDay/Modify modal appears here. */}
-      <AddDay
-        user={user}
-        campID={campID}
-        data={calendarData}
-        initialDate={addDayInitialDate}
-        standardShiftLength={3}
-        opened={addDayModalOpen}
-        onClose={() => setAddDayModalOpen(false)}
-        mode={dayModalMode}
-        existingData={dayModalExistingData}
-      />
-    </div>
+      </div>
+    ) : (
+      <div>You must select a camp in the Menu.</div>
+    )
   );
 };
 
@@ -118,17 +148,31 @@ const DailyView = ({ data }) => {
           date={date}
           shiftDay={data[date].shiftDay}
           tasks={data[date].tasks}
+          breakfastTitle={data[date].breakfastTitle}
+          breakfastDifficulty={data[date].breakfastDifficulty}
+          dinnerTitle={data[date].dinnerTitle}
+          dinnerDifficulty={data[date].dinnerDifficulty}
         />
       ))}
     </div>
   );
 };
 
-const Daily = ({ date, shiftDay, tasks }) => (
+const Daily = ({ date, shiftDay, tasks, breakfastTitle, breakfastDifficulty, dinnerTitle, dinnerDifficulty }) => (
   <div style={{ marginBottom: "24px" }}>
     <h2>
       {date} (Day {shiftDay === 0 ? "Off" : shiftDay})
     </h2>
+    {breakfastTitle && (
+      <span style={{ display: "block", marginBottom: "8px", color: mealDifficultyColors(breakfastDifficulty) }}>
+        Breakfast: {breakfastTitle}
+      </span>
+    )}
+    {dinnerTitle && (
+      <span style={{ display: "block", marginBottom: "8px", color: mealDifficultyColors(dinnerDifficulty) }}>
+        Dinner: {dinnerDifficulty}
+      </span>
+    )}
     {tasks ? (
       Object.keys(tasks).map((taskId) => (
         <div key={taskId} style={{ paddingLeft: "16px" }}>
@@ -138,7 +182,27 @@ const Daily = ({ date, shiftDay, tasks }) => (
     ) : (
       <p>No tasks for this day.</p>
     )}
-    <Button onClick={() => alert("Add task.")}>Add Task</Button>
+    <div>
+      {dayData ? (
+        <Button
+          size="xs"
+          mt="sm"
+          onClick={() => onModifyDay(formattedDate, dayData)}
+          style={{ width: "100%" }}
+        >
+          Modify Data
+        </Button>
+      ) : (
+        <Button
+          size="xs"
+          mt="sm"
+          onClick={() => onAddDay(formattedDate)}
+          style={{ width: "100%" }}
+        >
+          Add Data
+        </Button>
+      )}
+    </div>
   </div>
 );
 
@@ -381,7 +445,6 @@ const AddDay = ({
   // Handler for adding a new task.
   const handleAddTask = () => {
     if (newTaskDescription.trim() === "") return;
-    alert("USER: " + JSON.stringify(user, null, 2));
     const newTask = {
       id: Date.now(), // Temporary unique ID
       description: newTaskDescription,
@@ -419,7 +482,6 @@ const AddDay = ({
     };
 
     try {
-      alert(campID)
       await set(ref(database, `camps/` + campID + `/calendar/${date}`), newData); // change scooter to your campID 
       alert("Data added successfully!");
       if (mode === "add" && resetAfterSubmit) {
@@ -447,7 +509,7 @@ const AddDay = ({
     if (window.confirm("Are you sure you want to delete data for this day?")) {
       try {
         await remove(ref(database, `camps/scooter/calendar/${date}`));
-        alert("Data deleted successfully!");
+        alert("Data deleted successfully.");
         onClose();
       } catch (error) {
         console.log("Error deleting data:", error);

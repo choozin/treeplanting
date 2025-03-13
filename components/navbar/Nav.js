@@ -11,6 +11,8 @@ import {
 } from "../../firebase/firebase";
 import { ref, get, set, update } from "firebase/database"; // Import only what’s needed
 
+import Cookies from "js-cookie";
+
 import { IconBulb, IconCheckbox, IconPlus, IconSearch, IconUser } from "@tabler/icons-react";
 import {
     ActionIcon,
@@ -35,55 +37,56 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData }) => {
     const [name, setName] = useState("");
     const [isRegistering, setIsRegistering] = useState(false);
     const [error, setError] = useState(null);
+    const [rememberMe, setRememberMe] = useState(false);
+
+    // On mount, check if there's a remembered email in the cookies.
+    useEffect(() => {
+        const savedEmail = Cookies.get("rememberedEmail");
+        if (savedEmail) {
+            setEmail(savedEmail);
+            setRememberMe(true);
+        }
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (isRegistering) {
+        try {
+            let userResult;
+            if (isRegistering) {
+                userResult = await registerUser(email, password, name);
+            } else {
+                userResult = await loginUser(email, password);
+            }
+            setUser(userResult);
             try {
-                const user = await registerUser(email, password, name);
-                setUser(user);
-                try {
-                    const userDataRef = ref(database, `users/${user.uid}`);
-                    const snapshot = await get(userDataRef);
-                    if (snapshot.exists()) {
-                        setUserData(snapshot.val());
-                        alert("User data found: " + JSON.stringify(snapshot.val()));
-                    } else {
-                        setError("No user data found");
-                        alert("No user data found");
-                    }
-                } catch (error) {
-                    setError("Error getting user data: " + error.message);
-                    alert("Error getting user data: " + error.message);
+                const userDataRef = ref(database, `users/${userResult.uid}`);
+                const snapshot = await get(userDataRef);
+                if (snapshot.exists()) {
+                    setUserData(snapshot.val());
+                } else {
+                    setError("No user data found");
+                    alert("No user data found");
                 }
             } catch (error) {
-                setError(error.message);
+                setError("Error getting user data: " + error.message);
+                alert("Error getting user data: " + error.message);
             }
-        } else {
-            try {
-                const user = await loginUser(email, password);
-                setUser(user);
-                try {
-                    const userDataRef = ref(database, `users/${user.uid}`);
-                    const snapshot = await get(userDataRef);
-                    if (snapshot.exists()) {
-                        setUserData(snapshot.val());
-                        alert("User data found: " + JSON.stringify(snapshot.val()));
-                    } else {
-                        setError("No user data found");
-                        alert("No user data found");
-                    }
-                } catch (error) {
-                    setError("Error getting user data: " + error.message);
-                    alert("Error getting user data: " + error.message);
-                }
-            } catch (error) {
-                setError(error.message);
+
+            // If "Remember me" is checked, store the email in a cookie for 30 days.
+            if (rememberMe) {
+                Cookies.set("rememberedEmail", email, { expires: 30 });
+            } else {
+                Cookies.remove("rememberedEmail");
             }
+        } catch (error) {
+            setError(error.message);
         }
     };
 
     const handleLogout = async () => {
+        if (!window.confirm("Are you sure you want to logout?")) {
+            return;
+        }
         await logoutUser();
         setUser(null);
         setUserData(null);
@@ -92,15 +95,15 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData }) => {
     // If user is logged in, display info with a logout button
     if (user) {
         return (
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "16px", marginBottom: "8px", marginTop: "-10px" }}>
                 <p style={{ margin: 0 }}>
-                    Logged in as: {userData ? `${userData.name} (${userData.email})` : "Loading..."}
+                    Welcome, <span style={{ fontWeight: "bold" }}>{userData ? `${userData.name}` : "Loading..."}</span>
                 </p>
                 <button
                     onClick={handleLogout}
                     style={{
-                        padding: "6px 12px",
-                        backgroundColor: "#555",
+                        padding: "0px 6px 3px 6px",
+                        backgroundColor: "#222",
                         color: "#fff",
                         border: "none",
                         borderRadius: "4px",
@@ -182,6 +185,15 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData }) => {
                             }}
                         />
                     )}
+                    {/* Remember Me Checkbox */}
+                    <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "14px" }}>
+                        <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                        />
+                        Remember me
+                    </label>
                     <button
                         type="submit"
                         style={{
@@ -243,10 +255,21 @@ const CampSelector = ({ user, userData, campID, onCampSelect }) => {
         fetchCamps();
     }, [user, userData]);
 
+    // On mount, check if there's a remembered campID in the cookies.
+    useEffect(() => {
+        const storedCampID = Cookies.get("campID");
+        if (storedCampID) {
+            setSelectedCamp(storedCampID);
+            onCampSelect(storedCampID);
+        }
+    }, [onCampSelect]);
+
     const handleCampChange = (e) => {
-        const campID = e.target.value;
-        setSelectedCamp(campID);
-        onCampSelect(campID);
+        const newCampID = e.target.value;
+        setSelectedCamp(newCampID);
+        onCampSelect(newCampID);
+        // Remember this campID in a cookie for 30 days
+        Cookies.set("campID", newCampID, { expires: 30 });
     };
 
     if (loading)
@@ -284,29 +307,36 @@ const CampSelector = ({ user, userData, campID, onCampSelect }) => {
     );
 };
 
-const links = [
-    { icon: IconBulb, label: "Messages", notifications: 3 },
-    { icon: IconCheckbox, label: "Tasks", notifications: 4 },
-    { icon: IconUser, label: "Calendar" }
-];
-export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, navIsOpen, setNavIsOpen, isCalendarVisible, setIsCalendarVisible, isRecipesListVisible, setIsRecipesListVisible }) {
+export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, navIsOpen, setNavIsOpen, handleComponentChange, isCalendarVisible, setIsCalendarVisible, isRecipesListVisible, setIsRecipesListVisible }) {
+
+    const links = [
+        { icon: IconBulb, label: "Messages", notifications: 3 },
+        { icon: IconCheckbox, label: "Tasks", notifications: 4 },
+        { icon: IconUser, label: "Calendar", onClick: () => handleComponentChange('calendar') },
+    ];
 
     const collections = [
         { emoji: "👍", label: "Feedback", onClick: () => console.log("Feedback clicked") },
         { emoji: "📦", label: "Inventory", onClick: () => console.log("Inventory clicked") },
-        { emoji: "🍲", label: "Recipes", onClick: () => setIsRecipesListVisible(true) },
+        { emoji: "🍲", label: "Recipes", onClick: () => handleComponentChange('recipes') },
         { emoji: "🛒", label: "Orders", onClick: () => console.log("Orders clicked") },
         { emoji: "🚚", label: "Deliveries", onClick: () => console.log("Deliveries clicked") },
         { emoji: "💸", label: "Budget", onClick: () => console.log("Budget clicked") },
         { emoji: "📊", label: "Reports", onClick: () => console.log("Reports clicked") },
         { emoji: "🎂", label: "Birthdays", onClick: () => console.log("Birthdays clicked") },
-        { emoji: "📉", label: "Debts", onClick: () => console.log("Debts clicked") },
-        { emoji: "👥", label: "Staff List", onClick: () => console.log("Staff List clicked") },
+        { emoji: "📋", label: "Staff List", onClick: () => console.log("Staff List clicked") },
+        { emoji: "👤", label: "User Management", onClick: () => console.log("User Management clicked") },
     ];
 
     // Build main links using Mantine's UnstyledButton and your CSS modules
     const mainLinks = links.map((link) => (
-        <UnstyledButton key={link.label} className={classes.mainLink}>
+        <UnstyledButton key={link.label} className={classes.mainLink}
+            onClick={(event) => {
+                event.preventDefault();
+                if (link.onClick) {
+                    link.onClick();
+                }
+            }}>
             <div className={classes.mainLinkInner}>
                 <link.icon size={20} className={classes.mainLinkIcon} stroke={1.5} />
                 <span>{link.label}</span>
@@ -394,8 +424,6 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                             placeholder="Search"
                             size="xs"
                             leftSection={<IconSearch size={12} stroke={1.5} />}
-                            rightSectionWidth={70}
-                            rightSection={<Code className={classes.searchCode}>Ctrl + K</Code>}
                             styles={{ section: { pointerEvents: "none" } }}
                             mb="sm"
                         />
