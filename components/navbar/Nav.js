@@ -307,7 +307,7 @@ const CampSelector = ({ user, userData, campID, onCampSelect }) => {
     );
 };
 
-export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, navIsOpen, setNavIsOpen, handleComponentChange, isCalendarVisible, setIsCalendarVisible, isRecipesListVisible, setIsRecipesListVisible }) {
+export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, navIsOpen, setNavIsOpen, handleComponentChange, isWelcomeVisible, setIsWelcomeVisible, isCalendarVisible, setIsCalendarVisible, isRecipesListVisible, setIsRecipesListVisible }) {
 
     const links = [
         { icon: IconBulb, label: "Messages", notifications: 3 },
