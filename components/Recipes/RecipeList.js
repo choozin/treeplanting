@@ -714,7 +714,7 @@ const RecipeList = ({
     setIsRecipesListVisible,
     handleComponentChange,
 }) => {
-    const [user, setUser] = useState(null);
+    
     const [role, setRole] = useState(null);
     const [recipes, setRecipes] = useState([]);
     const [loading, setLoading] = useState(true);
