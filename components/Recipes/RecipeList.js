@@ -708,7 +708,7 @@ const UploadOriginalRecipeButton = ({ campID }) => {
 };
 
 const RecipeList = ({
-    userID,
+    user,
     campID,
     isRecipesListVisible,
     setIsRecipesListVisible,
