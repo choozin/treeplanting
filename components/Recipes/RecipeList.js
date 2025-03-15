@@ -708,10 +708,11 @@ const UploadOriginalRecipeButton = ({ campID }) => {
 };
 
 const RecipeList = ({
+    userID,
+    campID,
     isRecipesListVisible,
     setIsRecipesListVisible,
     handleComponentChange,
-    campID,
 }) => {
     const [user, setUser] = useState(null);
     const [role, setRole] = useState(null);
@@ -763,7 +764,7 @@ const RecipeList = ({
         quantity: "",
     });
 
-    // NEW: state to toggle export behavior.
+    // State to toggle export behavior.
     const [onlyExportExpanded, setOnlyExportExpanded] = useState(false);
 
     const tableRef = useRef(null);
@@ -929,10 +930,11 @@ const RecipeList = ({
         URL.revokeObjectURL(url);
     };
 
-    // Modified print function: if onlyExportExpanded is true, open a new window with a filtered table.
+    // Modified print function: if onlyExportExpanded is true, open a new window with a filtered table including expanded details.
     const handlePrint = () => {
         const sortedData =
             (tableRef.current && tableRef.current.getSortedData()) || filteredRecipes;
+        // When onlyExportExpanded is on, filter to rows that are expanded.
         const dataToPrint = onlyExportExpanded
             ? sortedData.filter((row) => expandedRecipeIds.includes(row.id))
             : sortedData;
@@ -952,6 +954,7 @@ const RecipeList = ({
         );
         printWindow.document.write("</head><body>");
         printWindow.document.write("<table>");
+        // Table header
         printWindow.document.write("<tr>");
         printWindow.document.write("<th>Recipe Name</th>");
         printWindow.document.write("<th>Difficulty</th>");
@@ -959,7 +962,9 @@ const RecipeList = ({
         printWindow.document.write("<th>Notes</th>");
         printWindow.document.write("<th>Added By</th>");
         printWindow.document.write("</tr>");
+
         dataToPrint.forEach((row) => {
+            // Main row
             printWindow.document.write("<tr>");
             printWindow.document.write(`<td>${row.recipeName}</td>`);
             printWindow.document.write(`<td>${row.difficulty}</td>`);
@@ -972,6 +977,52 @@ const RecipeList = ({
                 }</td>`
             );
             printWindow.document.write("</tr>");
+
+            // Expanded details row
+            let expandedContent = "";
+            if (row.ingredients && row.ingredients.length > 0) {
+                expandedContent += `<strong>Ingredients:</strong><br/>${formatIngredients(row.ingredients).replace(/\n/g, "<br/>")}<br/>`;
+            }
+            if (row.notes && row.notes.trim() !== "") {
+                expandedContent += `<strong>Full Notes:</strong><br/>${row.notes}<br/>`;
+            }
+            let dietary = "";
+            if (row.vegan && row.vegan.trim() !== "") {
+                dietary += `Vegan: ${row.vegan}; `;
+            }
+            if (row.vegetarian && row.vegetarian.trim() !== "") {
+                dietary += `Vegetarian: ${row.vegetarian}; `;
+            }
+            if (row.glutenFree && row.glutenFree.trim() !== "") {
+                dietary += `Gluten Free: ${row.glutenFree}; `;
+            }
+            if (row.otherDietary && row.otherDietary.trim() !== "") {
+                dietary += `Other: ${row.otherDietary}; `;
+            }
+            if (dietary !== "") {
+                expandedContent += `<strong>Dietary Info:</strong><br/>${dietary}<br/>`;
+            }
+            let recommendations = "";
+            if (row.recommendedSides && row.recommendedSides.trim() !== "") {
+                recommendations += `Sides: ${row.recommendedSides}; `;
+            }
+            if (row.recommendedBread && row.recommendedBread.trim() !== "") {
+                recommendations += `Bread: ${row.recommendedBread}; `;
+            }
+            if (row.recommendedSalad && row.recommendedSalad.trim() !== "") {
+                recommendations += `Salad: ${row.recommendedSalad}; `;
+            }
+            if (row.recommendedDessert && row.recommendedDessert.trim() !== "") {
+                recommendations += `Dessert: ${row.recommendedDessert}; `;
+            }
+            if (recommendations !== "") {
+                expandedContent += `<strong>Recommendations:</strong><br/>${recommendations}<br/>`;
+            }
+            if (expandedContent !== "") {
+                printWindow.document.write("<tr>");
+                printWindow.document.write(`<td colspan="5">${expandedContent}</td>`);
+                printWindow.document.write("</tr>");
+            }
         });
         printWindow.document.write("</table>");
         printWindow.document.write("</body></html>");
@@ -1400,17 +1451,8 @@ const RecipeList = ({
                                             className="expanded-row"
                                             style={{ borderBottom: "1px solid #eee" }}
                                         >
-                                            <td
-                                                colSpan={totalColumns}
-                                                style={{ textAlign: "left", padding: "16px" }}
-                                            >
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        flexWrap: "wrap",
-                                                        gap: "16px",
-                                                    }}
-                                                >
+                                            <td colSpan={totalColumns} style={{ textAlign: "left", padding: "16px" }}>
+                                                <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
                                                     <div style={{ flex: "1 1 200px" }}>
                                                         <strong>Ingredients:</strong>
                                                         {editingRecipeId === row.id ? (
@@ -1462,14 +1504,7 @@ const RecipeList = ({
                                                                             ))}
                                                                         </div>
                                                                     )}
-                                                                <div
-                                                                    style={{
-                                                                        marginTop: "8px",
-                                                                        display: "flex",
-                                                                        flexDirection: "column",
-                                                                        gap: "8px",
-                                                                    }}
-                                                                >
+                                                                <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "8px" }}>
                                                                     <TextInput
                                                                         label="Name"
                                                                         value={inlineNewIngredient.name}

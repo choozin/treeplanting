@@ -49,7 +49,7 @@ export default function HomePage() {
       {isCalendarVisible && <CalendarViews user={user} campID={campID} isCalendarVisible={isCalendarVisible} setIsCalendarVisible={setIsCalendarVisible} handleComponentChange={handleComponentChange} />}
       {isRecipesListVisible &&
         <div>
-          <RecipesList isRecipesListVisible={isRecipesListVisible} setIsRecipesListVisible={setIsRecipesListVisible} handleComponentChange={handleComponentChange} />
+          <RecipesList user={user} campID={campID} isRecipesListVisible={isRecipesListVisible} setIsRecipesListVisible={setIsRecipesListVisible} handleComponentChange={handleComponentChange} />
         </div>
       }
       <ColorSchemeToggle />
