@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ref, get, onValue, set, remove } from "firebase/database";
+import { ref, onValue, set, remove } from "firebase/database";
 import { database } from "../../firebase/firebase";
-
 import {
   Modal,
   TextInput,
@@ -30,8 +29,7 @@ const mealDifficultyColors = (difficulty) => {
     default:
       return "black";
   }
-}
-
+};
 
 const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible, handleComponentChange }) => {
   const [calendarData, setCalendarData] = useState(null);
@@ -82,14 +80,36 @@ const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible, 
     setAddDayModalOpen(true);
   };
 
+  // Callbacks to be passed to the Daily view.
+  const handleAddDayFromDaily = (date) => {
+    setDayModalMode("add");
+    setAddDayInitialDate(date);
+    setDayModalExistingData(null);
+    setAddDayModalOpen(true);
+  };
+
+  const handleModifyDayFromDaily = (date, existingData) => {
+    setDayModalMode("modify");
+    setAddDayInitialDate(date);
+    setDayModalExistingData(existingData);
+    setAddDayModalOpen(true);
+  };
+
   return (
     campID ? (
       <div>
         <div style={{ display: 'flex', gap: '16px' }}>
           <div style={{ marginBottom: "16px" }}>
             <div>Schedule View: </div>
-            {activeView === "daily" ? <Button onClick={() => setActiveView("calendar")}>Switch to Calendar</Button> :
-              <Button onClick={() => setActiveView("daily")}>Switch to Daily</Button>}
+            {activeView === "daily" ? (
+              <Button onClick={() => setActiveView("calendar")}>
+                Switch to Calendar
+              </Button>
+            ) : (
+              <Button onClick={() => setActiveView("daily")}>
+                Switch to Daily
+              </Button>
+            )}
           </div>
 
           <div style={{ marginBottom: "16px" }}>
@@ -98,7 +118,13 @@ const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible, 
           </div>
         </div>
 
-        {activeView === "daily" && <DailyView data={calendarData} />}
+        {activeView === "daily" && (
+          <DailyView
+            data={calendarData}
+            onAddDay={handleAddDayFromDaily}
+            onModifyDay={handleModifyDayFromDaily}
+          />
+        )}
         {activeView === "shifts" && <div>Shifts view coming soon</div>}
         {activeView === "calendar" && (
           <CalendarView
@@ -118,7 +144,7 @@ const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible, 
           />
         )}
 
-        {/* AddDay/Modify modal appears here. */}
+        {/* AddDay/Modify modal */}
         <AddDay
           user={user}
           campID={campID}
@@ -137,7 +163,7 @@ const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible, 
   );
 };
 
-const DailyView = ({ data }) => {
+const DailyView = ({ data, onAddDay, onModifyDay }) => {
   if (!data) return <div>Loading...</div>;
   const dates = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
   return (
@@ -152,38 +178,61 @@ const DailyView = ({ data }) => {
           breakfastDifficulty={data[date].breakfastDifficulty}
           dinnerTitle={data[date].dinnerTitle}
           dinnerDifficulty={data[date].dinnerDifficulty}
+          onAddDay={onAddDay}
+          onModifyDay={onModifyDay}
         />
       ))}
     </div>
   );
 };
 
-const Daily = ({ date, shiftDay, tasks, breakfastTitle, breakfastDifficulty, dinnerTitle, dinnerDifficulty }) => (
-  <div style={{ marginBottom: "24px" }}>
-    <h2>
-      {date} (Day {shiftDay === 0 ? "Off" : shiftDay})
-    </h2>
-    {breakfastTitle && (
-      <span style={{ display: "block", marginBottom: "8px", color: mealDifficultyColors(breakfastDifficulty) }}>
-        Breakfast: {breakfastTitle}
-      </span>
-    )}
-    {dinnerTitle && (
-      <span style={{ display: "block", marginBottom: "8px", color: mealDifficultyColors(dinnerDifficulty) }}>
-        Dinner: {dinnerDifficulty}
-      </span>
-    )}
-    {tasks ? (
-      Object.keys(tasks).map((taskId) => (
-        <div key={taskId} style={{ paddingLeft: "16px" }}>
-          <p>{tasks[taskId].description || "Task details"}</p>
-        </div>
-      ))
-    ) : (
-      <p>No tasks for this day.</p>
-    )}
-    <div>
-      {dayData ? (
+const Daily = ({
+  date,
+  shiftDay,
+  tasks,
+  breakfastTitle,
+  breakfastDifficulty,
+  dinnerTitle,
+  dinnerDifficulty,
+  onAddDay,
+  onModifyDay,
+}) => {
+  // Compose dayData from props
+  const dayData = {
+    shiftDay,
+    tasks,
+    breakfastTitle,
+    breakfastDifficulty,
+    dinnerTitle,
+    dinnerDifficulty,
+  };
+  // Assume date is already in YYYY-MM-DD format
+  const formattedDate = date;
+  return (
+    <div style={{ marginBottom: "24px" }}>
+      <h2>
+        {date} (Day {shiftDay === 0 ? "Off" : shiftDay})
+      </h2>
+      {breakfastTitle && (
+        <span style={{ display: "block", marginBottom: "8px", color: mealDifficultyColors(breakfastDifficulty) }}>
+          Breakfast: {breakfastTitle}
+        </span>
+      )}
+      {dinnerTitle && (
+        <span style={{ display: "block", marginBottom: "8px", color: mealDifficultyColors(dinnerDifficulty) }}>
+          Dinner: {dinnerTitle}
+        </span>
+      )}
+      {tasks ? (
+        Object.keys(tasks).map((taskId) => (
+          <div key={taskId} style={{ paddingLeft: "16px" }}>
+            <p>{tasks[taskId].description || "Task details"}</p>
+          </div>
+        ))
+      ) : (
+        <p>No tasks for this day.</p>
+      )}
+      <div>
         <Button
           size="xs"
           mt="sm"
@@ -192,39 +241,22 @@ const Daily = ({ date, shiftDay, tasks, breakfastTitle, breakfastDifficulty, din
         >
           Modify Data
         </Button>
-      ) : (
-        <Button
-          size="xs"
-          mt="sm"
-          onClick={() => onAddDay(formattedDate)}
-          style={{ width: "100%" }}
-        >
-          Add Data
-        </Button>
-      )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const CalendarView = ({ data, onAddDay, onModifyDay }) => {
-  // Set the number of weeks to display (can be changed as needed)
   const [weeksDisplayed, setWeeksDisplayed] = useState(5);
 
   if (!data) return <div>Loading...</div>;
 
-  // Get all the date keys from the data and sort them
   const dateKeys = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
-
-  // Determine the earliest date in the data
   const earliestDate = new Date(dateKeys[0]);
-
-  // Calculate the start date for the calendar:
-  // Back up to the previous Sunday if the earliest date isn't already a Sunday.
   const startDay = earliestDate.getDay(); // Sunday = 0, Monday = 1, etc.
   const calendarStartDate = new Date(earliestDate);
   calendarStartDate.setDate(earliestDate.getDate() - startDay);
 
-  // Calculate total number of days to display based on weeksDisplayed
   const totalDays = weeksDisplayed * 7;
   const calendarDays = [];
   for (let i = 0; i < totalDays; i++) {
@@ -233,7 +265,7 @@ const CalendarView = ({ data, onAddDay, onModifyDay }) => {
     calendarDays.push(currentDate);
   }
 
-  // Helper function to format dates as YYYY-MM-DD (assumes data keys use this format)
+  // Helper to format date as YYYY-MM-DD
   const formatDate = (date) => {
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -246,7 +278,7 @@ const CalendarView = ({ data, onAddDay, onModifyDay }) => {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(7, minmax(100px, 1fr))", // each column will be at least 100px
+          gridTemplateColumns: "repeat(7, minmax(100px, 1fr))",
           gap: "8px",
         }}
       >
@@ -335,27 +367,19 @@ const AddDay = ({
   opened,
   onClose,
   mode, // "add" or "modify"
-  existingData, // only used in modify mode
+  existingData, // used in modify mode
 }) => {
-  // Date and confirmation state
   const [date, setDate] = useState("");
   const [dateConfirmed, setDateConfirmed] = useState(false);
-
-  // Form fields state
   const [breakfastTitle, setBreakfastTitle] = useState("");
   const [breakfastDifficulty, setBreakfastDifficulty] = useState(3);
   const [dinnerTitle, setDinnerTitle] = useState("");
   const [dinnerDifficulty, setDinnerDifficulty] = useState(3);
   const [tasks, setTasks] = useState([]);
-
-  // New task input states
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskAssignedTo, setNewTaskAssignedTo] = useState("");
-
-  // Computed (and modifiable) shiftDay
   const [shiftDay, setShiftDay] = useState(1);
 
-  // When the modal opens, set a default date and pre-populate if in modify mode.
   useEffect(() => {
     if (opened) {
       if (mode === "modify" && existingData) {
@@ -365,34 +389,22 @@ const AddDay = ({
         setBreakfastDifficulty(existingData.breakfastDifficulty || 3);
         setDinnerTitle(existingData.dinnerTitle || "");
         setDinnerDifficulty(existingData.dinnerDifficulty || 3);
-        setShiftDay(
-          typeof existingData.shiftDay === "number"
-            ? existingData.shiftDay
-            : 1
-        );
-        // Convert tasks object to an array, if it exists.
-        const tasksArr = existingData.tasks
-          ? Object.values(existingData.tasks)
-          : [];
+        setShiftDay(typeof existingData.shiftDay === "number" ? existingData.shiftDay : 1);
+        const tasksArr = existingData.tasks ? Object.values(existingData.tasks) : [];
         setTasks(tasksArr);
       } else {
-        // "add" mode logic.
         if (initialDate) {
           setDate(initialDate);
         } else if (data) {
-          // Compute default date as the day after the most recent date in data.
           const dates = Object.keys(data);
           if (dates.length > 0) {
-            const sortedDates = dates.sort(
-              (a, b) => new Date(a) - new Date(b)
-            );
+            const sortedDates = dates.sort((a, b) => new Date(a) - new Date(b));
             const lastDateStr = sortedDates[sortedDates.length - 1];
             const lastDate = new Date(lastDateStr);
             const nextDate = new Date(lastDate);
             nextDate.setDate(lastDate.getDate() + 1);
             setDate(nextDate.toISOString().split("T")[0]);
           } else {
-            // No data exists—default to today's date.
             setDate(new Date().toISOString().split("T")[0]);
           }
         } else {
@@ -402,18 +414,13 @@ const AddDay = ({
     }
   }, [opened, initialDate, data, mode, existingData]);
 
-  // In "add" mode, once the date is confirmed, compute shiftDay.
   useEffect(() => {
     if (opened && mode === "add" && dateConfirmed) {
       const currentDate = new Date(date);
       const prevDate = new Date(currentDate);
       prevDate.setDate(currentDate.getDate() - 1);
       const prevDateStr = prevDate.toISOString().split("T")[0];
-      if (
-        data &&
-        data[prevDateStr] &&
-        typeof data[prevDateStr].shiftDay === "number"
-      ) {
+      if (data && data[prevDateStr] && typeof data[prevDateStr].shiftDay === "number") {
         const prevShift = data[prevDateStr].shiftDay;
         if (prevShift >= standardShiftLength) {
           setShiftDay(0);
@@ -426,7 +433,6 @@ const AddDay = ({
     }
   }, [opened, mode, dateConfirmed, date, data, standardShiftLength]);
 
-  // Reset form state when the modal closes.
   useEffect(() => {
     if (!opened) {
       setDate("");
@@ -442,11 +448,10 @@ const AddDay = ({
     }
   }, [opened]);
 
-  // Handler for adding a new task.
   const handleAddTask = () => {
     if (newTaskDescription.trim() === "") return;
     const newTask = {
-      id: Date.now(), // Temporary unique ID
+      id: Date.now(),
       description: newTaskDescription,
       assignedTo: newTaskAssignedTo,
       author: user.uid,
@@ -457,7 +462,6 @@ const AddDay = ({
     setNewTaskAssignedTo("");
   };
 
-  // Handler for form submission.
   const handleSubmit = async (resetAfterSubmit = false) => {
     if (!date || breakfastTitle.trim() === "" || dinnerTitle.trim() === "") {
       alert("Please fill in all required fields.");
@@ -482,7 +486,7 @@ const AddDay = ({
     };
 
     try {
-      await set(ref(database, `camps/` + campID + `/calendar/${date}`), newData); // change scooter to your campID 
+      await set(ref(database, `camps/${campID}/calendar/${date}`), newData);
       alert("Data added successfully!");
       if (mode === "add" && resetAfterSubmit) {
         const currentDate = new Date(date);
@@ -504,11 +508,10 @@ const AddDay = ({
     }
   };
 
-  // Handler for deleting data in modify mode.
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete data for this day?")) {
       try {
-        await remove(ref(database, `camps/scooter/calendar/${date}`));
+        await remove(ref(database, `camps/${campID}/calendar/${date}`));
         alert("Data deleted successfully.");
         onClose();
       } catch (error) {
@@ -546,9 +549,7 @@ const AddDay = ({
           </>
         ) : (
           <>
-            {/* In modify mode, display the date (read-only) */}
             <Text mb="sm">Date: {date}</Text>
-            {/* Shift Day is now modifiable */}
             <NumberInput
               label="Shift Day"
               value={shiftDay}
@@ -588,7 +589,6 @@ const AddDay = ({
               max={5}
               mt="sm"
             />
-
             <Box mt="md">
               <Title order={4}>Tasks</Title>
               {tasks.length > 0 && (
@@ -596,9 +596,7 @@ const AddDay = ({
                   {tasks.map((task) => (
                     <Text key={task.id}>
                       {task.description}{" "}
-                      {task.assignedTo &&
-                        `(Assigned to: ${task.assignedTo})`} (Author:{" "}
-                      {task.author})
+                      {task.assignedTo && `(Assigned to: ${task.assignedTo})`} (Author: {task.author})
                     </Text>
                   ))}
                 </Box>
@@ -620,7 +618,6 @@ const AddDay = ({
                 Add Task
               </Button>
             </Box>
-
             <Group mt="md">
               <Button onClick={() => handleSubmit(false)}>Submit</Button>
               {mode === "add" && (
