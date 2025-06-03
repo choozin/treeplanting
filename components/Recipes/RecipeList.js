@@ -43,48 +43,181 @@ import {
 // Full originalRecipes array
 const originalRecipes = [
     {
-        recipeName: "Penne Bake w/ Italian Sausage",
-        difficulty: 1,
-        cost: 3,
+        recipeName: "Penne Bake with Italian Sausage",
+        difficulty: 2,
+        cost: 2,
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Penne Pasta", form: "Dry (packaged)", quantity: "40 lb" },
-            { name: "Italian Sausage", form: "Fresh (in casing)", quantity: "30 lb" },
+            { name: "Penne Pasta", form: "Dry", quantity: "20 lb" },
+            {
+                name: "Gluten-Free Penne Pasta",
+                form: "Dry",
+                quantity: "0.7 lb",
+            },
+            {
+                name: "Italian Sausage",
+                form: "Fresh (casings removed)",
+                quantity: "21 lb",
+            },
+            {
+                name: "Plant-Based Sausage",
+                form: "Fresh (casings removed)",
+                quantity: "6 lb",
+            },
+            {
+                name: "Olive Oil",
+                form: "Liquid",
+                quantity: "30 tbsp (about 2 cups)",
+            },
+            { name: "Onion", form: "Fresh", quantity: "15 medium" },
+            { name: "Garlic", form: "Fresh", quantity: "45 cloves" },
+            {
+                name: "Tomato Sauce",
+                form: "Canned",
+                quantity: "400 oz (approx. 50 cups)",
+            },
+            {
+                name: "Crushed Tomatoes",
+                form: "Canned",
+                quantity: "200 oz (approx. 25 cups)",
+            },
+            {
+                name: "Ricotta/Cottage Cheese",
+                form: "Fresh",
+                quantity: "10 cups",
+            },
+            {
+                name: "Mozzarella Cheese",
+                form: "Shredded (store-brand)",
+                quantity: "80oz or 2.2kg",
+            },
+            {
+                name: "Parmesan Cheese (optional)",
+                form: "Dry Grated",
+                quantity: "3 cups",
+            },
+            { name: "Basil", form: "Dry", quantity: "1.5 cup" },
+            { name: "Oregano", form: "Dry", quantity: "1 cup" },
+            { name: "Salt", form: "Dry", quantity: "to taste" },
+            { name: "Black Pepper", form: "Dry", quantity: "to taste" },
+            {
+                name: "Red Pepper Flakes",
+                form: "Dry",
+                quantity: "to taste",
+            },
         ],
-        notes:
-            "A hearty pasta bake with a rich tomato sauce. Ideal for a large family dinner.",
-        vegan: "Plant‐based sausage (1 lb)",
-        vegetarian: "Roasted mixed vegetables and mushrooms (1 lb)",
-        glutenFree: "Gluten‐free pasta (1 lb)",
-        recommendedSides: "Garlic Bread",
-        recommendedBread: "",
+        instructions: [
+            "Peel the onions and garlic, then chop the onions and mince the garlic.",
+            "Preheat your oven to 375°F (190°C). Prepare multiple chauffer pans by lightly greasing them.",
+            "Fill a very large pot with water, add a generous amount of salt, and bring it to a boil.",
+            "In a large pot over medium heat, warm the olive oil.",
+            "Add the chopped onions to the pot and cook until they soften.",
+            "Add the minced garlic and cook for an additional minute until fragrant.",
+            "Separate garlic and onion into large pots for onmivore, vegetarian, and vegan recipes. (Veg will include real cheeses)",
+            "Add the Italian/plant-based sausage to their corresponding pots. Break it apart as it browns, and continue cooking until it is fully browned and cooked through.",
+            "Pour in the tomato sauce and crushed tomatoes. Season with salt, pepper, red pepper flakes and dry basil if using. Simmer for at least 30 minutes.",
+            "Add the penne pasta to the boiling water and cook until al dente. Drain the pasta and set it aside.",
+            "Cook a small pot of gluten free-pasta as well.",
+            "In the large pots, combine the cooked penne pasta with the sausage tomato sauce. Slowly mix in the ricotta/cottage cheese and half of the shredded mozzarella.",
+            "In the veg/vegan pot, combine cooked penne pasta with the plant-based sausage tomato sauce. Slowly mix in the vegan cheese and half of the shredded mozzarella.",
+            "Evenly distribute the pasta mixture into your prepared chauffer pans. Sprinkle the remaining mozzarella and a light sprinkle of Parmesan cheese evenly over the top of each pan.",
+            "Place the chauffer pans in the preheated oven and bake for 25–30 minutes, until the cheese is bubbly and slightly golden.",
+            "Remove the chauffer pans from the oven and allow the dish to rest for 5 minutes before serving.",
+        ],
+        notes: "This is one I think would be a good potential starter.",
+        vegan:
+            "For a vegan version, substitute Italian sausage with a plant-based sausage and use vegan cheeses.",
+        vegetarian:
+            "For a vegetarian version, use vegan sausage and/or add extra vegetables such as zucchini.",
+        glutenFree: "For a gluten-free option, use gluten-free penne pasta.",
+        recommendedSides: "",
+        recommendedBread: "Garlic Bread",
         recommendedSalad: "Caesar Salad",
         recommendedDessert: "Tiramisu",
-        createdBy: "",
+        createdBy: "Cam",
     },
     {
         recipeName: "Spaghetti w/ Bolognese",
-        difficulty: 1,
-        cost: 3,
+        difficulty: 2,
+        cost: 2,
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Spaghetti", form: "Dry (packaged)", quantity: "40 lb" },
-            { name: "Ground Beef", form: "Fresh (ground)", quantity: "20 lb" },
-            { name: "Tomato Sauce", form: "Canned", quantity: "80 cups" },
-            { name: "Onion", form: "Fresh", quantity: "40 cups" },
+            { name: "Spaghetti", form: "Dry", quantity: "22 lb" },
+            {
+                name: "Gluten-Free Spaghetti",
+                form: "Dry",
+                quantity: "1 lb",
+            },
+            {
+                name: "Ground Beef",
+                form: "Fresh (ground)",
+                quantity: "28 lb",
+            },
+            {
+                name: "Plant-Based Meat Substitute",
+                form: "Fresh",
+                quantity: "8 lb",
+            },
+            {
+                name: "Olive Oil",
+                form: "Liquid",
+                quantity: "30 tbsp (about 2 cups)",
+            },
+            { name: "Onion", form: "Fresh", quantity: "18 medium" },
+            { name: "Garlic", form: "Fresh", quantity: "45 cloves" },
+            { name: "Mushrooms", form: "Fresh", quantity: "7 lbs" },
+            {
+                name: "Tomato Sauce",
+                form: "Canned",
+                quantity: "400 oz (approx. 50 cups)",
+            },
+            {
+                name: "Crushed Tomatoes",
+                form: "Canned",
+                quantity: "200 oz (approx. 25 cups)",
+            },
+            {
+                name: "Grated Parmesan Cheese",
+                form: "Dry",
+                quantity: "Light sprinkle (optional)",
+            },
+            { name: "Basil", form: "Dry", quantity: "1.5 cup" },
+            { name: "Oregano", form: "Dry", quantity: "1 cup" },
+            { name: "Salt", form: "Dry", quantity: "to taste" },
+            { name: "Black Pepper", form: "Dry", quantity: "to taste" },
+            {
+                name: "Red Pepper Flakes",
+                form: "Dry",
+                quantity: "to taste",
+            },
         ],
-        notes:
-            "A classic spaghetti with a hearty meat sauce suitable for large groups.",
-        vegan: "Lentils (1 lb)",
-        vegetarian: "Mushrooms and lentils (1 lb)",
-        glutenFree: "Gluten‐free spaghetti (1 lb)",
-        recommendedSides: "Garlic Bread",
-        recommendedBread: "",
-        recommendedSalad: "",
-        recommendedDessert: "",
-        createdBy: "",
+        instructions: [
+            "Peel the onions and garlic, then chop the onions and food process the garlic and mushrooms.",
+            "Fill a very large pot with water, add a generous amount of salt, and bring it to a boil.",
+            "In a large pot over medium heat, warm the olive oil.",
+            "Add the chopped onions and minced mushrooms and cook until they soften.",
+            "Add the minced garlic and cook for an additional minute until fragrant.",
+            "In one pot, add the ground beef and cook until fully browned and cooked through.",
+            "In a separate pot, cook the plant-based meat substitute until done.",
+            "Divide the tomato sauce and crushed tomatoes between the two pots.",
+            "Season both pots with basil, oregano, salt, black pepper, and red pepper flakes. Simmer each for at least 30 minutes.",
+            "In the boiling water, cook the spaghetti and gluten-free spaghetti until al dente. Drain and set aside.",
+            "In two large mixing pots, combine the cooked spaghetti with the corresponding Bolognese sauce for omnivores and vegans/vegetarians respectively.",
+            "Oil the spaghetti and put into prepared chauffer pans to hold warm.",
+            "Optionally, garnish with a light sprinkle of grated Parmesan cheese before serving.",
+        ],
+        notes: "Another good option for an early season dinner.",
+        vegan: "For a vegan version, use plant-based meat substitute and vegan cheese if desired.",
+        vegetarian:
+            "For a vegetarian version, use a combination of lentils and mushrooms as a meat alternative.",
+        glutenFree: "For a gluten-free option, use gluten-free spaghetti.",
+        recommendedSides: "",
+        recommendedBread: "Garlic Bread",
+        recommendedSalad: "Simple Caesar Salad",
+        recommendedDessert: "Lemon Cake",
+        createdBy: "Cam",
     },
     {
         recipeName: "Lasagna",
@@ -93,13 +226,25 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Lasagna Noodles", form: "Dry (packaged)", quantity: "480 pieces" },
+            {
+                name: "Lasagna Noodles",
+                form: "Dry (packaged)",
+                quantity: "480 pieces",
+            },
             { name: "Ricotta", form: "Fresh", quantity: "80 cups" },
-            { name: "Mozzarella", form: "Pre‐shredded", quantity: "80 cups" },
-            { name: "Ground Beef", form: "Fresh (ground)", quantity: "40 lb" },
+            {
+                name: "Mozzarella",
+                form: "Pre‐shredded",
+                quantity: "80 cups",
+            },
+            {
+                name: "Ground Beef",
+                form: "Fresh (ground)",
+                quantity: "40 lb",
+            },
         ],
         notes:
-            "Layers of pasta, meat, and cheese baked to perfection for a crowd.",
+            "",
         vegan: "Vegan cheese (1 lb) and grilled vegetables (1 lb)",
         vegetarian: "Mushrooms and spinach (1 lb)",
         glutenFree: "Gluten‐free lasagna noodles (17 pieces)",
@@ -116,12 +261,24 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Chicken Breast", form: "Fresh (skinless, boneless)", quantity: "80 pieces" },
-            { name: "Marinara Sauce", form: "Canned", quantity: "40 cups" },
-            { name: "Mozzarella", form: "Pre‐sliced", quantity: "20 lb" },
+            {
+                name: "Chicken Breast",
+                form: "Fresh (skinless, boneless)",
+                quantity: "80 pieces",
+            },
+            {
+                name: "Marinara Sauce",
+                form: "Canned",
+                quantity: "40 cups",
+            },
+            {
+                name: "Mozzarella",
+                form: "Pre‐sliced",
+                quantity: "20 lb",
+            },
         ],
         notes:
-            "Classic chicken parmesan with breaded chicken and melted cheese.",
+            "",
         vegan: "Eggplant slices or tofu (3 pieces) and vegan cheese (1 lb)",
         vegetarian: "Eggplant or portobello mushrooms (3 pieces)",
         glutenFree: "Gluten‑free breadcrumbs (as per recipe)",
@@ -132,29 +289,56 @@ const originalRecipes = [
         createdBy: "",
     },
     {
-        recipeName: "Cold Cut/Meatball Subs",
-        difficulty: 1,
+        recipeName: "Chicken Parm/Meatball Subs",
+        difficulty: 3,
         cost: 2,
         month: 7,
         meal: "dinner",
         ingredients: [
-            { name: "Italian Cold Cuts", form: "Assorted (deli style)", quantity: "20 lb" },
-            { name: "Meatballs", form: "Pre‐cooked", quantity: "160 pieces" },
-            { name: "Sub Rolls", form: "Fresh bakery", quantity: "160 rolls" },
-            { name: "Lettuce", form: "Fresh", quantity: "40 cups" },
-            { name: "Tomato", form: "Fresh", quantity: "40 tomatoes" },
-            { name: "Onion", form: "Fresh", quantity: "40 onions" },
+            { name: "Sub Loaves", form: "Store-bought", quantity: "60ft+ worth" },
+            { name: "Gluten-Free Sub Loaves", form: "Store-bought", quantity: "60ft+ worth" },
+            { name: "Chicken Theighs", form: "Fresh", quantity: "18 lb" },
+            { name: "Meatballs", form: "Pre‐cooked", quantity: "200 pieces" },
+            { name: "Eggplant", form: "Fresh", quantity: "6 lb" },
+            { name: "Vegan Meatballs", form: "Pre‐cooked", quantity: "10 pieces" },
+            { name: "Tomato Sauce", form: "Canned", quantity: "400 oz (approx. 50 cups)" },
+            { name: "Crushed Tomatoes", form: "Canned", quantity: "200 oz (approx. 25 cups)" },
+            { name: "Mozzarella Cheese", form: "Shredded", quantity: "80 oz or 2.2kg" },
+            { name: "Grated Parmesan Cheese", form: "Dry", quantity: "Light sprinkle" },
+            { name: "Basil", form: "Dry", quantity: "1.5 cup" },
+            { name: "Oregano", form: "Dry", quantity: "1 cup" },
+            { name: "Salt", form: "Dry", quantity: "to taste" },
+            { name: "Black Pepper", form: "Dry", quantity: "to taste" },
+            { name: "Red Pepper Flakes", form: "Dry", quantity: "to taste" },
+            { name: "Onion", form: "Fresh, sliced", quantity: "20 cups" },
+            { name: "Green Pepper", form: "Fresh, sliced", quantity: "10 cups" },
+            { name: "Spinach", form: "Fresh", quantity: "10 cups" },
+            { name: "Olives", form: "Sliced", quantity: "5 cups" },
+            { name: "Pickles", form: "Sliced", quantity: "5 cups" }
         ],
-        notes:
-            "Delicious subs loaded with cold cuts and meatballs, perfect for lunch.",
-        vegan: "Plant‐based deli slices (1 lb) and vegan meatballs (6 pieces)",
-        vegetarian: "Grilled vegetables and cheese (1 lb)",
-        glutenFree: "Gluten‑free sub rolls (6 rolls)",
+        instructions: [
+            "Wash all fresh produce. Peel and slice the onions; wash and slice the green peppers; wash and slice the eggplant; wash the spinach; and slice the olives and pickles if needed.",
+            "Preheat your oven to 375°F (190°C) and prepare multiple chauffer pans by lightly greasing them if warming is required.",
+            "In a large pot, combine the tomato sauce, crushed tomatoes, basil, oregano, salt, black pepper, and red pepper flakes. Bring the sauce to a simmer and let it cook for at least 30 minutes.",
+            "In a separate pan over medium heat, cook the chicken breasts for Chicken Parmesan until golden and cooked through, then slice or chop them.",
+            "Warm the pre‐cooked meatballs in another pan until heated through.",
+            "For the vegan/vegetarian option, in another pan cook the eggplant until done and warm the vegan meatballs.",
+            "In two large mixing pots, combine the omnivore sauce with the cooked chicken for the Chicken Parmesan filling and with the meatballs for the Meatball filling. Separately, combine the vegan sauce with the plant‐based chicken cutlets and vegan meatballs.",
+            "Slice the 6' sub loaves lengthwise to prepare for assembly.",
+            "Assemble each sub by offering a choice of filling (Chicken Parmesan or Meatballs) from the omnivore or vegan/vegetarian options.",
+            "Top each sub with generous garnish: add sliced onions, green peppers, spinach, and a choice of olives or pickles.",
+            "Optionally, finish with a light sprinkle of grated Parmesan cheese on the omnivore sub.",
+            "Serve immediately."
+        ],
+        notes: "A fun option... may be useful if I can make the meatballs 1 or 2 nights ahead.",
+        vegan: "For a vegan version, use eggplant to replace the chicken and vegan meatballs with vegan cheese.",
+        vegetarian: "For a vegetarian version, use eggplant and vegan meatballs, or substitute with grilled vegetables and cheese.",
+        glutenFree: "For a gluten‐free option, use gluten‐free sub loaves if available.",
         recommendedSides: "Chips",
-        recommendedBread: "",
+        recommendedBread: "6' Sub Loaves",
         recommendedSalad: "Coleslaw",
-        recommendedDessert: "",
-        createdBy: "",
+        recommendedDessert: "Tiramisu",
+        createdBy: "Cam"
     },
     {
         recipeName: "Pulled Pork Sandwiches w/ Roasted Potatoes & Veg",
@@ -163,9 +347,17 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Pulled Pork", form: "Fresh (slow‐cooked)", quantity: "40 lb" },
+            {
+                name: "Pulled Pork",
+                form: "Fresh (slow‐cooked)",
+                quantity: "40 lb",
+            },
             { name: "Potatoes", form: "Fresh (raw)", quantity: "80 lb" },
-            { name: "Mixed Vegetables", form: "Fresh", quantity: "40 lb" },
+            {
+                name: "Mixed Vegetables",
+                form: "Fresh",
+                quantity: "40 lb",
+            },
         ],
         notes:
             "Tender pulled pork served with crispy roasted potatoes and steamed veggies.",
@@ -185,14 +377,27 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Hamburger Patties", form: "Fresh (ground beef)", quantity: "160 patties" },
-            { name: "Hot Dogs", form: "Packaged", quantity: "160 hot dogs" },
+            {
+                name: "Hamburger Patties",
+                form: "Fresh (ground beef)",
+                quantity: "160 patties",
+            },
+            {
+                name: "Hot Dogs",
+                form: "Packaged",
+                quantity: "160 hot dogs",
+            },
             { name: "Fries", form: "Frozen", quantity: "40 lb" },
-            { name: "Onion Rings", form: "Frozen", quantity: "40 servings" },
+            {
+                name: "Onion Rings",
+                form: "Frozen",
+                quantity: "40 servings",
+            },
         ],
         notes:
             "A fun mix of burgers, hot dogs, fries, and onion rings perfect for a crowd.",
-        vegan: "Plant‐based patties (6 patties) and vegan hot dogs (6 pieces)",
+        vegan:
+            "Plant‐based patties (6 patties) and vegan hot dogs (6 pieces)",
         vegetarian: "Veggie patties (6 patties)",
         glutenFree: "",
         recommendedSides: "Pickles",
@@ -208,9 +413,21 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Ground Beef", form: "Fresh (ground)", quantity: "40 lb" },
-            { name: "Sloppy Joe Sauce", form: "Canned", quantity: "40 cups" },
-            { name: "Fresh Buns", form: "Bakery", quantity: "160 buns" },
+            {
+                name: "Ground Beef",
+                form: "Fresh (ground)",
+                quantity: "40 lb",
+            },
+            {
+                name: "Sloppy Joe Sauce",
+                form: "Canned",
+                quantity: "40 cups",
+            },
+            {
+                name: "Fresh Buns",
+                form: "Bakery",
+                quantity: "160 buns",
+            },
         ],
         notes: "Messy and delicious sloppy joes that are easy to serve.",
         vegan: "Textured vegetable protein (1 lb)",
@@ -231,11 +448,16 @@ const originalRecipes = [
         ingredients: [
             { name: "Veggie Dogs", form: "Packaged", quantity: "160 veggie dogs" },
             { name: "Chilli", form: "Canned", quantity: "40 cups" },
-            { name: "Cheddar Cheese", form: "Pre‐shredded", quantity: "40 cups" },
+            {
+                name: "Cheddar Cheese",
+                form: "Pre‐shredded",
+                quantity: "40 cups",
+            },
         ],
         notes:
             "A twist on hot dogs featuring a spicy chilli and melted cheese.",
-        vegan: "Soy‐based veggie dogs (6 pieces) and vegan cheese (1 cup)",
+        vegan:
+            "Soy‐based veggie dogs (6 pieces) and vegan cheese (1 cup)",
         vegetarian: "Already vegetarian",
         glutenFree: "",
         recommendedSides: "Fries",
@@ -251,9 +473,17 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Beef", form: "Fresh (sliced, marinated)", quantity: "40 lb" },
+            {
+                name: "Beef",
+                form: "Fresh (sliced, marinated)",
+                quantity: "40 lb",
+            },
             { name: "Carrot", form: "Fresh", quantity: "40 cups" },
-            { name: "Rice", form: "Dry (packaged)", quantity: "80 cups" },
+            {
+                name: "Rice",
+                form: "Dry (packaged)",
+                quantity: "80 cups",
+            },
             { name: "Bok Choi", form: "Fresh", quantity: "40 bunches" },
         ],
         notes:
@@ -275,10 +505,18 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Ground Pork", form: "Fresh (raw)", quantity: "40 lb" },
+            {
+                name: "Ground Pork",
+                form: "Fresh (raw)",
+                quantity: "40 lb",
+            },
             { name: "Cabbage", form: "Fresh", quantity: "80 cups" },
             { name: "Carrot", form: "Fresh", quantity: "40 cups" },
-            { name: "Rice", form: "Dry (packaged)", quantity: "80 cups" },
+            {
+                name: "Rice",
+                form: "Dry (packaged)",
+                quantity: "80 cups",
+            },
         ],
         notes: "A sweet and salty pork dish served over rice.",
         vegan: "Soy protein (1 lb)",
@@ -291,16 +529,25 @@ const originalRecipes = [
         createdBy: "",
     },
     {
-        recipeName: "Chicken Chow Mein w/ carrot, beansprout, something else green?",
+        recipeName:
+            "Chicken Chow Mein w/ carrot, beansprout, something else green?",
         difficulty: 2,
         cost: 3,
         month: 6,
         meal: "dinner",
         ingredients: [
             { name: "Chicken", form: "Fresh (sliced)", quantity: "40 lb" },
-            { name: "Chow Mein Noodles", form: "Dry (packaged)", quantity: "20 lb" },
+            {
+                name: "Chow Mein Noodles",
+                form: "Dry (packaged)",
+                quantity: "20 lb",
+            },
             { name: "Carrot", form: "Fresh", quantity: "40 carrots" },
-            { name: "Beansprouts", form: "Fresh", quantity: "80 cups" },
+            {
+                name: "Beansprouts",
+                form: "Fresh",
+                quantity: "80 cups",
+            },
             { name: "Green Pepper", form: "Fresh", quantity: "40 peppers" },
         ],
         notes:
@@ -323,7 +570,11 @@ const originalRecipes = [
         ingredients: [
             { name: "Beef", form: "Fresh (sliced)", quantity: "40 lb" },
             { name: "Broccoli", form: "Fresh", quantity: "80 cups" },
-            { name: "Egg Fried Rice", form: "Prepared", quantity: "120 cups" },
+            {
+                name: "Egg Fried Rice",
+                form: "Prepared",
+                quantity: "120 cups",
+            },
         ],
         notes:
             "A classic combination of beef, broccoli, and savory fried rice.",
@@ -343,9 +594,17 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Ground Pork", form: "Fresh (seasoned)", quantity: "20 lb" },
+            {
+                name: "Ground Pork",
+                form: "Fresh (seasoned)",
+                quantity: "20 lb",
+            },
             { name: "Cabbage", form: "Fresh", quantity: "40 cups" },
-            { name: "Dumpling Wrappers", form: "Dry (packaged)", quantity: "960 pieces" },
+            {
+                name: "Dumpling Wrappers",
+                form: "Dry (packaged)",
+                quantity: "960 pieces",
+            },
         ],
         notes:
             "Steamed dumplings filled with a savory pork mixture.",
@@ -367,7 +626,11 @@ const originalRecipes = [
         ingredients: [
             { name: "Chicken", form: "Fresh (diced)", quantity: "40 lb" },
             { name: "Broccoli", form: "Fresh", quantity: "80 cups" },
-            { name: "Scalloped Potatoes", form: "Prepared", quantity: "120 cups" },
+            {
+                name: "Scalloped Potatoes",
+                form: "Prepared",
+                quantity: "120 cups",
+            },
         ],
         notes:
             "A hearty dish combining tender chicken, broccoli, and cheesy potatoes.",
@@ -387,9 +650,17 @@ const originalRecipes = [
         month: 5,
         meal: "dinner",
         ingredients: [
-            { name: "Ground Beef", form: "Fresh (ground)", quantity: "40 lb" },
+            {
+                name: "Ground Beef",
+                form: "Fresh (ground)",
+                quantity: "40 lb",
+            },
             { name: "Chili", form: "Canned", quantity: "80 cups" },
-            { name: "Baked Potatoes", form: "Fresh", quantity: "160 potatoes" },
+            {
+                name: "Baked Potatoes",
+                form: "Fresh",
+                quantity: "160 potatoes",
+            },
         ],
         notes:
             "A spicy and filling chili served with loaded baked potatoes.",
@@ -409,14 +680,31 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Macaroni", form: "Dry (packaged)", quantity: "40 lb" },
-            { name: "Cheddar Cheese", form: "Pre‐shredded", quantity: "80 cups" },
-            { name: "Sliced Hot Dog", form: "Packaged", quantity: "160 pieces" },
-            { name: "Cous Cous", form: "Dry (packaged)", quantity: "40 cups" },
+            {
+                name: "Macaroni",
+                form: "Dry (packaged)",
+                quantity: "40 lb",
+            },
+            {
+                name: "Cheddar Cheese",
+                form: "Pre‐shredded",
+                quantity: "80 cups",
+            },
+            {
+                name: "Sliced Hot Dog",
+                form: "Packaged",
+                quantity: "160 pieces",
+            },
+            {
+                name: "Cous Cous",
+                form: "Dry (packaged)",
+                quantity: "40 cups",
+            },
         ],
         notes:
             "A fun twist on mac & cheese with hot dogs and a refreshing cous cous salad.",
-        vegan: "Vegan sausages (6 pieces) and vegan cheese (3 cups)",
+        vegan:
+            "Vegan sausages (6 pieces) and vegan cheese (3 cups)",
         vegetarian: "Vegetable medley (1 lb)",
         glutenFree:
             "Gluten‑free macaroni (1 lb) and gluten‑free cous cous (1 cup)",
@@ -433,9 +721,21 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Ground Lamb", form: "Fresh (ground)", quantity: "40 lb" },
-            { name: "Mixed Vegetables", form: "Fresh (diced)", quantity: "80 cups" },
-            { name: "Mashed Potatoes", form: "Prepared", quantity: "120 cups" },
+            {
+                name: "Ground Lamb",
+                form: "Fresh (ground)",
+                quantity: "40 lb",
+            },
+            {
+                name: "Mixed Vegetables",
+                form: "Fresh (diced)",
+                quantity: "80 cups",
+            },
+            {
+                name: "Mashed Potatoes",
+                form: "Prepared",
+                quantity: "120 cups",
+            },
         ],
         notes:
             "A comforting shepherd's pie with a savory lamb filling and mashed potato topping.",
@@ -456,9 +756,21 @@ const originalRecipes = [
         month: 5,
         meal: "dinner",
         ingredients: [
-            { name: "Chicken Noodle Soup", form: "Prepared", quantity: "80 cups" },
-            { name: "Grilled Cheese", form: "Prepared", quantity: "80 sandwiches" },
-            { name: "Bacon Sandwiches", form: "Prepared", quantity: "80 sandwiches" },
+            {
+                name: "Chicken Noodle Soup",
+                form: "Prepared",
+                quantity: "80 cups",
+            },
+            {
+                name: "Grilled Cheese",
+                form: "Prepared",
+                quantity: "80 sandwiches",
+            },
+            {
+                name: "Bacon Sandwiches",
+                form: "Prepared",
+                quantity: "80 sandwiches",
+            },
         ],
         notes:
             "Comforting soup with grilled cheese and bacon sandwiches served in disposable bowls.",
@@ -481,13 +793,26 @@ const originalRecipes = [
         month: 7,
         meal: "dinner",
         ingredients: [
-            { name: "BBQ Chicken Drumsticks", form: "Fresh", quantity: "240 pieces" },
-            { name: "Corn on the Cob", form: "Fresh", quantity: "160 cobs" },
-            { name: "Potato Salad", form: "Prepared", quantity: "80 cups" },
+            {
+                name: "BBQ Chicken Drumsticks",
+                form: "Fresh",
+                quantity: "240 pieces",
+            },
+            {
+                name: "Corn on the Cob",
+                form: "Fresh",
+                quantity: "160 cobs",
+            },
+            {
+                name: "Potato Salad",
+                form: "Prepared",
+                quantity: "80 cups",
+            },
         ],
         notes:
             "Smoky BBQ chicken paired with corn and a creamy potato salad.",
-        vegan: "BBQ jackfruit (9 pieces) and vegan potato salad (3 cups)",
+        vegan:
+            "BBQ jackfruit (9 pieces) and vegan potato salad (3 cups)",
         vegetarian: "Grilled tofu (9 pieces)",
         glutenFree: "",
         recommendedSides: "Coleslaw",
@@ -503,10 +828,22 @@ const originalRecipes = [
         month: 7,
         meal: "dinner",
         ingredients: [
-            { name: "Taco Shells", form: "Hard (packaged)", quantity: "320 shells" },
-            { name: "Seasoned Beef", form: "Fresh (ground)", quantity: "40 lb" },
+            {
+                name: "Taco Shells",
+                form: "Hard (packaged)",
+                quantity: "320 shells",
+            },
+            {
+                name: "Seasoned Beef",
+                form: "Fresh (ground)",
+                quantity: "40 lb",
+            },
             { name: "Lettuce", form: "Fresh", quantity: "40 cups" },
-            { name: "Cheddar Cheese", form: "Pre‐shredded", quantity: "40 cups" },
+            {
+                name: "Cheddar Cheese",
+                form: "Pre‐shredded",
+                quantity: "40 cups",
+            },
             { name: "Tomato", form: "Fresh", quantity: "40 tomatoes" },
         ],
         notes:
@@ -527,10 +864,26 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Flour Tortillas", form: "Packaged", quantity: "240 tortillas" },
-            { name: "Refried Beans", form: "Canned", quantity: "40 cups" },
-            { name: "Rice", form: "Dry (packaged)", quantity: "80 cups" },
-            { name: "Cheese", form: "Pre‐shredded", quantity: "40 cups" },
+            {
+                name: "Flour Tortillas",
+                form: "Packaged",
+                quantity: "240 tortillas",
+            },
+            {
+                name: "Refried Beans",
+                form: "Canned",
+                quantity: "40 cups",
+            },
+            {
+                name: "Rice",
+                form: "Dry (packaged)",
+                quantity: "80 cups",
+            },
+            {
+                name: "Cheese",
+                form: "Pre‐shredded",
+                quantity: "40 cups",
+            },
             { name: "Salsa", form: "Fresh", quantity: "40 cups" },
         ],
         notes:
@@ -551,10 +904,22 @@ const originalRecipes = [
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Chicken or Beef", form: "Fresh (sliced)", quantity: "40 lb" },
-            { name: "Bell Peppers", form: "Fresh", quantity: "80 peppers" },
+            {
+                name: "Chicken or Beef",
+                form: "Fresh (sliced)",
+                quantity: "40 lb",
+            },
+            {
+                name: "Bell Peppers",
+                form: "Fresh",
+                quantity: "80 peppers",
+            },
             { name: "Onions", form: "Fresh", quantity: "40 onions" },
-            { name: "Fajita Seasoning", form: "Packaged", quantity: "to taste" },
+            {
+                name: "Fajita Seasoning",
+                form: "Packaged",
+                quantity: "to taste",
+            },
             { name: "Lime", form: "Fresh", quantity: "40 limes" },
         ],
         notes:
@@ -577,12 +942,21 @@ const originalRecipes = [
         ingredients: [
             { name: "Tortillas", form: "Packaged", quantity: "160 tortillas" },
             { name: "Cheese", form: "Melted", quantity: "80 cups" },
-            { name: "Chicken", form: "Fresh (diced)", quantity: "40 lb" },
-            { name: "Mexican Salad", form: "Fresh", quantity: "40 bowls" },
+            {
+                name: "Chicken",
+                form: "Fresh (diced)",
+                quantity: "40 lb",
+            },
+            {
+                name: "Mexican Salad",
+                form: "Fresh",
+                quantity: "40 bowls",
+            },
         ],
         notes:
             "Cheesy quesadillas paired with a zesty Mexican salad.",
-        vegan: "Seasoned tofu (1 lb) and vegan cheese (3 cups)",
+        vegan:
+            "Seasoned tofu (1 lb) and vegan cheese (3 cups)",
         vegetarian: "Extra vegetables (1 lb)",
         glutenFree: "Gluten‑free tortillas (6 tortillas)",
         recommendedSides: "Sour Cream",
@@ -600,10 +974,22 @@ const originalRecipes = [
         meal: "dinner",
         ingredients: [
             { name: "Chicken", form: "Fresh (diced)", quantity: "40 lb" },
-            { name: "Tomato", form: "Canned (pureed)", quantity: "80 cups" },
-            { name: "Onion", form: "Fresh (chopped)", quantity: "40 cups" },
+            {
+                name: "Tomato",
+                form: "Canned (pureed)",
+                quantity: "80 cups",
+            },
+            {
+                name: "Onion",
+                form: "Fresh (chopped)",
+                quantity: "40 cups",
+            },
             { name: "Spinach", form: "Fresh", quantity: "120 cups" },
-            { name: "Curry Spices", form: "Mixed (packaged)", quantity: "80 tbsp" },
+            {
+                name: "Curry Spices",
+                form: "Mixed (packaged)",
+                quantity: "80 tbsp",
+            },
         ],
         notes:
             "A fragrant chicken curry with a rich, spicy tomato base.",
@@ -623,15 +1009,28 @@ const originalRecipes = [
         month: 7,
         meal: "dinner",
         ingredients: [
-            { name: "Chicken", form: "Fresh (marinated)", quantity: "40 lb" },
+            {
+                name: "Chicken",
+                form: "Fresh (marinated)",
+                quantity: "40 lb",
+            },
             { name: "Pita Bread", form: "Packaged", quantity: "160 pitas" },
-            { name: "Tzatziki Sauce", form: "Prepared", quantity: "40 cups" },
+            {
+                name: "Tzatziki Sauce",
+                form: "Prepared",
+                quantity: "40 cups",
+            },
             { name: "Lettuce", form: "Fresh", quantity: "40 cups" },
-            { name: "Tomato", form: "Fresh (sliced)", quantity: "40 tomatoes" },
+            {
+                name: "Tomato",
+                form: "Fresh (sliced)",
+                quantity: "40 tomatoes",
+            },
         ],
         notes:
             "Greek‐style wraps bursting with flavor and fresh veggies.",
-        vegan: "Marinated portobello mushrooms (1 lb) and vegan tzatziki (1 cup)",
+        vegan:
+            "Marinated portobello mushrooms (1 lb) and vegan tzatziki (1 cup)",
         vegetarian: "Grilled vegetables (1 lb)",
         glutenFree: "Gluten‑free pita (6 pitas)",
         recommendedSides: "",
@@ -641,19 +1040,33 @@ const originalRecipes = [
         createdBy: "",
     },
     {
-        recipeName: "Tandoori Chicken w/ Curried Lentils & Roasted Vegetables",
+        recipeName:
+            "Tandoori Chicken w/ Curried Lentils & Roasted Vegetables",
         difficulty: 3,
         cost: 3,
         month: 6,
         meal: "dinner",
         ingredients: [
-            { name: "Tandoori Chicken", form: "Fresh (spiced)", quantity: "40 lb" },
-            { name: "Curried Lentils", form: "Prepared", quantity: "80 cups" },
-            { name: "Roasted Vegetables", form: "Fresh", quantity: "80 cups" },
+            {
+                name: "Tandoori Chicken",
+                form: "Fresh (spiced)",
+                quantity: "40 lb",
+            },
+            {
+                name: "Curried Lentils",
+                form: "Prepared",
+                quantity: "80 cups",
+            },
+            {
+                name: "Roasted Vegetables",
+                form: "Fresh",
+                quantity: "80 cups",
+            },
         ],
         notes:
             "An Indian‐inspired dish with spiced chicken and aromatic lentils.",
-        vegan: "BBQ tofu (1 lb) and curried chickpeas (3 cups)",
+        vegan:
+            "BBQ tofu (1 lb) and curried chickpeas (3 cups)",
         vegetarian: "Extra lentils and vegetables (1 lb)",
         glutenFree: "",
         recommendedSides: "Naan",
@@ -714,16 +1127,27 @@ const RecipeList = ({
     setIsRecipesListVisible,
     handleComponentChange,
 }) => {
-    
     const [role, setRole] = useState(null);
     const [recipes, setRecipes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [firebaseError, setFirebaseError] = useState(null);
     const [mealFilter, setMealFilter] = useState("dinner");
 
-    const [selectedDifficulties, setSelectedDifficulties] = useState([1, 2, 3, 4, 5]);
+    const [selectedDifficulties, setSelectedDifficulties] = useState([
+        1,
+        2,
+        3,
+        4,
+        5,
+    ]);
     const [selectedMonths, setSelectedMonths] = useState([5, 6, 7]);
-    const [selectedExcitement, setSelectedExcitement] = useState([1, 2, 3, 4, 5]);
+    const [selectedExcitement, setSelectedExcitement] = useState([
+        1,
+        2,
+        3,
+        4,
+        5,
+    ]);
     const [showFilterModal, setShowFilterModal] = useState(false);
 
     const [showAddModal, setShowAddModal] = useState(false);
@@ -771,14 +1195,37 @@ const RecipeList = ({
 
     useEffect(() => {
         const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
-            setUser(currentUser);
+            // Assuming setUser is coming from props or higher up; if not, you might need to declare it.
+            // setUser(currentUser);
             if (currentUser) {
-                const userRef = ref(database, `users/${currentUser.uid}`);
-                const snapshot = await get(userRef);
-                if (snapshot.exists()) {
-                    setRole(snapshot.val().role);
+                const userRef = ref(database, `camps/${campID}/users/${currentUser.uid}`);
+                try {
+                    const snapshot = await get(userRef);
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        if (!userData.role) {
+                            alert("User data is missing the 'role' property.");
+                            console.error(
+                                "User data is missing the 'role' property:",
+                                userData
+                            );
+                            setRole(null);
+                        } else {
+                            setRole(userData.role);
+                        }
+                    } else {
+                        alert("User snapshot does not exist for the current user.");
+                        console.error("User snapshot does not exist for uid:", currentUser.uid);
+                        setRole(null);
+                    }
+                } catch (error) {
+                    alert("Error retrieving user data: " + error);
+                    console.error("Error retrieving user data:", error);
+                    setRole(null);
                 }
             } else {
+                alert("No current user logged in.");
+                console.error("No current user logged in.");
                 setRole(null);
             }
         });
@@ -857,7 +1304,8 @@ const RecipeList = ({
             (recipe.recommendedSides && recipe.recommendedSides.trim() !== "") ||
             (recipe.recommendedBread && recipe.recommendedBread.trim() !== "") ||
             (recipe.recommendedSalad && recipe.recommendedSalad.trim() !== "") ||
-            (recipe.recommendedDessert && recipe.recommendedDessert.trim() !== "")
+            (recipe.recommendedDessert &&
+                recipe.recommendedDessert.trim() !== "")
         );
     };
 
@@ -981,7 +1429,10 @@ const RecipeList = ({
             // Expanded details row
             let expandedContent = "";
             if (row.ingredients && row.ingredients.length > 0) {
-                expandedContent += `<strong>Ingredients:</strong><br/>${formatIngredients(row.ingredients).replace(/\n/g, "<br/>")}<br/>`;
+                expandedContent += `<strong>Ingredients:</strong><br/>${formatIngredients(
+                    row.ingredients
+                )
+                    .replace(/\n/g, "<br/>")}<br/>`;
             }
             if (row.notes && row.notes.trim() !== "") {
                 expandedContent += `<strong>Full Notes:</strong><br/>${row.notes}<br/>`;
@@ -1020,7 +1471,9 @@ const RecipeList = ({
             }
             if (expandedContent !== "") {
                 printWindow.document.write("<tr>");
-                printWindow.document.write(`<td colspan="5">${expandedContent}</td>`);
+                printWindow.document.write(
+                    `<td colspan="5">${expandedContent}</td>`
+                );
                 printWindow.document.write("</tr>");
             }
         });
@@ -1071,6 +1524,7 @@ const RecipeList = ({
             setNewIngredient({ name: "", form: "", quantity: "" });
         } catch (error) {
             alert("Error adding recipe: " + error);
+            console.error("Error adding recipe:", error);
         }
     };
 
@@ -1135,6 +1589,7 @@ const RecipeList = ({
             setEditedRecipe({});
         } catch (error) {
             alert("Error updating recipe: " + error);
+            console.error("Error updating recipe:", error);
         }
     };
 
@@ -1149,6 +1604,7 @@ const RecipeList = ({
                 await remove(ref(database, `/camps/${campID}/recipes/${id}`));
             } catch (error) {
                 alert("Error deleting recipe: " + error);
+                console.error("Error deleting recipe:", error);
             }
         }
     };
@@ -1195,7 +1651,9 @@ const RecipeList = ({
                             return sortConfig.direction === "ascending" ? 1 : -1;
                         return 0;
                     } else {
-                        return sortConfig.direction === "ascending" ? aValue - bValue : bValue - aValue;
+                        return sortConfig.direction === "ascending"
+                            ? aValue - bValue
+                            : bValue - aValue;
                     }
                 });
             }
@@ -1387,7 +1845,9 @@ const RecipeList = ({
                                             {editingRecipeId === row.id ? (
                                                 <Textarea
                                                     value={editedRecipe.notes}
-                                                    onChange={(e) => handleEditChange("notes", e.target.value)}
+                                                    onChange={(e) =>
+                                                        handleEditChange("notes", e.target.value)
+                                                    }
                                                 />
                                             ) : (
                                                 getShortNotes(row.notes)
@@ -1396,7 +1856,7 @@ const RecipeList = ({
                                         <td style={{ padding: "8px", minWidth: "100px" }}>
                                             {row.createdBy && usersMap[row.createdBy]
                                                 ? usersMap[row.createdBy].name
-                                                : ""}
+                                                : "Not entered"}
                                         </td>
                                         {role >= 5 && (
                                             <>
@@ -1451,8 +1911,17 @@ const RecipeList = ({
                                             className="expanded-row"
                                             style={{ borderBottom: "1px solid #eee" }}
                                         >
-                                            <td colSpan={totalColumns} style={{ textAlign: "left", padding: "16px" }}>
-                                                <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+                                            <td
+                                                colSpan={totalColumns}
+                                                style={{ textAlign: "left", padding: "16px" }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        flexWrap: "wrap",
+                                                        gap: "16px",
+                                                    }}
+                                                >
                                                     <div style={{ flex: "1 1 200px" }}>
                                                         <strong>Ingredients:</strong>
                                                         {editingRecipeId === row.id ? (
@@ -1475,27 +1944,41 @@ const RecipeList = ({
                                                                                         label="Name"
                                                                                         value={ing.name}
                                                                                         onChange={(e) =>
-                                                                                            handleInlineIngredientChange(index, "name", e.target.value)
+                                                                                            handleInlineIngredientChange(
+                                                                                                index,
+                                                                                                "name",
+                                                                                                e.target.value
+                                                                                            )
                                                                                         }
                                                                                     />
                                                                                     <TextInput
                                                                                         label="Form"
                                                                                         value={ing.form}
                                                                                         onChange={(e) =>
-                                                                                            handleInlineIngredientChange(index, "form", e.target.value)
+                                                                                            handleInlineIngredientChange(
+                                                                                                index,
+                                                                                                "form",
+                                                                                                e.target.value
+                                                                                            )
                                                                                         }
                                                                                     />
                                                                                     <TextInput
                                                                                         label="Qty"
                                                                                         value={ing.quantity}
                                                                                         onChange={(e) =>
-                                                                                            handleInlineIngredientChange(index, "quantity", e.target.value)
+                                                                                            handleInlineIngredientChange(
+                                                                                                index,
+                                                                                                "quantity",
+                                                                                                e.target.value
+                                                                                            )
                                                                                         }
                                                                                     />
                                                                                     <Button
                                                                                         variant="subtle"
                                                                                         size="xs"
-                                                                                        onClick={() => handleInlineDeleteIngredient(index)}
+                                                                                        onClick={() =>
+                                                                                            handleInlineDeleteIngredient(index)
+                                                                                        }
                                                                                         title="Delete ingredient"
                                                                                     >
                                                                                         <IconTrash size={16} />
@@ -1504,7 +1987,14 @@ const RecipeList = ({
                                                                             ))}
                                                                         </div>
                                                                     )}
-                                                                <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                                                                <div
+                                                                    style={{
+                                                                        marginTop: "8px",
+                                                                        display: "flex",
+                                                                        flexDirection: "column",
+                                                                        gap: "8px",
+                                                                    }}
+                                                                >
                                                                     <TextInput
                                                                         label="Name"
                                                                         value={inlineNewIngredient.name}
@@ -1535,7 +2025,10 @@ const RecipeList = ({
                                                                             })
                                                                         }
                                                                     />
-                                                                    <Button onClick={handleInlineAddIngredient} title="Add Ingredient">
+                                                                    <Button
+                                                                        onClick={handleInlineAddIngredient}
+                                                                        title="Add Ingredient"
+                                                                    >
                                                                         <IconPlus size={16} />
                                                                     </Button>
                                                                 </div>
@@ -1545,7 +2038,14 @@ const RecipeList = ({
                                                             row.ingredients.length > 0 && (
                                                                 <div>
                                                                     {row.ingredients.map((ing, idx) => (
-                                                                        <div key={idx} style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                                                                        <div
+                                                                            key={idx}
+                                                                            style={{
+                                                                                display: "flex",
+                                                                                alignItems: "center",
+                                                                                marginBottom: "4px",
+                                                                            }}
+                                                                        >
                                                                             <span style={{ flexGrow: 1 }}>
                                                                                 {ing.name}, {ing.form} ({ing.quantity})
                                                                             </span>
@@ -1560,7 +2060,9 @@ const RecipeList = ({
                                                         {editingRecipeId === row.id ? (
                                                             <Textarea
                                                                 value={editedRecipe.notes}
-                                                                onChange={(e) => handleEditChange("notes", e.target.value)}
+                                                                onChange={(e) =>
+                                                                    handleEditChange("notes", e.target.value)
+                                                                }
                                                             />
                                                         ) : (
                                                             row.notes && <p style={{ margin: "4px 0" }}>{row.notes}</p>
@@ -1578,17 +2080,23 @@ const RecipeList = ({
                                                                 <TextInput
                                                                     label="Vegetarian"
                                                                     value={editedRecipe.vegetarian}
-                                                                    onChange={(e) => handleEditChange("vegetarian", e.target.value)}
+                                                                    onChange={(e) =>
+                                                                        handleEditChange("vegetarian", e.target.value)
+                                                                    }
                                                                 />
                                                                 <TextInput
                                                                     label="Gluten Free"
                                                                     value={editedRecipe.glutenFree}
-                                                                    onChange={(e) => handleEditChange("glutenFree", e.target.value)}
+                                                                    onChange={(e) =>
+                                                                        handleEditChange("glutenFree", e.target.value)
+                                                                    }
                                                                 />
                                                                 <TextInput
                                                                     label="Other Dietary"
                                                                     value={editedRecipe.otherDietary}
-                                                                    onChange={(e) => handleEditChange("otherDietary", e.target.value)}
+                                                                    onChange={(e) =>
+                                                                        handleEditChange("otherDietary", e.target.value)
+                                                                    }
                                                                 />
                                                             </>
                                                         ) : (
@@ -1607,22 +2115,30 @@ const RecipeList = ({
                                                                 <TextInput
                                                                     label="Sides"
                                                                     value={editedRecipe.recommendedSides}
-                                                                    onChange={(e) => handleEditChange("recommendedSides", e.target.value)}
+                                                                    onChange={(e) =>
+                                                                        handleEditChange("recommendedSides", e.target.value)
+                                                                    }
                                                                 />
                                                                 <TextInput
                                                                     label="Bread"
                                                                     value={editedRecipe.recommendedBread}
-                                                                    onChange={(e) => handleEditChange("recommendedBread", e.target.value)}
+                                                                    onChange={(e) =>
+                                                                        handleEditChange("recommendedBread", e.target.value)
+                                                                    }
                                                                 />
                                                                 <TextInput
                                                                     label="Salad"
                                                                     value={editedRecipe.recommendedSalad}
-                                                                    onChange={(e) => handleEditChange("recommendedSalad", e.target.value)}
+                                                                    onChange={(e) =>
+                                                                        handleEditChange("recommendedSalad", e.target.value)
+                                                                    }
                                                                 />
                                                                 <TextInput
                                                                     label="Dessert"
                                                                     value={editedRecipe.recommendedDessert}
-                                                                    onChange={(e) => handleEditChange("recommendedDessert", e.target.value)}
+                                                                    onChange={(e) =>
+                                                                        handleEditChange("recommendedDessert", e.target.value)
+                                                                    }
                                                                 />
                                                             </>
                                                         ) : (
