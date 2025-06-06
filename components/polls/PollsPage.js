@@ -480,7 +480,7 @@ const PollsPage = ({ user, campID, userData }) => { // userData is still used fo
     return (
         <Container size="lg" style={{ marginTop: '2rem', marginBottom: '4rem' }}>
             <Title order={2} style={{ marginBottom: '1.5rem', textAlign: 'center', color: 'var(--mantine-color-blue-7)' }}>
-                Camp Polls for {userData?.assignedCamps?.[campID]?.campName || 'Your Camp'}
+                Camp Polls for {campID && userData?.assignedCamps?.[campID]?.campName || 'Your Camp'}
             </Title>
 
             {canUserCreatePoll() && (

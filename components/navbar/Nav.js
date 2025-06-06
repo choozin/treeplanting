@@ -1,21 +1,23 @@
+// components/navbar/Nav.js
+
 'use client';
 // Your provided imports - ensuring useRef and forwardRef are here
-import { useState, useEffect, useRef, forwardRef } from "react"; 
+import { useState, useEffect, useRef, forwardRef } from "react";
 import {
     registerUser,
     loginUser,
     logoutUser,
     auth,
-    database, 
+    database,
     onAuthStateChanged // This onAuthStateChanged is from firebase/firebase, not firebase/database
 } from "../../firebase/firebase";
 // Correctly alias the Firebase 'ref' function and ADD onValue import
-import { ref as firebaseDatabaseRef, get, onValue } from "firebase/database"; 
+import { ref as firebaseDatabaseRef, get, onValue } from "firebase/database";
 
 import Cookies from "js-cookie";
 
 // Original Tabler Icons imports
-import { IconBulb, IconCheckbox, IconPlus, IconSearch, IconUser, IconInfoCircle } from "@tabler/icons-react"; 
+import { IconBulb, IconCheckbox, IconPlus, IconSearch, IconUser, IconInfoCircle } from "@tabler/icons-react";
 import {
     Badge,
     Box,
@@ -58,11 +60,11 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
             } else {
                 userResult = await loginUser(email, password);
             }
-            
+
             if (userResult) {
-                setUser(userResult); 
+                setUser(userResult);
                 try {
-                    const userDataRef = firebaseDatabaseRef(database, `users/${userResult.uid}`); 
+                    const userDataRef = firebaseDatabaseRef(database, `users/${userResult.uid}`);
                     const snapshot = await get(userDataRef);
                     if (snapshot.exists()) {
                         setUserData(snapshot.val());
@@ -79,7 +81,7 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
                     Cookies.remove("rememberedEmail");
                 }
             } else {
-                 setError(isRegistering ? "Registration failed. Please try again." : "Login failed. Please check your credentials.");
+                setError(isRegistering ? "Registration failed. Please try again." : "Login failed. Please check your credentials.");
             }
         } catch (authError) {
             setError(authError.message);
@@ -87,14 +89,14 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
     };
 
     const handleLogout = async () => {
-        if (!window.confirm("Are you sure you want to logout?")) { 
+        if (!window.confirm("Are you sure you want to logout?")) {
             return;
         }
         await logoutUser();
         setUser(null);
         setUserData(null);
-        Cookies.remove("campID"); 
-        if (setNavIsOpen) setNavIsOpen(false); 
+        Cookies.remove("campID");
+        if (setNavIsOpen) setNavIsOpen(false);
     };
 
     if (user) {
@@ -127,7 +129,7 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
             style={{
                 position: "fixed", width: "100vw", height: "100vh", top: 0, left: 0,
                 background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column",
-                justifyContent: "center", alignItems: "center", zIndex: 2000 
+                justifyContent: "center", alignItems: "center", zIndex: 2000
             }}
         >
             <Paper shadow="xl" p="xl" radius="md" withBorder
@@ -149,7 +151,7 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
                         />
                     )}
                     <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "var(--mantine-color-dimmed)" }}>
-                        <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} style={{ marginRight: '4px' }}/>
+                        <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} style={{ marginRight: '4px' }} />
                         Remember me
                     </label>
                     <Button type="submit" fullWidth style={{ backgroundColor: "brown" }} size="md">
@@ -195,21 +197,21 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
                     fetchedCampsData = snapshot.val();
                     setCamps(fetchedCampsData);
                 } else {
-                    setErrorCamps("No assigned camps found in global user profile.");
+                    setErrorCamps("You have not been assigned to any camps yet. Please contact a camp admin.");
                 }
                 if (onCampsLoaded) onCampsLoaded(snapshot.exists() && Object.keys(fetchedCampsData).length > 0);
 
                 const storedCampID = Cookies.get("campID");
                 if (storedCampID && fetchedCampsData[storedCampID]) {
-                     if (selectedCampState !== storedCampID) {
+                    if (selectedCampState !== storedCampID) {
                         setSelectedCampState(storedCampID);
-                        if (campID !== storedCampID) { 
-                           onCampSelect(storedCampID);
+                        if (campID !== storedCampID) {
+                            onCampSelect(storedCampID);
                         }
                     }
-                } else if (!storedCampID && selectedCampState) { 
-                    setSelectedCampState(""); 
-                     if (campID !== "") { 
+                } else if (!storedCampID && selectedCampState) {
+                    setSelectedCampState("");
+                    if (campID !== "") {
                         onCampSelect("");
                     }
                 }
@@ -223,14 +225,14 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
     }, [user, onCampSelect, onCampsLoaded]);
 
     useEffect(() => {
-        if (user && user.uid && selectedCampState) { 
+        if (user && user.uid && selectedCampState) {
             const campUserRoleRef = firebaseDatabaseRef(database, `camps/${selectedCampState}/users/${user.uid}/role`);
             // Using onValue here as per your provided code
             const unsubscribe = onValue(campUserRoleRef, (snapshot) => {
                 if (snapshot.exists()) {
                     setCurrentCampRole(snapshot.val());
                 } else {
-                    setCurrentCampRole(globalUserData?.assignedCamps?.[selectedCampState]?.role || null); 
+                    setCurrentCampRole(globalUserData?.assignedCamps?.[selectedCampState]?.role || null);
                     console.log(`No specific role found for user ${user.uid} in camp ${selectedCampState} at /camps/${selectedCampState}/users/${user.uid}/role. Using global definition if available.`);
                 }
             }, (error) => {
@@ -239,26 +241,26 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
             });
             return () => unsubscribe();
         } else {
-            setCurrentCampRole(null); 
+            setCurrentCampRole(null);
         }
     }, [user, selectedCampState, globalUserData]);
 
     const handleCampChange = (e) => {
         const newCampID = e.target.value;
-        setSelectedCampState(newCampID); 
-        onCampSelect(newCampID); 
+        setSelectedCampState(newCampID);
+        onCampSelect(newCampID);
         if (newCampID) {
             Cookies.set("campID", newCampID, { expires: 30 });
         } else {
             Cookies.remove("campID");
         }
     };
-    
+
     const campEntries = Object.entries(camps);
 
     return (
-        <div 
-            ref={forwardedRef} 
+        <div
+            ref={forwardedRef}
             style={{ display: "flex", flexDirection: 'column', gap: "8px", width: '100%' }}
         >
             <select
@@ -280,13 +282,13 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
                     </option>
                 ))}
             </select>
-            {selectedCampState && ( 
+            {selectedCampState && (
                 <div style={{ fontSize: "14px", color: "var(--mantine-color-dimmed)" }}>
                     Camp Role: {currentCampRole !== null ? currentCampRole : (loadingCamps ? "Loading..." : "N/A")}
                 </div>
             )}
             {errorCamps && campEntries.length === 0 && !loadingCamps && (
-                 <Text c="red" size="xs" mt={4}>{errorCamps}</Text>
+                <Text c="red" size="xs" mt={4}>{errorCamps}</Text>
             )}
             {!loadingCamps && campEntries.length === 0 && !errorCamps && (
                 <Text size="xs" c="dimmed" mt={4}>No camps assigned to your profile.</Text>
@@ -299,36 +301,36 @@ CampSelector.displayName = 'CampSelector';
 export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, navIsOpen, setNavIsOpen, handleComponentChange }) {
     const [showCampGuide, setShowCampGuide] = useState(false);
     const [campsAvailableForGuide, setCampsAvailableForGuide] = useState(false);
-    const campSelectorWrapperRef = useRef(null); 
+    const campSelectorWrapperRef = useRef(null);
 
     useEffect(() => {
         const storedCampID = Cookies.get("campID");
         if (user && userData && navIsOpen && campsAvailableForGuide && !storedCampID && !campID) {
             const timer = setTimeout(() => {
-                if (campSelectorWrapperRef.current) { 
+                if (campSelectorWrapperRef.current) {
                     setShowCampGuide(true);
                 }
-            }, 150); 
+            }, 150);
             return () => clearTimeout(timer);
         } else {
             setShowCampGuide(false);
         }
-    }, [user, userData, navIsOpen, campsAvailableForGuide, campID]); 
+    }, [user, userData, navIsOpen, campsAvailableForGuide, campID]);
 
     useEffect(() => {
-        if (campID) { 
+        if (campID) {
             setShowCampGuide(false);
         }
     }, [campID]);
 
     // Renamed from handleCampsLoaded to avoid conflict if Nav itself had a onCampsLoaded
-    const handleCampsLoadedForGuide = (hasCamps) => { 
+    const handleCampsLoadedForGuide = (hasCamps) => {
         setCampsAvailableForGuide(hasCamps);
     };
 
     const handleCampSelectedAndCloseGuide = (selectedCampID) => {
-        setCampID(selectedCampID); 
-        setShowCampGuide(false);  
+        setCampID(selectedCampID);
+        setShowCampGuide(false);
     };
 
     // Added isFunctional property and ensured onClick calls handleComponentChange
@@ -336,14 +338,14 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
     const links = [
         { icon: IconBulb, label: "Messages", notifications: 3, onClick: () => { handleComponentChange('messages'); setNavIsOpen(false); }, section: "messages", isFunctional: false },
         { icon: IconCheckbox, label: "Tasks", notifications: 4, onClick: () => { handleComponentChange('tasks'); setNavIsOpen(false); }, section: "tasks", isFunctional: false },
-        { icon: IconUser, label: "Calendar", onClick: () => { handleComponentChange('calendar'); setNavIsOpen(false); }, section: "calendar", isFunctional: false},
+        { icon: IconUser, label: "Calendar", onClick: () => { handleComponentChange('calendar'); setNavIsOpen(false); }, section: "calendar", isFunctional: true }, // Calendar is functional even without campID
     ];
 
     const collections = [
         { emoji: "👍", label: "Feedback", onClick: () => { handleComponentChange('feedback'); setNavIsOpen(false); }, section: "feedback", isFunctional: false },
-        { emoji: "📊", label: "Polls", onClick: () => { handleComponentChange('polls'); setNavIsOpen(false); }, section: "polls", isFunctional: true }, 
+        { emoji: "📊", label: "Polls", onClick: () => { handleComponentChange('polls'); setNavIsOpen(false); }, section: "polls", isFunctional: true },
         { emoji: "📦", label: "Inventory", onClick: () => { handleComponentChange('inventory'); setNavIsOpen(false); }, section: "inventory", isFunctional: false },
-        { emoji: "🍲", label: "Recipes", onClick: () => { handleComponentChange('recipes'); setNavIsOpen(false); }, section: "recipes", isFunctional: false},
+        { emoji: "🍲", label: "Recipes", onClick: () => { handleComponentChange('recipes'); setNavIsOpen(false); }, section: "recipes", isFunctional: true }, // Set to true
         { emoji: "🛒", label: "Orders", onClick: () => { handleComponentChange('orders'); setNavIsOpen(false); }, section: "orders", isFunctional: false },
         { emoji: "🚚", label: "Deliveries", onClick: () => { handleComponentChange('deliveries'); setNavIsOpen(false); }, section: "deliveries", isFunctional: false },
         { emoji: "💸", label: "Budget", onClick: () => { handleComponentChange('budget'); setNavIsOpen(false); }, section: "budget", isFunctional: false },
@@ -357,13 +359,14 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
     // Common styling and onClick logic for nav items
     const renderNavItem = (item, isCollectionLink = false) => {
         const itemBaseStyle = {
-            opacity: showCampGuide ? 0.3 : 1, 
+            opacity: showCampGuide ? 0.3 : 1,
             transition: 'opacity 0.3s ease',
         };
-        
+
         const functionalStyle = {
             ...itemBaseStyle,
-            opacity: item.isFunctional ? itemBaseStyle.opacity : Math.min(itemBaseStyle.opacity, 0.5), 
+            // Only disable pointer events if showCampGuide is true AND the item is NOT functional
+            opacity: item.isFunctional ? itemBaseStyle.opacity : Math.min(itemBaseStyle.opacity, 0.5),
             cursor: item.isFunctional ? 'pointer' : 'not-allowed',
         };
 
@@ -372,7 +375,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
             if (item.isFunctional && item.onClick) {
                 item.onClick(); // This now correctly calls the onClick which includes setNavIsOpen(false)
             } else if (!item.isFunctional) {
-                console.log(`${item.label} is coming soon!`); 
+                console.log(`${item.label} is coming soon!`);
             }
         };
 
@@ -398,9 +401,9 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         if (!item.isFunctional) {
             return (
                 <Tooltip label="Coming soon!" key={item.label} position="right" withArrow openDelay={300} withinPortal>
-                     <div style={{ display: 'block', cursor: 'not-allowed' }} 
-                        onClick={(e) => { if (!item.isFunctional) e.stopPropagation(); }} 
-                     >{content}</div>
+                    <div style={{ display: 'block', cursor: 'not-allowed' }}
+                        onClick={(e) => { if (!item.isFunctional) e.stopPropagation(); }}
+                    >{content}</div>
                 </Tooltip>
             );
         }
@@ -409,30 +412,30 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
 
     const mainLinks = links.map(link => <div key={link.label}>{renderNavItem(link)}</div>);
     const collectionLinks = collections.map(collection => <div key={collection.label}>{renderNavItem(collection, true)}</div>);
-    
+
     const handleOverlayClickForNav = () => {
-        if (!showCampGuide) { 
+        if (!showCampGuide) {
             setNavIsOpen(false);
         }
     };
 
     return (
         <>
-            {navIsOpen && ( 
+            {navIsOpen && (
                 <Overlay
                     color="#000"
-                    opacity={showCampGuide ? 0.85 : 0.6} 
-                    zIndex={1000} 
-                    onClick={handleOverlayClickForNav} 
+                    opacity={showCampGuide ? 0.85 : 0.6}
+                    zIndex={1000}
+                    onClick={handleOverlayClickForNav}
                     style={{ position: 'fixed' }}
                 />
             )}
-            
+
             {!navIsOpen && (
                 <Button
                     onClick={() => setNavIsOpen(true)}
                     style={{
-                        position: "fixed", top: "16px", right: "16px", zIndex: 1000, 
+                        position: "fixed", top: "16px", right: "16px", zIndex: 1000,
                         padding: "10px 15px", backgroundColor: "var(--mantine-color-blue-6, #228BE6)",
                         color: "#fff", border: "none", borderRadius: "var(--mantine-radius-md, 4px)",
                         cursor: "pointer", boxShadow: "var(--mantine-shadow-sm)"
@@ -444,18 +447,18 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
             )}
 
             <nav
-                className={classes.navbar} 
+                className={classes.navbar}
                 style={{
-                    position: "fixed", top: 0, left: navIsOpen ? 0 : "-310px", 
-                    zIndex: 1001, height: "100%", width: "300px", 
+                    position: "fixed", top: 0, left: navIsOpen ? 0 : "-310px",
+                    zIndex: 1001, height: "100%", width: "300px",
                     background: "var(--mantine-color-body)", overflowY: "auto",
                     padding: "var(--mantine-spacing-md)", paddingTop: "var(--mantine-spacing-sm)",
                     display: "flex", flexDirection: "column",
                     transition: "left 0.3s ease-in-out", boxShadow: "2px 0 10px rgba(0,0,0,0.1)"
                 }}
             >
-                {!user && navIsOpen ? ( 
-                     <div className={classes.section} style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                {!user && navIsOpen ? (
+                    <div className={classes.section} style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <SelfRegistrationAndLogin
                             user={user} setUser={setUser} userData={userData} setUserData={setUserData}
                             setNavIsOpen={setNavIsOpen}
@@ -464,7 +467,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                             Cancel
                         </Button>
                     </div>
-                ) : user ? ( 
+                ) : user ? (
                     <>
                         <div className={classes.section}>
                             <SelfRegistrationAndLogin
@@ -472,12 +475,12 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                                 setNavIsOpen={setNavIsOpen}
                             />
                         </div>
-                        
-                        <div 
-                            className={classes.section} 
-                            ref={campSelectorWrapperRef} 
+
+                        <div
+                            className={classes.section}
+                            ref={campSelectorWrapperRef}
                             style={{
-                                position: 'relative', zIndex: showCampGuide ? 1003 : 'auto', 
+                                position: 'relative', zIndex: showCampGuide ? 1003 : 'auto',
                                 padding: showCampGuide ? 'var(--mantine-spacing-xs)' : undefined,
                                 marginLeft: showCampGuide ? `calc(var(--mantine-spacing-md) * -1 + var(--mantine-spacing-xs))` : undefined,
                                 marginRight: showCampGuide ? `calc(var(--mantine-spacing-md) * -1 + var(--mantine-spacing-xs))` : undefined,
@@ -490,20 +493,20 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                         >
                             <CampSelector
                                 user={user}
-                                userData={userData} 
-                                campID={campID} 
-                                onCampSelect={handleCampSelectedAndCloseGuide} 
-                                onCampsLoaded={handleCampsLoadedForGuide} 
+                                userData={userData}
+                                campID={campID}
+                                onCampSelect={handleCampSelectedAndCloseGuide}
+                                onCampsLoaded={handleCampsLoadedForGuide}
                             />
                         </div>
                         {showCampGuide && campSelectorWrapperRef.current && (
                             <Popover
                                 opened={showCampGuide}
-                                target={campSelectorWrapperRef.current} 
-                                width={280} position="right" withArrow shadow="xl" zIndex={1004} 
-                                closeOnClickOutside={false} trapFocus={false} 
+                                target={campSelectorWrapperRef.current}
+                                width={280} position="right" withArrow shadow="xl" zIndex={1004}
+                                closeOnClickOutside={false} trapFocus={false}
                                 transitionProps={{ transition: 'pop-top-right', duration: 200 }}
-                                styles={{ dropdown: { pointerEvents: 'auto' } }} 
+                                styles={{ dropdown: { pointerEvents: 'auto' } }}
                             >
                                 <Popover.Dropdown>
                                     <Paper p="md" radius="md">
@@ -527,23 +530,34 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
 
                         <TextInput
                             placeholder="Search" size="xs" leftSection={<IconSearch size={12} stroke={1.5} />}
-                            styles={{ section: { pointerEvents: "none" }, wrapper: { opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease'}}}
+                            styles={{ section: { pointerEvents: "none" }, wrapper: { opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto' } }}
                             mb="sm"
                         />
                         <div className={classes.section} style={{ opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
                             <div className={classes.mainLinks}>{mainLinks}</div>
                         </div>
-                        <div className={classes.section} style={{ opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
-                            <Group className={classes.collectionsHeader} justify="space-between">
-                                <Text size="xs" fw={500} c="dimmed">Tools & Data</Text>
-                            </Group>
-                            <div className={classes.collections}>{collectionLinks}</div>
-                        </div>
-                         <div className={classes.section} style={{ marginTop: "auto", paddingTop: "var(--mantine-spacing-md)", opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
+
+                        {/* CONDITIONAL RENDERING OF "Tools & Data" SECTION */}
+                        {campID ? ( // Only render if a camp is selected
+                            <div className={classes.section} style={{ opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
+                                <Group className={classes.collectionsHeader} justify="space-between">
+                                    <Text size="xs" fw={500} c="dimmed">Camp Tools {campID}</Text>
+                                </Group>
+                                <div className={classes.collections}>{collectionLinks}</div>
+                            </div>
+                        ) : (
+                            <div className={classes.section} style={{ padding: 'var(--mantine-spacing-md)', textAlign: 'center', backgroundColor: 'var(--mantine-color-gray-0)', borderRadius: 'var(--mantine-radius-md)' }}>
+                                <Text size="sm" c="dimmed" style={{ lineHeight: 1.5 }}>
+                                    You must select a camp to use the camp-specific tools and data.
+                                </Text>
+                            </div>
+                        )}
+
+                        <div className={classes.section} style={{ marginTop: "auto", paddingTop: "var(--mantine-spacing-md)", opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
                             <Button fullWidth onClick={() => setNavIsOpen(false)} size="md">Close Menu</Button>
                         </div>
                     </>
-                ) : null } 
+                ) : null}
             </nav>
         </>
     );

@@ -17,7 +17,7 @@ const CampSpecificAnnouncement = ({ user, campID, isVisible, onClose }) => {
     if (user && campID) {
       // --- START OF HARDCODED SECTION TO BE REPLACED ---
       if (campID === "scooter") {
-        setMessage("Please check out the 'Polls' section of this app (found in the nav) to participate in polls asking for Breakfast/Dinner meal requests/preferences, and event ideas for nights off.");
+        setMessage("Please check out the 'Polls' section of this app (found in the nav) to participate in polls asking for Breakfast/Dinner meal requests, or to suggest ideas for night off events. If you want a new poll created, Crew Bosses (or other Management folk) are able to create new polls. You can also submit additional options for existing polls - but these must be approved via a crew boss/management account before they'll appear on the poll.");
         setShouldRenderContent(true); // Internal logic says content is available
       } else {
         // For other camps, no message is shown in this hardcoded version

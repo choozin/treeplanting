@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { auth, database } from '../../firebase/firebase';
-import { ref, get, update } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 
 const MyAccount = ({ user, setUserData }) => {
     const [fullName, setFullName] = useState('');

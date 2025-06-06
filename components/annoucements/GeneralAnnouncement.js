@@ -10,9 +10,9 @@ const GeneralAnnouncement = ({ isVisible, onClose }) => {
 
   // TODO: In the future, this message could potentially be fetched from a general announcements section in Firebase.
   const announcementParagraphs = [
-    "Thanks for trying this app. It's currently in very early development stages, and there are many features that aren't yet working.",
-    "You'll likely encounter the occasional bug, and when you do it would be greatly appreciated if you could let Cam know about it. Thank you in advance.",
-    "Also, for anyone wondering, passwords are encrypted using Google's proprietary authentication software, and all login security and authentication happens externally from this app - so your data is protected and completely unaccessable to me or anyone else who views the source code for the app."
+    "Thanks for trying this app. It's currently in very early development stages, but I hope you'll find it useful. I'll be adding features throughout the season. If you have any ideas you'd like to suggest, talk direclty to Cam or use the 'Feedback' section, found in the nav menu.",
+    "You'll likely encounter the occasional bug, and if so it would be greatly appreciated if you could let Cam know about it. Maybe take a screenshot too? Thank you in advance!",
+    "Also, for anyone wondering, passwords are encrypted using Google's proprietary authentication software, and all login security and authentication happens externally from this app - so your password is protected and completely inaccessable to me or anyone else who views the source code for the app. That being said, you can use a non-secure password if you'd like since only our camp will be using this app for now and no one will be trying to hack you - most likely. If you'd like to view the source code yourself or see how the security works, ask any time!"
   ];
 
   return (

@@ -73,6 +73,12 @@ export default function HomePage() {
         break;
       case 'polls':
         setIsPollsVisible(true); break;
+      case 'myAccount': // Add this case
+        setIsMyAccountVisible(true);
+        break;
+      case 'birthdays': // Add this case
+        setIsBirthdaysVisible(true);
+        break;
       // Add cases for other components if needed
       // case 'welcome':
       //   setIsWelcomeVisible(true);
@@ -156,9 +162,9 @@ export default function HomePage() {
         )}
 
         {isMyAccountVisible && <MyAccount user={user} setUserData={setUserData} />} {/* Render MyAccount */}
-        
+
         {isBirthdaysVisible && <Birthdays />} {/* Render Birthdays */}
-        
+
         {isUserManagementVisible && user && userData && userData.role >= 8 && ( // Example: Show UserManagement if role is high enough
           <UserManagement
             currentUser={user} // Prop name as expected by UserManagement
