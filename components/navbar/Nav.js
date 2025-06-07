@@ -1,7 +1,4 @@
-// components/navbar/Nav.js
-
 'use client';
-// Your provided imports - ensuring useRef and forwardRef are here
 import { useState, useEffect, useRef, forwardRef } from "react";
 import {
     registerUser,
@@ -9,14 +6,12 @@ import {
     logoutUser,
     auth,
     database,
-    onAuthStateChanged // This onAuthStateChanged is from firebase/firebase, not firebase/database
+    onAuthStateChanged
 } from "../../firebase/firebase";
-// Correctly alias the Firebase 'ref' function and ADD onValue import
 import { ref as firebaseDatabaseRef, get, onValue } from "firebase/database";
 
 import Cookies from "js-cookie";
 
-// Original Tabler Icons imports
 import { IconBulb, IconCheckbox, IconPlus, IconSearch, IconUser, IconInfoCircle } from "@tabler/icons-react";
 import {
     Badge,
@@ -29,7 +24,7 @@ import {
     Popover,
     Overlay,
     Paper,
-    Tooltip // Tooltip from Mantine for "Coming soon"
+    Tooltip
 } from "@mantine/core";
 
 import classes from "./Navbar.module.css";
@@ -37,6 +32,7 @@ import classes from "./Navbar.module.css";
 const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNavIsOpen }) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [passwordConfirm, setPasswordConfirm] = useState(""); // State for the new field
     const [name, setName] = useState("");
     const [isRegistering, setIsRegistering] = useState(false);
     const [error, setError] = useState(null);
@@ -53,38 +49,54 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
-        try {
-            let userResult;
-            if (isRegistering) {
-                userResult = await registerUser(email, password, name);
-            } else {
-                userResult = await loginUser(email, password);
-            }
 
-            if (userResult) {
-                setUser(userResult);
-                try {
-                    const userDataRef = firebaseDatabaseRef(database, `users/${userResult.uid}`);
+        if (isRegistering) {
+            // Check if passwords match
+            if (password !== passwordConfirm) {
+                setError("Passwords do not match.");
+                return; // Prevent form submission
+            }
+            try {
+                const userResult = await registerUser(email, password, name);
+                if (userResult) {
+                    setUser(userResult);
+                    const userDataRef = ref(database, `users/${userResult.uid}`);
                     const snapshot = await get(userDataRef);
                     if (snapshot.exists()) {
                         setUserData(snapshot.val());
                     } else {
                         setError("No user data found for this account.");
                     }
-                } catch (dbError) {
-                    setError("Error fetching user data: " + dbError.message);
-                }
-
-                if (rememberMe) {
-                    Cookies.set("rememberedEmail", email, { expires: 30 });
                 } else {
-                    Cookies.remove("rememberedEmail");
+                    setError("Registration failed. Please try again.");
                 }
-            } else {
-                setError(isRegistering ? "Registration failed. Please try again." : "Login failed. Please check your credentials.");
+            } catch (authError) {
+                setError(authError.message);
             }
-        } catch (authError) {
-            setError(authError.message);
+        } else {
+            // Login logic remains the same
+            try {
+                const userResult = await loginUser(email, password);
+                if (userResult) {
+                    setUser(userResult);
+                    const userDataRef = ref(database, `users/${userResult.uid}`);
+                    const snapshot = await get(userDataRef);
+                    if (snapshot.exists()) {
+                        setUserData(snapshot.val());
+                    } else {
+                        setError("No user data found for this account.");
+                    }
+                    if (rememberMe) {
+                        Cookies.set("rememberedEmail", email, { expires: 30 });
+                    } else {
+                        Cookies.remove("rememberedEmail");
+                    }
+                } else {
+                    setError("Login failed. Please check your credentials.");
+                }
+            } catch (authError) {
+                setError(authError.message);
+            }
         }
     };
 
@@ -132,10 +144,24 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
                 justifyContent: "center", alignItems: "center", zIndex: 2000
             }}
         >
-            <Paper shadow="xl" p="xl" radius="md" withBorder
-                style={{ width: "400px", maxWidth: "95vw", backgroundColor: "var(--mantine-color-body)" }}
+            <div
+                style={{
+                    width: '400px',
+                    maxWidth: '95vw',
+                    padding: '24px',
+                    borderRadius: '8px',
+                    border: '1px solid #dee2e6',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                    backgroundColor: '#fff'
+                }}
             >
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {isRegistering && (
+                        <TextInput
+                            label="Name" placeholder="Your name" value={name}
+                            onChange={(event) => setName(event.currentTarget.value)} required size="md"
+                        />
+                    )}
                     <TextInput
                         label="Email" placeholder="your@email.com" value={email}
                         onChange={(event) => setEmail(event.currentTarget.value)} required size="md"
@@ -146,11 +172,16 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
                     />
                     {isRegistering && (
                         <TextInput
-                            label="Name" placeholder="Your name" value={name}
-                            onChange={(event) => setName(event.currentTarget.value)} required size="md"
+                            label="Repeat Password"
+                            type="password"
+                            placeholder="Repeat your password"
+                            value={passwordConfirm}
+                            onChange={(event) => setPasswordConfirm(event.currentTarget.value)}
+                            required
+                            size="md"
                         />
                     )}
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "var(--mantine-color-dimmed)" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#868e96" }}>
                         <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} style={{ marginRight: '4px' }} />
                         Remember me
                     </label>
@@ -162,7 +193,7 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
                     </Button>
                     {error && <Text c="red" ta="center" size="sm" mt="xs">{error}</Text>}
                 </form>
-            </Paper>
+            </div>
         </div>
     );
 };
@@ -197,7 +228,7 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
                     fetchedCampsData = snapshot.val();
                     setCamps(fetchedCampsData);
                 } else {
-                    setErrorCamps("You have not been assigned to any camps yet. Please contact a camp admin.");
+                    setErrorCamps("No assigned camps found in global user profile.");
                 }
                 if (onCampsLoaded) onCampsLoaded(snapshot.exists() && Object.keys(fetchedCampsData).length > 0);
 
@@ -227,7 +258,6 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
     useEffect(() => {
         if (user && user.uid && selectedCampState) {
             const campUserRoleRef = firebaseDatabaseRef(database, `camps/${selectedCampState}/users/${user.uid}/role`);
-            // Using onValue here as per your provided code
             const unsubscribe = onValue(campUserRoleRef, (snapshot) => {
                 if (snapshot.exists()) {
                     setCurrentCampRole(snapshot.val());
@@ -268,9 +298,9 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
                 onChange={handleCampChange}
                 disabled={loadingCamps || campEntries.length === 0}
                 style={{
-                    padding: "10px 12px", fontSize: "16px", borderRadius: "var(--mantine-radius-sm)",
-                    border: `1px solid ${errorCamps ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-gray-4)'}`,
-                    width: '100%', backgroundColor: 'var(--mantine-color-body)', color: 'var(--mantine-color-text)',
+                    padding: "10px 12px", fontSize: "16px", borderRadius: "4px",
+                    border: `1px solid ${errorCamps ? '#FA5252' : '#ced4da'}`,
+                    width: '100%', backgroundColor: '#fff', color: '#000',
                     cursor: (loadingCamps || campEntries.length === 0) ? 'not-allowed' : 'pointer'
                 }}
                 aria-label="Select a Camp"
@@ -283,7 +313,7 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
                 ))}
             </select>
             {selectedCampState && (
-                <div style={{ fontSize: "14px", color: "var(--mantine-color-dimmed)" }}>
+                <div style={{ fontSize: "14px", color: "#868e96" }}>
                     Camp Role: {currentCampRole !== null ? currentCampRole : (loadingCamps ? "Loading..." : "N/A")}
                 </div>
             )}
@@ -323,7 +353,6 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         }
     }, [campID]);
 
-    // Renamed from handleCampsLoaded to avoid conflict if Nav itself had a onCampsLoaded
     const handleCampsLoadedForGuide = (hasCamps) => {
         setCampsAvailableForGuide(hasCamps);
     };
@@ -333,19 +362,17 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         setShowCampGuide(false);
     };
 
-    // Added isFunctional property and ensured onClick calls handleComponentChange
-    // Also ensured all items in 'links' call setNavIsOpen(false)
     const links = [
         { icon: IconBulb, label: "Messages", notifications: 3, onClick: () => { handleComponentChange('messages'); setNavIsOpen(false); }, section: "messages", isFunctional: false },
         { icon: IconCheckbox, label: "Tasks", notifications: 4, onClick: () => { handleComponentChange('tasks'); setNavIsOpen(false); }, section: "tasks", isFunctional: false },
-        { icon: IconUser, label: "Calendar", onClick: () => { handleComponentChange('calendar'); setNavIsOpen(false); }, section: "calendar", isFunctional: true }, // Calendar is functional even without campID
+        { icon: IconUser, label: "Calendar", onClick: () => { handleComponentChange('calendar'); setNavIsOpen(false); }, section: "calendar", isFunctional: false },
     ];
 
     const collections = [
         { emoji: "👍", label: "Feedback", onClick: () => { handleComponentChange('feedback'); setNavIsOpen(false); }, section: "feedback", isFunctional: false },
         { emoji: "📊", label: "Polls", onClick: () => { handleComponentChange('polls'); setNavIsOpen(false); }, section: "polls", isFunctional: true },
         { emoji: "📦", label: "Inventory", onClick: () => { handleComponentChange('inventory'); setNavIsOpen(false); }, section: "inventory", isFunctional: false },
-        { emoji: "🍲", label: "Recipes", onClick: () => { handleComponentChange('recipes'); setNavIsOpen(false); }, section: "recipes", isFunctional: true }, // Set to true
+        { emoji: "🍲", label: "Recipes", onClick: () => { handleComponentChange('recipes'); setNavIsOpen(false); }, section: "recipes", isFunctional: false },
         { emoji: "🛒", label: "Orders", onClick: () => { handleComponentChange('orders'); setNavIsOpen(false); }, section: "orders", isFunctional: false },
         { emoji: "🚚", label: "Deliveries", onClick: () => { handleComponentChange('deliveries'); setNavIsOpen(false); }, section: "deliveries", isFunctional: false },
         { emoji: "💸", label: "Budget", onClick: () => { handleComponentChange('budget'); setNavIsOpen(false); }, section: "budget", isFunctional: false },
@@ -353,10 +380,9 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         { emoji: "🎂", label: "Birthdays", onClick: () => { handleComponentChange('birthdays'); setNavIsOpen(false); }, section: "birthdays", isFunctional: true },
         { emoji: "📋", label: "Staff List", onClick: () => { handleComponentChange('staff'); setNavIsOpen(false); }, section: "staff", isFunctional: false },
         { emoji: "👤", label: "My Account", onClick: () => { handleComponentChange('myAccount'); setNavIsOpen(false); }, section: "myAccount", isFunctional: true },
-        { emoji: "👥", label: "User Management", onClick: () => { handleComponentChange('userManagement'); setNavIsOpen(false); }, section: "userManagement", isFunctional: false },
+        { emoji: "👥", label: "User Management", onClick: () => { handleComponentChange('userManagement'); setNavIsOpen(false); }, section: "userManagement", isFunctional: true },
     ];
 
-    // Common styling and onClick logic for nav items
     const renderNavItem = (item, isCollectionLink = false) => {
         const itemBaseStyle = {
             opacity: showCampGuide ? 0.3 : 1,
@@ -365,7 +391,6 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
 
         const functionalStyle = {
             ...itemBaseStyle,
-            // Only disable pointer events if showCampGuide is true AND the item is NOT functional
             opacity: item.isFunctional ? itemBaseStyle.opacity : Math.min(itemBaseStyle.opacity, 0.5),
             cursor: item.isFunctional ? 'pointer' : 'not-allowed',
         };
@@ -373,7 +398,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         const itemOnClick = (event) => {
             event.preventDefault();
             if (item.isFunctional && item.onClick) {
-                item.onClick(); // This now correctly calls the onClick which includes setNavIsOpen(false)
+                item.onClick();
             } else if (!item.isFunctional) {
                 console.log(`${item.label} is coming soon!`);
             }
@@ -436,9 +461,9 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                     onClick={() => setNavIsOpen(true)}
                     style={{
                         position: "fixed", top: "16px", right: "16px", zIndex: 1000,
-                        padding: "10px 15px", backgroundColor: "var(--mantine-color-blue-6, #228BE6)",
-                        color: "#fff", border: "none", borderRadius: "var(--mantine-radius-md, 4px)",
-                        cursor: "pointer", boxShadow: "var(--mantine-shadow-sm)"
+                        padding: "10px 15px", backgroundColor: "#228BE6",
+                        color: "#fff", border: "none", borderRadius: "4px",
+                        cursor: "pointer", boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
                     }}
                     aria-label="Open menu"
                 >
@@ -451,8 +476,8 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                 style={{
                     position: "fixed", top: 0, left: navIsOpen ? 0 : "-310px",
                     zIndex: 1001, height: "100%", width: "300px",
-                    background: "var(--mantine-color-body)", overflowY: "auto",
-                    padding: "var(--mantine-spacing-md)", paddingTop: "var(--mantine-spacing-sm)",
+                    background: "#fff", overflowY: "auto",
+                    padding: "16px", paddingTop: "8px",
                     display: "flex", flexDirection: "column",
                     transition: "left 0.3s ease-in-out", boxShadow: "2px 0 10px rgba(0,0,0,0.1)"
                 }}
@@ -481,13 +506,13 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                             ref={campSelectorWrapperRef}
                             style={{
                                 position: 'relative', zIndex: showCampGuide ? 1003 : 'auto',
-                                padding: showCampGuide ? 'var(--mantine-spacing-xs)' : undefined,
-                                marginLeft: showCampGuide ? `calc(var(--mantine-spacing-md) * -1 + var(--mantine-spacing-xs))` : undefined,
-                                marginRight: showCampGuide ? `calc(var(--mantine-spacing-md) * -1 + var(--mantine-spacing-xs))` : undefined,
-                                marginBottom: showCampGuide ? 'var(--mantine-spacing-md)' : undefined,
-                                backgroundColor: showCampGuide ? 'var(--mantine-color-yellow-0)' : 'transparent',
-                                border: showCampGuide ? '2px solid var(--mantine-color-yellow-5)' : 'none',
-                                borderRadius: showCampGuide ? 'var(--mantine-radius-md)' : '0',
+                                padding: showCampGuide ? '8px' : undefined,
+                                marginLeft: showCampGuide ? `-8px` : undefined,
+                                marginRight: showCampGuide ? `-8px` : undefined,
+                                marginBottom: showCampGuide ? '16px' : undefined,
+                                backgroundColor: showCampGuide ? '#fff9db' : 'transparent',
+                                border: showCampGuide ? '2px solid #fab005' : 'none',
+                                borderRadius: showCampGuide ? '8px' : '0',
                                 transition: 'all 0.2s ease-in-out',
                             }}
                         >
@@ -506,54 +531,50 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                                 width={280} position="right" withArrow shadow="xl" zIndex={1004}
                                 closeOnClickOutside={false} trapFocus={false}
                                 transitionProps={{ transition: 'pop-top-right', duration: 200 }}
-                                styles={{ dropdown: { pointerEvents: 'auto' } }}
                             >
                                 <Popover.Dropdown>
-                                    <Paper p="md" radius="md">
+                                    <div style={{ padding: '16px', borderRadius: '8px' }}>
                                         <Group gap="xs" mb="xs" align="center">
-                                            <IconInfoCircle size={28} style={{ color: "var(--mantine-color-blue-filled)" }} />
+                                            <IconInfoCircle size={28} style={{ color: "#228BE6" }} />
                                             <Text fw={700} size="lg">Camp Selection Required</Text>
                                         </Group>
                                         <Text size="sm" mb="sm" style={{ lineHeight: 1.55 }}>
                                             You'll need to select a camp from the menu in order to view camp-specific tools and information.
                                         </Text>
                                         <Text size="xs" c="dimmed" mb="lg" style={{ lineHeight: 1.45 }}>
-                                            If you don't see any camps available to select, please tell Cam and he'll add you to your camp roster.
+                                            If you don't see any camps available, please tell Cam and he'll add you to your camp roster.
                                         </Text>
                                         <Button fullWidth onClick={() => setShowCampGuide(false)} size="sm" variant="light" color="blue">
                                             Okay, Got it!
                                         </Button>
-                                    </Paper>
+                                    </div>
                                 </Popover.Dropdown>
                             </Popover>
                         )}
 
                         <TextInput
                             placeholder="Search" size="xs" leftSection={<IconSearch size={12} stroke={1.5} />}
-                            styles={{ section: { pointerEvents: "none" }, wrapper: { opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto' } }}
+                            styles={{ section: { pointerEvents: "none" }, wrapper: { opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' } }}
                             mb="sm"
                         />
                         <div className={classes.section} style={{ opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
                             <div className={classes.mainLinks}>{mainLinks}</div>
                         </div>
 
-                        {/* CONDITIONAL RENDERING OF "Tools & Data" SECTION */}
-                        {campID ? ( // Only render if a camp is selected
+                        {campID ? (
                             <div className={classes.section} style={{ opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
                                 <Group className={classes.collectionsHeader} justify="space-between">
-                                    <Text size="xs" fw={500} c="dimmed">Camp Tools {campID}</Text>
+                                    <Text size="xs" fw={500} c="dimmed">Camp Tools</Text>
                                 </Group>
                                 <div className={classes.collections}>{collectionLinks}</div>
                             </div>
                         ) : (
-                            <div className={classes.section} style={{ padding: 'var(--mantine-spacing-md)', textAlign: 'center', backgroundColor: 'var(--mantine-color-gray-0)', borderRadius: 'var(--mantine-radius-md)' }}>
-                                <Text size="sm" c="dimmed" style={{ lineHeight: 1.5 }}>
-                                    You must select a camp to use the camp-specific tools and data.
-                                </Text>
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#868e96', marginTop: '20px', borderTop: '1px solid #e9ecef' }}>
+                                <Text size="sm">Please select a camp to access camp-specific tools.</Text>
                             </div>
                         )}
 
-                        <div className={classes.section} style={{ marginTop: "auto", paddingTop: "var(--mantine-spacing-md)", opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
+                        <div className={classes.section} style={{ marginTop: "auto", paddingTop: "16px", opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
                             <Button fullWidth onClick={() => setNavIsOpen(false)} size="md">Close Menu</Button>
                         </div>
                     </>

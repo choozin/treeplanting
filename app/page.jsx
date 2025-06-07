@@ -1,63 +1,63 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Cookies from 'js-cookie'; // Import Cookies
+import Cookies from 'js-cookie';
 
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import Nav from '../components/navbar/Nav';
 import CalendarViews from '../components/calendar/CalendarViews';
 import RecipesList from '../components/Recipes/RecipeList';
-import UserManagement from '../components/auth/UserManagement'; // Assuming this path is correct
+import UserManagement from '../components/auth/UserManagement';
 import GeneralAnnouncement from '../components/annoucements/GeneralAnnouncement';
 import CampSpecificAnnouncement from '../components/annoucements/CampSpecificAnnouncement';
 import PollsPage from '../components/polls/PollsPage';
 import MyAccount from '../components/MyAccount/MyAccount';
 import Birthdays from '../components/Birthdays/Birthdays';
-
-// Styling for the main content area can be done via a CSS module or inline
-// For simplicity here, some basic inline styles are used for the main wrapper.
+import { Paper, Text } from '@mantine/core';
 
 export default function HomePage() {
-  const [user, setUser] = useState(null); // Firebase auth user object
-  const [userData, setUserData] = useState(null); // User data from Firebase RTDB
-  const [campID, setCampID] = useState(null); // Currently selected camp ID
+  const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [campID, setCampID] = useState(null);
 
   const [navIsOpen, setNavIsOpen] = useState(false);
-
-  // State for the general announcement visibility
   const [isGeneralAnnouncementVisible, setIsGeneralAnnouncementVisible] = useState(true);
   const [isCampSpecificAnnouncementVisible, setIsCampSpecificAnnouncementVisible] = useState(true);
 
-  // States for main functional component visibility
-  const [isWelcomeVisible, setIsWelcomeVisible] = useState(false); // Defaulting to false as per new structure
-  const [isCalendarVisible, setIsCalendarVisible] = useState(true); // Calendar is the default main view
+  const [isCalendarVisible, setIsCalendarVisible] = useState(true);
   const [isRecipesListVisible, setIsRecipesListVisible] = useState(false);
   const [isUserManagementVisible, setIsUserManagementVisible] = useState(false);
   const [isPollsVisible, setIsPollsVisible] = useState(false);
-  const [isMyAccountVisible, setIsMyAccountVisible] = useState(false); // New state for MyAccount
-  const [isBirthdaysVisible, setIsBirthdaysVisible] = useState(false); // New state for Birthdays
+  const [isMyAccountVisible, setIsMyAccountVisible] = useState(false);
+  const [isBirthdaysVisible, setIsBirthdaysVisible] = useState(false);
 
-  // Attempt to load campID from cookies on initial client-side load
+  // Effect to handle campID based on user authentication state
   useEffect(() => {
-    // This check ensures Cookies is only accessed on the client-side
-    if (typeof window !== "undefined") {
+    if (user && userData?.assignedCamps) {
       const storedCampID = Cookies.get("campID");
-      if (storedCampID) {
+      // Only set campID from cookie if it's a valid camp for the current user
+      if (storedCampID && userData.assignedCamps[storedCampID]) {
         setCampID(storedCampID);
+      } else {
+        // If the cookie holds an invalid camp, or no camp, clear it.
+        setCampID(null);
+        Cookies.remove("campID");
       }
+    } else if (!user) {
+      // If there is no user, ensure campID state and cookie are cleared.
+      setCampID(null);
+      Cookies.remove("campID");
     }
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, [user, userData]);
 
-  // Function to handle switching between main functional components
   const handleComponentChange = (visibleComponent) => {
-    setNavIsOpen(false); // Close nav when a component is selected
+    setNavIsOpen(false);
 
     // Hide all functional components first
-    setIsWelcomeVisible(false); // Assuming Welcome is not a main view anymore
     setIsCalendarVisible(false);
     setIsRecipesListVisible(false);
     setIsUserManagementVisible(false);
-    setIsMyAccountVisible(false); // Ensure all are false
-    setIsBirthdaysVisible(false); // Ensure all are false
+    setIsMyAccountVisible(false);
+    setIsBirthdaysVisible(false);
     setIsPollsVisible(false);
 
     // Show the selected component
@@ -72,39 +72,29 @@ export default function HomePage() {
         setIsUserManagementVisible(true);
         break;
       case 'polls':
-        setIsPollsVisible(true); break;
-      case 'myAccount': // Add this case
+        setIsPollsVisible(true);
+        break;
+      case 'myAccount':
         setIsMyAccountVisible(true);
         break;
-      case 'birthdays': // Add this case
+      case 'birthdays':
         setIsBirthdaysVisible(true);
         break;
-      // Add cases for other components if needed
-      // case 'welcome':
-      //   setIsWelcomeVisible(true);
-      //   break;
       default:
-        // If no specific component matches, default to showing the calendar
-        // This ensures there's always a primary view active.
         setIsCalendarVisible(true);
         break;
     }
   };
 
-  // Inline style for the main content wrapper
   const mainContentStyle = {
-    padding: 'var(--mantine-spacing-md, 16px)',
-    // Add a top margin to prevent content from being hidden under a potentially fixed Nav button
-    // Adjust this value based on your Nav button's height and position
-    marginTop: user ? '20px' : '70px', // Less margin if user is logged in (Nav might be smaller)
-    // More margin if login form is full screen
+    padding: '16px',
+    marginTop: user ? '20px' : '70px',
   };
 
-  // Style for the ColorSchemeToggle container to center it
   const colorSchemeToggleContainerStyle = {
-    padding: 'var(--mantine-spacing-xl, 24px)', // Use Mantine spacing
+    padding: '24px',
     textAlign: 'center',
-    marginTop: 'var(--mantine-spacing-xl, 24px)',
+    marginTop: '24px',
   };
 
 
@@ -116,22 +106,18 @@ export default function HomePage() {
         userData={userData}
         setUserData={setUserData}
         campID={campID}
-        setCampID={setCampID} // Pass setCampID to Nav
+        setCampID={setCampID}
         navIsOpen={navIsOpen}
         setNavIsOpen={setNavIsOpen}
         handleComponentChange={handleComponentChange}
-      // No need to pass individual visibility states like isCalendarVisible to Nav
-      // as Nav's primary role here is navigation and auth display.
       />
 
-      {/* Main content area where components are rendered */}
       <main style={mainContentStyle}>
         <GeneralAnnouncement
           isVisible={isGeneralAnnouncementVisible}
           onClose={() => setIsGeneralAnnouncementVisible(false)}
         />
 
-        {/* CampSpecificAnnouncement will only render its content if user & campID match criteria */}
         <CampSpecificAnnouncement
           isVisible={isCampSpecificAnnouncementVisible}
           onClose={() => setIsCampSpecificAnnouncementVisible(false)}
@@ -143,46 +129,39 @@ export default function HomePage() {
           <PollsPage user={user} campID={campID} userData={userData} />
         )}
 
-        {/* Conditionally render main functional components */}
-        {isCalendarVisible && user && campID && ( // Show calendar only if user logged in and camp selected
+        {isCalendarVisible && user && campID && (
           <CalendarViews
             user={user}
             campID={campID}
-          // setIsCalendarVisible={setIsCalendarVisible} // Not needed if visibility is managed here
-          // handleComponentChange={handleComponentChange} // Not needed if Nav handles changes
           />
         )}
-        {isRecipesListVisible && user && campID && ( // Show recipes only if user logged in and camp selected
+        {isRecipesListVisible && user && campID && (
           <RecipesList
             user={user}
             campID={campID}
-            setIsRecipesListVisible={setIsRecipesListVisible} // To allow closing from within
-          // handleComponentChange={handleComponentChange} // Not needed if Nav handles changes
+            setIsRecipesListVisible={setIsRecipesListVisible}
           />
         )}
 
-        {isMyAccountVisible && <MyAccount user={user} setUserData={setUserData} />} {/* Render MyAccount */}
+        {isMyAccountVisible && <MyAccount user={user} setUserData={setUserData} />}
 
-        {isBirthdaysVisible && <Birthdays />} {/* Render Birthdays */}
+        {isBirthdaysVisible && <Birthdays />}
 
-        {isUserManagementVisible && user && userData && userData.role >= 8 && ( // Example: Show UserManagement if role is high enough
+        {isUserManagementVisible && user && userData && userData.role >= 8 && (
           <UserManagement
-            currentUser={user} // Prop name as expected by UserManagement
+            currentUser={user}
             campID={campID}
-          // handleComponentChange={handleComponentChange} // Not needed if Nav handles changes
           />
         )}
 
-        {/* Fallback content if no main component is active (e.g., user logged in but no camp selected) */}
-        {user && !campID && !isCalendarVisible && !isRecipesListVisible && !isUserManagementVisible && (
+        {user && !campID && !isMyAccountVisible && (
           <Paper shadow="xs" p="xl" radius="md" withBorder style={{ textAlign: 'center', marginTop: '20px', backgroundColor: 'var(--mantine-color-gray-0)' }}>
             <Text size="lg" fw={500}>Welcome, {userData?.name || 'User'}!</Text>
             <Text c="dimmed" mt="sm">Please select a camp from the menu to view its tools and information.</Text>
           </Paper>
         )}
 
-        {/* If user is not logged in, and no specific component is set to be visible by default for non-logged-in users */}
-        {!user && !isCalendarVisible && !isRecipesListVisible && !isUserManagementVisible && !isWelcomeVisible && (
+        {!user && !isMyAccountVisible && (
           <Paper shadow="xs" p="xl" radius="md" withBorder style={{ textAlign: 'center', marginTop: '20px', backgroundColor: 'var(--mantine-color-gray-0)' }}>
             <Text size="lg" fw={500}>Please log in to access the application features.</Text>
             <Text c="dimmed" mt="sm">You can open the menu to log in or register.</Text>
@@ -190,7 +169,7 @@ export default function HomePage() {
         )}
 
       </main>
-      <div style={colorSchemeToggleContainerStyle}>
+      <div style={{colorSchemeToggleContainerStyle, display: 'none' }}>
         <ColorSchemeToggle />
       </div>
     </>
