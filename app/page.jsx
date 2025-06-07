@@ -14,6 +14,7 @@ import CampSpecificAnnouncement from '../components/annoucements/CampSpecificAnn
 import PollsPage from '../components/polls/PollsPage';
 import MyAccount from '../components/MyAccount/MyAccount';
 import Birthdays from '../components/Birthdays/Birthdays';
+import WeatherPage from '../components/weather/WeatherPage'; // Import the new component
 import { Paper, Text } from '@mantine/core';
 
 export default function HomePage() {
@@ -32,6 +33,7 @@ export default function HomePage() {
   const [isPollsVisible, setIsPollsVisible] = useState(false);
   const [isMyAccountVisible, setIsMyAccountVisible] = useState(false);
   const [isBirthdaysVisible, setIsBirthdaysVisible] = useState(false);
+  const [isWeatherVisible, setIsWeatherVisible] = useState(false); // New state for weather page
 
   // Effect to handle campID based on user authentication state
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function HomePage() {
     setIsMyAccountVisible(false);
     setIsBirthdaysVisible(false);
     setIsPollsVisible(false);
+    setIsWeatherVisible(false); // Hide weather page
 
     // Show the selected component
     switch (visibleComponent) {
@@ -115,6 +118,9 @@ export default function HomePage() {
         break;
       case 'birthdays':
         setIsBirthdaysVisible(true);
+        break;
+      case 'weather': // Show weather page
+        setIsWeatherVisible(true);
         break;
       default:
         setIsCalendarVisible(true);
@@ -162,6 +168,8 @@ export default function HomePage() {
           campID={campID}
         />
 
+        {isWeatherVisible && <WeatherPage />}
+
         {isPollsVisible && user && campID && (
           <PollsPage user={user} campID={campID} userData={userData} effectiveRole={effectiveRole} />
         )}
@@ -192,14 +200,14 @@ export default function HomePage() {
           />
         )}
 
-        {user && !campID && !isMyAccountVisible && (
+        {user && !campID && !isMyAccountVisible && !isWeatherVisible && (
           <Paper shadow="xs" p="xl" radius="md" withBorder style={{ textAlign: 'center', marginTop: '20px', backgroundColor: 'var(--mantine-color-gray-0)' }}>
             <Text size="lg" fw={500}>Welcome, {userData?.name || 'User'}!</Text>
             <Text c="dimmed" mt="sm">Please select a camp from the menu to view its tools and information.</Text>
           </Paper>
         )}
 
-        {!user && !isMyAccountVisible && (
+        {!user && !isMyAccountVisible && !isWeatherVisible && (
           <Paper shadow="xs" p="xl" radius="md" withBorder style={{ textAlign: 'center', marginTop: '20px', backgroundColor: 'var(--mantine-color-gray-0)' }}>
             <Text size="lg" fw={500}>Please log in to access the application features.</Text>
             <Text c="dimmed" mt="sm">You can open the menu to log in or register.</Text>

@@ -3,10 +3,11 @@ import '@mantine/core/styles.css';
 import React from 'react';
 import { ColorSchemeScript, mantineHtmlProps, MantineProvider } from '@mantine/core';
 import { theme } from '../theme';
+import { WeatherProvider } from '../context/WeatherProvider';
 
 export const metadata = {
-  title: 'Tree Planting Kitchen Coordinator',
-  description: 'An app to help coordinate the duties in a tree planting kitchen, and perhaps beyond.',
+  title: 'Tree Planting Camp App',
+  description: 'An app to help with stuff in a tree planting camp.',
 };
 
 export default function RootLayout({ children }: { children: any }) {
@@ -21,7 +22,11 @@ export default function RootLayout({ children }: { children: any }) {
         />
       </head>
       <body suppressHydrationWarning={true}>
-        <MantineProvider theme={theme}>{children}</MantineProvider>
+        <MantineProvider theme={theme}>
+          <WeatherProvider>
+            {children}
+          </WeatherProvider>
+        </MantineProvider>
       </body>
     </html>
   );

@@ -29,6 +29,7 @@ import {
 } from "@mantine/core";
 
 import classes from "./Navbar.module.css";
+import WeatherNavWidget from '../weather/WeatherNavWidget';
 
 const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNavIsOpen }) => {
     const [email, setEmail] = useState("");
@@ -350,11 +351,13 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
 
     const allCollections = [
         { emoji: "💡", label: "App Feedback", onClick: () => { handleComponentChange('appFeedback'); setNavIsOpen(false); }, section: "appFeedback", isFunctional: true },
-        { emoji: "📊", label: "Polls", onClick: () => { handleComponentChange('polls'); setNavIsOpen(false); }, section: "polls", isFunctional: true },
         { emoji: "🌦️", label: "Weather", onClick: () => { handleComponentChange('weather'); setNavIsOpen(false); }, section: "weather", isFunctional: true },
+        { emoji: "📊", label: "Polls", onClick: () => { handleComponentChange('polls'); setNavIsOpen(false); }, section: "polls", isFunctional: true },
         { emoji: "🤝", label: "Buy/Sell/Trade", onClick: () => { handleComponentChange('trade'); setNavIsOpen(false); }, section: "trade", isFunctional: true },
         { emoji: "🎵", label: "Planting Music", onClick: () => { handleComponentChange('music'); setNavIsOpen(false); }, section: "music", isFunctional: true },
         { emoji: "🎂", label: "Birthdays", onClick: () => { handleComponentChange('birthdays'); setNavIsOpen(false); }, section: "birthdays", isFunctional: true },
+        { emoji: "👤", label: "My Account", onClick: () => { handleComponentChange('myAccount'); setNavIsOpen(false); }, section: "myAccount", isFunctional: true },
+        { emoji: "👥", label: "User Management", onClick: () => { handleComponentChange('userManagement'); setNavIsOpen(false); }, section: "userManagement", isFunctional: true },
         { emoji: "📦", label: "Inventory", onClick: () => { handleComponentChange('inventory'); setNavIsOpen(false); }, section: "inventory", isFunctional: false },
         { emoji: "🍲", label: "Recipes", onClick: () => { handleComponentChange('recipes'); setNavIsOpen(false); }, section: "recipes", isFunctional: false },
         { emoji: "🛒", label: "Orders", onClick: () => { handleComponentChange('orders'); setNavIsOpen(false); }, section: "orders", isFunctional: false },
@@ -362,8 +365,6 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         { emoji: "💸", label: "Budget", onClick: () => { handleComponentChange('budget'); setNavIsOpen(false); }, section: "budget", isFunctional: false },
         { emoji: "📊", label: "Reports", onClick: () => { handleComponentChange('reports'); setNavIsOpen(false); }, section: "reports", isFunctional: false },
         { emoji: "📋", label: "Staff List", onClick: () => { handleComponentChange('staff'); setNavIsOpen(false); }, section: "staff", isFunctional: false },
-        { emoji: "👤", label: "My Account", onClick: () => { handleComponentChange('myAccount'); setNavIsOpen(false); }, section: "myAccount", isFunctional: true },
-        { emoji: "👥", label: "User Management", onClick: () => { handleComponentChange('userManagement'); setNavIsOpen(false); }, section: "userManagement", isFunctional: true },
     ];
 
     const collections = [
@@ -541,6 +542,10 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                                 </Popover.Dropdown>
                             </Popover>
                         )}
+
+                        <div className={classes.section} style={{ opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
+                            <WeatherNavWidget />
+                        </div>
 
                         <TextInput
                             placeholder="Search" size="xs" leftSection={<IconSearch size={12} stroke={1.5} />}
