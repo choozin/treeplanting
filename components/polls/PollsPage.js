@@ -41,7 +41,7 @@ const formatDate = (isoStringOrTimestamp) => {
 };
 
 const RankedVoteHelpModal = ({ opened, onClose }) => (
-    <Modal opened={opened} onClose={onClose} title="How Ranked Ballot Voting Works" size="lg" centered>
+    <Modal opened={opened} onClose={onClose} title="How Ranked Ballot Voting Works" size="lg" centered zIndex={2000}>
         <Stack gap="md">
             <Text>This system helps find the option that the most people prefer overall, not just the one with the most first-place votes.</Text>
             <div>
@@ -205,36 +205,38 @@ const RankedResultsDisplay = ({ poll }) => {
     if (error) return <Alert color="blue" title="Results" icon={<IconAlertCircle />}>{error}</Alert>;
     if (!poll || !poll.options) return <Text>Loading results...</Text>
     return (
-        <Stack>
-            {rounds.map((round, index) => (
-                <Paper key={index} p="md" withBorder radius="md">
-                    <Title order={4}>Round {round.round}</Title>
-                    {Object.entries(round.voteCounts).sort(([, a], [, b]) => b - a).map(([optionId, count]) => {
-                        const totalVotesInRound = Object.values(round.voteCounts).reduce((a, b) => a + b, 0);
-                        const percentage = totalVotesInRound > 0 ? Math.round((count / totalVotesInRound) * 100) : 0;
-                        return (
-                            <Box key={optionId} my="sm">
-                                <Group justify="space-between">
-                                    <Text>{poll.options[optionId]?.text || 'Unknown Option'}</Text>
-                                    <Text c="dimmed">{count} votes</Text>
-                                </Group>
-                                <Progress.Root size="xl" radius="sm">
-                                    <Progress.Section value={percentage} color={round.eliminated === optionId ? "red" : "teal"}>
-                                        {percentage > 10 && <Progress.Label>{percentage}%</Progress.Label>}
-                                    </Progress.Section>
-                                </Progress.Root>
-                            </Box>
-                        );
-                    })}
-                    {round.eliminated && <Text c="red" mt="sm">Eliminated: <strong>{poll.options[round.eliminated]?.text}</strong></Text>}
-                </Paper>
-            ))}
-            {winner && (
-                <Alert color="green" title="Winner Declared!" icon={<IconCircleCheck />} mt="lg">
-                    {winner === 'tie' ? "The result is a tie!" : `The winner is: ${poll.options[winner]?.text || 'undetermined'}`}
-                </Alert>
-            )}
-        </Stack>
+        <ScrollArea style={{ maxHeight: '50vh' }}>
+            <Stack>
+                {rounds.map((round, index) => (
+                    <Paper key={index} p="md" withBorder radius="md">
+                        <Title order={4}>Round {round.round}</Title>
+                        {Object.entries(round.voteCounts).sort(([, a], [, b]) => b - a).map(([optionId, count]) => {
+                            const totalVotesInRound = Object.values(round.voteCounts).reduce((a, b) => a + b, 0);
+                            const percentage = totalVotesInRound > 0 ? Math.round((count / totalVotesInRound) * 100) : 0;
+                            return (
+                                <Box key={optionId} my="sm">
+                                    <Group justify="space-between">
+                                        <Text>{poll.options[optionId]?.text || 'Unknown Option'}</Text>
+                                        <Text c="dimmed">{count} votes</Text>
+                                    </Group>
+                                    <Progress.Root size="xl" radius="sm">
+                                        <Progress.Section value={percentage} color={round.eliminated === optionId ? "red" : "teal"}>
+                                            {percentage > 10 && <Progress.Label>{percentage}%</Progress.Label>}
+                                        </Progress.Section>
+                                    </Progress.Root>
+                                </Box>
+                            );
+                        })}
+                        {round.eliminated && <Text c="red" mt="sm">Eliminated: <strong>{poll.options[round.eliminated]?.text}</strong></Text>}
+                    </Paper>
+                ))}
+                {winner && (
+                    <Alert color="green" title="Winner Declared!" icon={<IconCircleCheck />} mt="lg">
+                        {winner === 'tie' ? "The result is a tie!" : `The winner is: ${poll.options[winner]?.text || 'undetermined'}`}
+                    </Alert>
+                )}
+            </Stack>
+        </ScrollArea>
     );
 };
 

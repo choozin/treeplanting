@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
+import { ref, get } from "firebase/database";
+import { database } from '../firebase/firebase';
 
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import Nav from '../components/navbar/Nav';
@@ -18,6 +20,7 @@ export default function HomePage() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [campID, setCampID] = useState(null);
+  const [effectiveRole, setEffectiveRole] = useState(0);
 
   const [navIsOpen, setNavIsOpen] = useState(false);
   const [isGeneralAnnouncementVisible, setIsGeneralAnnouncementVisible] = useState(true);
@@ -48,6 +51,39 @@ export default function HomePage() {
       Cookies.remove("campID");
     }
   }, [user, userData]);
+
+  // Effect to calculate the user's effective role
+  useEffect(() => {
+    const calculateEffectiveRole = async () => {
+      if (!user || !userData) {
+        setEffectiveRole(0);
+        return;
+      }
+
+      const globalRole = userData.role || 0;
+
+      if (!campID) {
+        setEffectiveRole(globalRole);
+        return;
+      }
+
+      const campUserRoleRef = ref(database, `camps/${campID}/users/${user.uid}/role`);
+      try {
+        const snapshot = await get(campUserRoleRef);
+        if (snapshot.exists()) {
+          const campSpecificRole = snapshot.val() || 0;
+          setEffectiveRole(Math.max(globalRole, campSpecificRole));
+        } else {
+          setEffectiveRole(globalRole);
+        }
+      } catch (error) {
+        console.error("Error fetching camp-specific role:", error);
+        setEffectiveRole(globalRole); // Default to global role on error
+      }
+    };
+
+    calculateEffectiveRole();
+  }, [user, userData, campID]);
 
   const handleComponentChange = (visibleComponent) => {
     setNavIsOpen(false);
@@ -110,6 +146,7 @@ export default function HomePage() {
         navIsOpen={navIsOpen}
         setNavIsOpen={setNavIsOpen}
         handleComponentChange={handleComponentChange}
+        effectiveRole={effectiveRole}
       />
 
       <main style={mainContentStyle}>
@@ -126,7 +163,7 @@ export default function HomePage() {
         />
 
         {isPollsVisible && user && campID && (
-          <PollsPage user={user} campID={campID} userData={userData} />
+          <PollsPage user={user} campID={campID} userData={userData} effectiveRole={effectiveRole} />
         )}
 
         {isCalendarVisible && user && campID && (

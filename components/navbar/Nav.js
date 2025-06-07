@@ -8,7 +8,7 @@ import {
     database,
     onAuthStateChanged
 } from "../../firebase/firebase";
-import { ref as firebaseDatabaseRef, get, onValue } from "firebase/database";
+import { ref, get, onValue } from "firebase/database";
 
 import Cookies from "js-cookie";
 
@@ -24,7 +24,8 @@ import {
     Popover,
     Overlay,
     Paper,
-    Tooltip
+    Tooltip,
+    Modal
 } from "@mantine/core";
 
 import classes from "./Navbar.module.css";
@@ -32,11 +33,12 @@ import classes from "./Navbar.module.css";
 const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNavIsOpen }) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [passwordConfirm, setPasswordConfirm] = useState(""); // State for the new field
+    const [passwordConfirm, setPasswordConfirm] = useState("");
     const [name, setName] = useState("");
     const [isRegistering, setIsRegistering] = useState(false);
     const [error, setError] = useState(null);
     const [rememberMe, setRememberMe] = useState(false);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
     useEffect(() => {
         const savedEmail = Cookies.get("rememberedEmail");
@@ -51,10 +53,9 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
         setError(null);
 
         if (isRegistering) {
-            // Check if passwords match
             if (password !== passwordConfirm) {
                 setError("Passwords do not match.");
-                return; // Prevent form submission
+                return;
             }
             try {
                 const userResult = await registerUser(email, password, name);
@@ -74,7 +75,6 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
                 setError(authError.message);
             }
         } else {
-            // Login logic remains the same
             try {
                 const userResult = await loginUser(email, password);
                 if (userResult) {
@@ -100,89 +100,89 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNav
         }
     };
 
-    const handleLogout = async () => {
-        if (!window.confirm("Are you sure you want to logout?")) {
-            return;
-        }
+    const confirmLogout = async () => {
         await logoutUser();
         setUser(null);
         setUserData(null);
         Cookies.remove("campID");
         if (setNavIsOpen) setNavIsOpen(false);
+        setIsLogoutModalOpen(false);
     };
 
     if (user) {
         return (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", fontSize: "16px", marginBottom: "8px", marginTop: "0px" }}>
-                <p style={{ margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexGrow: 1 }}>
-                    Welcome, <span style={{ fontWeight: "bold" }}>{userData ? `${userData.name}` : "User"}</span>
-                </p>
-                <button
-                    onClick={handleLogout}
-                    style={{
-                        padding: "4px 8px",
-                        backgroundColor: "var(--mantine-color-red-6, #FA5252)",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "var(--mantine-radius-sm, 4px)",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                        flexShrink: 0
-                    }}
+            <>
+                <Modal
+                    opened={isLogoutModalOpen}
+                    onClose={() => setIsLogoutModalOpen(false)}
+                    title="Confirm Logout"
+                    centered
+                    zIndex={3000}
                 >
-                    Logout
-                </button>
-            </div>
+                    <Text>Are you sure you want to log out?</Text>
+                    <Group mt="xl" justify="flex-end">
+                        <Button variant="default" onClick={() => setIsLogoutModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button color="red" onClick={confirmLogout}>
+                            Logout
+                        </Button>
+                    </Group>
+                </Modal>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", fontSize: "16px", marginBottom: "8px", marginTop: "0px" }}>
+                    <p style={{ margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexGrow: 1 }}>
+                        Welcome, <span style={{ fontWeight: "bold" }}>{userData ? `${userData.name}` : "User"}</span>
+                    </p>
+                    <button
+                        onClick={() => setIsLogoutModalOpen(true)}
+                        style={{
+                            padding: "4px 8px",
+                            backgroundColor: "var(--mantine-color-red-6, #FA5252)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "var(--mantine-radius-sm, 4px)",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            flexShrink: 0
+                        }}
+                    >
+                        Logout
+                    </button>
+                </div>
+            </>
         );
     }
 
     return (
         <div
             style={{
-                position: "fixed", width: "100vw", height: "100vh", top: 0, left: 0,
-                background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column",
-                justifyContent: "center", alignItems: "center", zIndex: 2000
+                position: "fixed",
+                top: 0, right: 0, bottom: 0, left: 0,
+                background: "rgba(0,0,0,0.85)",
+                display: "flex", flexDirection: "column",
+                justifyContent: "center", alignItems: "center",
+                zIndex: 2000
             }}
         >
-            <div
+             <div
                 style={{
-                    width: '400px',
-                    maxWidth: '95vw',
-                    padding: '24px',
-                    borderRadius: '8px',
-                    border: '1px solid #dee2e6',
+                    width: '400px', maxWidth: '95vw', padding: '24px',
+                    borderRadius: '8px', border: '1px solid #dee2e6',
                     boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
                     backgroundColor: '#fff'
                 }}
             >
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                     {isRegistering && (
-                        <TextInput
-                            label="Name" placeholder="Your name" value={name}
-                            onChange={(event) => setName(event.currentTarget.value)} required size="md"
-                        />
+                        <TextInput label="Name" placeholder="Your name" value={name} onChange={(event) => setName(event.currentTarget.value)} required size="md" />
                     )}
-                    <TextInput
-                        label="Email" placeholder="your@email.com" value={email}
-                        onChange={(event) => setEmail(event.currentTarget.value)} required size="md"
-                    />
-                    <TextInput
-                        label="Password" type="password" placeholder="Your password" value={password}
-                        onChange={(event) => setPassword(event.currentTarget.value)} required size="md"
-                    />
+                    <TextInput label="Email" placeholder="your@email.com" value={email} onChange={(event) => setEmail(event.currentTarget.value)} required size="md" />
+                    <TextInput label="Password" type="password" placeholder="Your password" value={password} onChange={(event) => setPassword(event.currentTarget.value)} required size="md" />
                     {isRegistering && (
-                        <TextInput
-                            label="Repeat Password"
-                            type="password"
-                            placeholder="Repeat your password"
-                            value={passwordConfirm}
-                            onChange={(event) => setPasswordConfirm(event.currentTarget.value)}
-                            required
-                            size="md"
-                        />
+                        <TextInput label="Repeat Password" type="password" placeholder="Repeat your password" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.currentTarget.value)} required size="md" />
                     )}
                     <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#868e96" }}>
-                        <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} style={{ marginRight: '4px' }} />
+                        <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} style={{ marginRight: '4px' }}/>
                         Remember me
                     </label>
                     <Button type="submit" fullWidth style={{ backgroundColor: "brown" }} size="md">
@@ -221,7 +221,7 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
             setLoadingCamps(true);
             setErrorCamps(null);
             try {
-                const userAssignedCampsRef = firebaseDatabaseRef(database, `users/${user.uid}/assignedCamps`);
+                const userAssignedCampsRef = ref(database, `users/${user.uid}/assignedCamps`);
                 const snapshot = await get(userAssignedCampsRef);
                 let fetchedCampsData = {};
                 if (snapshot.exists()) {
@@ -234,15 +234,15 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
 
                 const storedCampID = Cookies.get("campID");
                 if (storedCampID && fetchedCampsData[storedCampID]) {
-                    if (selectedCampState !== storedCampID) {
+                     if (selectedCampState !== storedCampID) {
                         setSelectedCampState(storedCampID);
                         if (campID !== storedCampID) {
-                            onCampSelect(storedCampID);
+                           onCampSelect(storedCampID);
                         }
                     }
                 } else if (!storedCampID && selectedCampState) {
                     setSelectedCampState("");
-                    if (campID !== "") {
+                     if (campID !== "") {
                         onCampSelect("");
                     }
                 }
@@ -257,7 +257,7 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
 
     useEffect(() => {
         if (user && user.uid && selectedCampState) {
-            const campUserRoleRef = firebaseDatabaseRef(database, `camps/${selectedCampState}/users/${user.uid}/role`);
+            const campUserRoleRef = ref(database, `camps/${selectedCampState}/users/${user.uid}/role`);
             const unsubscribe = onValue(campUserRoleRef, (snapshot) => {
                 if (snapshot.exists()) {
                     setCurrentCampRole(snapshot.val());
@@ -318,7 +318,7 @@ const CampSelector = forwardRef(({ user, userData: globalUserData, campID, onCam
                 </div>
             )}
             {errorCamps && campEntries.length === 0 && !loadingCamps && (
-                <Text c="red" size="xs" mt={4}>{errorCamps}</Text>
+                 <Text c="red" size="xs" mt={4}>{errorCamps}</Text>
             )}
             {!loadingCamps && campEntries.length === 0 && !errorCamps && (
                 <Text size="xs" c="dimmed" mt={4}>No camps assigned to your profile.</Text>
@@ -365,14 +365,14 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
     const links = [
         { icon: IconBulb, label: "Messages", notifications: 3, onClick: () => { handleComponentChange('messages'); setNavIsOpen(false); }, section: "messages", isFunctional: false },
         { icon: IconCheckbox, label: "Tasks", notifications: 4, onClick: () => { handleComponentChange('tasks'); setNavIsOpen(false); }, section: "tasks", isFunctional: false },
-        { icon: IconUser, label: "Calendar", onClick: () => { handleComponentChange('calendar'); setNavIsOpen(false); }, section: "calendar", isFunctional: false },
+        { icon: IconUser, label: "Calendar", onClick: () => { handleComponentChange('calendar'); setNavIsOpen(false); }, section: "calendar", isFunctional: true },
     ];
 
     const collections = [
         { emoji: "👍", label: "Feedback", onClick: () => { handleComponentChange('feedback'); setNavIsOpen(false); }, section: "feedback", isFunctional: false },
         { emoji: "📊", label: "Polls", onClick: () => { handleComponentChange('polls'); setNavIsOpen(false); }, section: "polls", isFunctional: true },
         { emoji: "📦", label: "Inventory", onClick: () => { handleComponentChange('inventory'); setNavIsOpen(false); }, section: "inventory", isFunctional: false },
-        { emoji: "🍲", label: "Recipes", onClick: () => { handleComponentChange('recipes'); setNavIsOpen(false); }, section: "recipes", isFunctional: false },
+        { emoji: "🍲", label: "Recipes", onClick: () => { handleComponentChange('recipes'); setNavIsOpen(false); }, section: "recipes", isFunctional: true},
         { emoji: "🛒", label: "Orders", onClick: () => { handleComponentChange('orders'); setNavIsOpen(false); }, section: "orders", isFunctional: false },
         { emoji: "🚚", label: "Deliveries", onClick: () => { handleComponentChange('deliveries'); setNavIsOpen(false); }, section: "deliveries", isFunctional: false },
         { emoji: "💸", label: "Budget", onClick: () => { handleComponentChange('budget'); setNavIsOpen(false); }, section: "budget", isFunctional: false },
@@ -426,9 +426,9 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         if (!item.isFunctional) {
             return (
                 <Tooltip label="Coming soon!" key={item.label} position="right" withArrow openDelay={300} withinPortal>
-                    <div style={{ display: 'block', cursor: 'not-allowed' }}
+                     <div style={{ display: 'block', cursor: 'not-allowed' }}
                         onClick={(e) => { if (!item.isFunctional) e.stopPropagation(); }}
-                    >{content}</div>
+                     >{content}</div>
                 </Tooltip>
             );
         }
@@ -483,7 +483,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                 }}
             >
                 {!user && navIsOpen ? (
-                    <div className={classes.section} style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                     <div className={classes.section} style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <SelfRegistrationAndLogin
                             user={user} setUser={setUser} userData={userData} setUserData={setUserData}
                             setNavIsOpen={setNavIsOpen}
@@ -533,7 +533,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                                 transitionProps={{ transition: 'pop-top-right', duration: 200 }}
                             >
                                 <Popover.Dropdown>
-                                    <div style={{ padding: '16px', borderRadius: '8px' }}>
+                                    <div style={{padding: '16px', borderRadius: '8px'}}>
                                         <Group gap="xs" mb="xs" align="center">
                                             <IconInfoCircle size={28} style={{ color: "#228BE6" }} />
                                             <Text fw={700} size="lg">Camp Selection Required</Text>
@@ -554,7 +554,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
 
                         <TextInput
                             placeholder="Search" size="xs" leftSection={<IconSearch size={12} stroke={1.5} />}
-                            styles={{ section: { pointerEvents: "none" }, wrapper: { opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' } }}
+                            styles={{ section: { pointerEvents: "none" }, wrapper: { opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease'}}}
                             mb="sm"
                         />
                         <div className={classes.section} style={{ opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
@@ -562,7 +562,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                         </div>
 
                         {campID ? (
-                            <div className={classes.section} style={{ opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
+                             <div className={classes.section} style={{ opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
                                 <Group className={classes.collectionsHeader} justify="space-between">
                                     <Text size="xs" fw={500} c="dimmed">Camp Tools</Text>
                                 </Group>
@@ -574,11 +574,11 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                             </div>
                         )}
 
-                        <div className={classes.section} style={{ marginTop: "auto", paddingTop: "16px", opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
+                         <div className={classes.section} style={{ marginTop: "auto", paddingTop: "16px", opacity: showCampGuide ? 0.3 : 1, pointerEvents: showCampGuide ? 'none' : 'auto', transition: 'opacity 0.3s ease' }}>
                             <Button fullWidth onClick={() => setNavIsOpen(false)} size="md">Close Menu</Button>
                         </div>
                     </>
-                ) : null}
+                ) : null }
             </nav>
         </>
     );
