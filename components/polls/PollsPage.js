@@ -240,7 +240,7 @@ const RankedResultsDisplay = ({ poll }) => {
     );
 };
 
-const PollsPage = ({ user, campID, userData }) => { // userData is still used for usersDataMap
+const PollsPage = ({ user, campID, userData, effectiveRole }) => {
     const [polls, setPolls] = useState([]);
     const [usersDataMap, setUsersDataMap] = useState({});
     const [selectedPoll, setSelectedPoll] = useState(null);
@@ -265,52 +265,13 @@ const PollsPage = ({ user, campID, userData }) => { // userData is still used fo
         tags: []
     });
 
-    // New state for the role fetched from /camps/[campID]/users/[userID]/role
-    const [currentUserActualCampRole, setCurrentUserActualCampRole] = useState(0);
-
-    // Effect to fetch the camp-specific role for the current user
-    useEffect(() => {
-        if (user && user.uid && campID) {
-            const campUserRoleRef = firebaseDatabaseRef(database, `camps/${campID}/users/${user.uid}/role`);
-            const unsubscribeRole = onValue(campUserRoleRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    setCurrentUserActualCampRole(snapshot.val());
-                } else {
-                    // Fallback if no specific role entry is found at this path
-                    console.log(`No specific role found for user ${user.uid} in camp ${campID} at /camps/${campID}/users/${user.uid}/role. Checking global userData.`);
-                    // As a fallback, try the role from the global userData if it's structured there.
-                    // Or, decide if this specific path is the *only* source of truth.
-                    const roleFromGlobalUserData = userData?.assignedCamps?.[campID]?.role;
-                    if (roleFromGlobalUserData !== undefined) {
-                        setCurrentUserActualCampRole(roleFromGlobalUserData);
-                        console.log(`Using role ${roleFromGlobalUserData} from global userData.assignedCamps for user ${user.uid} in camp ${campID}.`);
-                    } else {
-                        setCurrentUserActualCampRole(0); // Default if not found anywhere
-                        console.log(`No role found in global userData.assignedCamps either. Defaulting role to 0.`);
-                    }
-                }
-            }, (errorObject) => {
-                console.error(`Error fetching camp-specific role for user ${user.uid} in camp ${campID}:`, errorObject);
-                setCurrentUserActualCampRole(0); // Default on error
-            });
-            return () => unsubscribeRole();
-        } else {
-            setCurrentUserActualCampRole(0); // Reset if no user or campID
-        }
-    }, [user, campID, userData]); // Added userData as a dependency in case the fallback logic needs it
-
     // --- Permission Helpers ---
-    // activeUserCampRole now uses the state updated by the new useEffect
-    const activeUserCampRole = useMemo(() => {
-        return currentUserActualCampRole || 0;
-    }, [currentUserActualCampRole]);
-
-    const canUserCreatePoll = useCallback(() => activeUserCampRole >= 5, [activeUserCampRole]);
-    const canUserManagePollDisplay = useCallback(() => activeUserCampRole >= 6, [activeUserCampRole]);
+    const canUserCreatePoll = useCallback(() => effectiveRole >= 5, [effectiveRole]);
+    const canUserManagePollDisplay = useCallback(() => effectiveRole >= 6, [effectiveRole]);
     const canUserManageOption = useCallback((poll) => {
         if (!poll || !user) return false;
-        return activeUserCampRole >= 6 || (poll.createdByUserID === user.uid && poll.creatorRoleAtCreation === 5);
-    }, [activeUserCampRole, user]);
+        return effectiveRole >= 6 || (poll.createdByUserID === user.uid && poll.creatorRoleAtCreation === 5);
+    }, [effectiveRole, user]);
 
 
     // Fetch all users once to map creator IDs to names (from global /users node)
@@ -439,7 +400,7 @@ const PollsPage = ({ user, campID, userData }) => { // userData is still used fo
             const timePart = newPollData.closesAtTime || "00:00";
             combinedClosesAt = new Date(`${newPollData.closesAtDate}T${timePart}`).toISOString();
         }
-        const isCreatorAdmin = activeUserCampRole >= 6;
+        const isCreatorAdmin = effectiveRole >= 6;
         const pollObject = {
             questionText: newPollData.questionText.trim(),
             description: newPollData.description.trim() || null,
@@ -454,7 +415,7 @@ const PollsPage = ({ user, campID, userData }) => { // userData is still used fo
             closesAt: combinedClosesAt,
             allowUserOptionSubmissions: newPollType === 'standard' ? newPollData.allowUserOptionSubmissions : false,
             resultsVisibility: newPollData.resultsVisibility, tags: newPollData.tags || [],
-            createdByUserID: user.uid, creatorRoleAtCreation: activeUserCampRole,
+            createdByUserID: user.uid, creatorRoleAtCreation: effectiveRole,
             createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
             isApprovedForDisplay: isCreatorAdmin, approvedByUserID: isCreatorAdmin ? user.uid : null,
             approvedAt: isCreatorAdmin ? serverTimestamp() : null, isRejectedForDisplay: false,

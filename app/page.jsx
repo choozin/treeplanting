@@ -184,10 +184,11 @@ export default function HomePage() {
 
         {isBirthdaysVisible && <Birthdays />}
 
-        {isUserManagementVisible && user && userData && userData.role >= 8 && (
+        {isUserManagementVisible && user && userData && effectiveRole >= 5 && (
           <UserManagement
             currentUser={user}
             campID={campID}
+            effectiveRole={effectiveRole}
           />
         )}
 
@@ -206,7 +207,7 @@ export default function HomePage() {
         )}
 
       </main>
-      <div style={{colorSchemeToggleContainerStyle, display: 'none' }}>
+      <div style={{ colorSchemeToggleContainerStyle, display: 'none' }}>
         <ColorSchemeToggle />
       </div>
     </>
