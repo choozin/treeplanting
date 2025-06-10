@@ -68,9 +68,9 @@ const processSixHourForecast = (hourly) => {
 
 export const WeatherProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [campID, setCampID] = useState(null);
     const [weatherPreferences, setWeatherPreferences] = useState(null);
     const [locations, setLocations] = useState({ primary: null, secondary: null });
+    const [campID, setCampID] = useState(null);
 
     const [primaryWeatherData, setPrimaryWeatherData] = useState({ data: null, loading: true, error: null, lastFetched: null, status: 'loading' });
     const [secondaryWeatherData, setSecondaryWeatherData] = useState({ data: null, loading: true, error: null, lastFetched: null, status: 'loading' });
@@ -81,61 +81,72 @@ export const WeatherProvider = ({ children }) => {
         return () => unsubscribe();
     }, []);
 
-    // Fetch user preferences and active camp location
-    useEffect(() => {
-        if (!user) return;
+    const updateActiveCampAndLocation = useCallback(async () => {
+        if (!user) {
+            setCampID(null);
+            setLocations({ primary: null, secondary: null });
+            setPrimaryWeatherData({ data: null, loading: false, error: null, lastFetched: null, status: 'no_user' });
+            return;
+        }
 
-        const prefsRef = ref(database, `users/${user.uid}/weatherPreferences`);
+        const userRef = ref(database, `users/${user.uid}`);
+        const campsRef = ref(database, 'camps');
+        const defaultLocation = { name: "Prince George, BC (Default)", latitude: 53.916943, longitude: -122.749443 };
+
+        try {
+            const [userSnap, campsSnap] = await Promise.all([get(userRef), get(campsRef)]);
+            const userData = userSnap.val();
+            const campsData = campsSnap.val();
+            const storedCampID = Cookies.get("campID");
+
+            const activeCampID = (campsData && userData?.assignedCamps && storedCampID && userData.assignedCamps[storedCampID])
+                ? storedCampID
+                : null;
+
+            setCampID(activeCampID);
+
+            if (activeCampID) {
+                const camp = campsData[activeCampID];
+                const activeLocationId = camp.activeLocationId;
+                const year = new Date().getFullYear();
+
+                if (activeLocationId && camp.campLocations?.[year]?.[activeLocationId]) {
+                    const primaryLoc = camp.campLocations[year][activeLocationId];
+                    const secondaryLocKey = weatherPreferences?.secondaryLocationKey;
+                    const secondaryLoc = secondaryLocKey ? primaryLoc.secondaryLocations?.[secondaryLocKey] : null;
+
+                    setLocations({
+                        primary: { name: primaryLoc.campLocationName, ...primaryLoc.latLong },
+                        secondary: secondaryLoc ? { name: secondaryLoc.name, ...secondaryLoc.latLong } : null
+                    });
+                    setPrimaryWeatherData(prev => ({ ...prev, status: 'ok' }));
+                } else {
+                    setLocations({ primary: defaultLocation, secondary: null });
+                    setPrimaryWeatherData(prev => ({ ...prev, status: 'using_default_location' }));
+                }
+            } else {
+                setLocations({ primary: null, secondary: null });
+                setPrimaryWeatherData({ data: null, loading: false, error: null, lastFetched: null, status: 'no_camp_selected' });
+            }
+        } catch (e) {
+            console.error("Error updating active camp:", e);
+        }
+    }, [user, weatherPreferences?.secondaryLocationKey]);
+
+    useEffect(() => {
+        updateActiveCampAndLocation();
+        window.addEventListener('campChange', updateActiveCampAndLocation);
+
+        const prefsRef = ref(database, `users/${user?.uid}/weatherPreferences`);
         const unsubPrefs = onValue(prefsRef, (snapshot) => {
             setWeatherPreferences(snapshot.val());
         });
 
-        const campRef = ref(database, 'camps');
-        const unsubCamps = onValue(campRef, async (snapshot) => {
-            const campsData = snapshot.val();
-            const userRef = ref(database, `users/${user.uid}`);
-            const userSnap = await get(userRef);
-            const userData = userSnap.val();
-
-            if (campsData && userData?.assignedCamps) {
-                const storedCampID = Cookies.get("campID");
-                const activeCampID = storedCampID && userData.assignedCamps[storedCampID] ? storedCampID : null;
-                setCampID(activeCampID);
-
-                if (activeCampID) {
-                    const camp = campsData[activeCampID];
-                    const activeLocationId = camp.activeLocationId;
-                    const year = new Date().getFullYear();
-
-                    if (activeLocationId && camp.campLocations?.[year]?.[activeLocationId]) {
-                        const primaryLoc = camp.campLocations[year][activeLocationId];
-                        const secondaryLocKey = weatherPreferences?.secondaryLocationKey;
-                        const secondaryLoc = secondaryLocKey ? primaryLoc.secondaryLocations?.[secondaryLocKey] : null;
-
-                        setLocations({
-                            primary: { name: primaryLoc.campLocationName, ...primaryLoc.latLong },
-                            secondary: secondaryLoc ? { name: secondaryLoc.name, ...secondaryLoc.latLong } : null
-                        });
-                        setPrimaryWeatherData(prev => ({ ...prev, status: 'ok' }));
-
-                    } else {
-                        // Handle case where camp is selected but no location is set
-                        setLocations({ primary: null, secondary: null });
-                        setPrimaryWeatherData({ data: null, loading: false, error: null, lastFetched: Date.now(), status: 'no_location_set' });
-                    }
-                } else {
-                    // Handle case where no camp is selected
-                    setLocations({ primary: null, secondary: null });
-                    setPrimaryWeatherData({ data: null, loading: false, error: null, lastFetched: null, status: 'no_camp_selected' });
-                }
-            }
-        });
-
         return () => {
+            window.removeEventListener('campChange', updateActiveCampAndLocation);
             unsubPrefs();
-            unsubCamps();
         };
-    }, [user, weatherPreferences?.secondaryLocationKey]);
+    }, [user, updateActiveCampAndLocation]);
 
     const fetchWeatherData = useCallback(async (location, setter, isTemporary = false) => {
         if (!location || !location.latitude || !location.longitude) {
@@ -164,7 +175,7 @@ export const WeatherProvider = ({ children }) => {
             if (isTemporary) {
                 setTemporaryWeatherData({ data: processedData, loading: false, error: null });
             } else {
-                setter({ data: processedData, loading: false, error: null, lastFetched: Date.now(), status: 'ok' });
+                setter(prev => ({ ...prev, data: processedData, loading: false, error: null, lastFetched: Date.now() }));
             }
         } catch (error) {
             console.error("Failed to fetch weather data:", error);
@@ -177,12 +188,11 @@ export const WeatherProvider = ({ children }) => {
         }
     }, []);
 
-    // Effect to trigger fetches for primary/secondary locations
     useEffect(() => {
-        if (locations.primary && isDataStale(primaryWeatherData.lastFetched)) {
+        if (locations.primary && (isDataStale(primaryWeatherData.lastFetched) || primaryWeatherData.status === 'using_default_location' && !primaryWeatherData.data)) {
             fetchWeatherData(locations.primary, setPrimaryWeatherData, false);
         }
-    }, [locations.primary, primaryWeatherData.lastFetched, fetchWeatherData]);
+    }, [locations.primary, primaryWeatherData.lastFetched, primaryWeatherData.data, primaryWeatherData.status, fetchWeatherData]);
 
     useEffect(() => {
         if (locations.secondary && isDataStale(secondaryWeatherData.lastFetched)) {
@@ -195,7 +205,6 @@ export const WeatherProvider = ({ children }) => {
     const fetchTemporaryWeather = useCallback((lat, long) => {
         fetchWeatherData({ latitude: lat, longitude: long, name: "Manual Entry" }, setTemporaryWeatherData, true);
     }, [fetchWeatherData]);
-
 
     const value = useMemo(() => ({
         primary: { ...primaryWeatherData, location: locations.primary },

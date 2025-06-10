@@ -2,6 +2,8 @@ import '@mantine/core/styles.css';
 
 import React from 'react';
 import { ColorSchemeScript, mantineHtmlProps, MantineProvider } from '@mantine/core';
+import { ModalsProvider } from '@mantine/modals';
+import { Notifications } from '@mantine/notifications';
 import { theme } from '../theme';
 import { WeatherProvider } from '../context/WeatherProvider';
 
@@ -23,9 +25,12 @@ export default function RootLayout({ children }: { children: any }) {
       </head>
       <body suppressHydrationWarning={true}>
         <MantineProvider theme={theme}>
-          <WeatherProvider>
-            {children}
-          </WeatherProvider>
+          <ModalsProvider>
+            <Notifications />
+            <WeatherProvider>
+              {children}
+            </WeatherProvider>
+          </ModalsProvider>
         </MantineProvider>
       </body>
     </html>

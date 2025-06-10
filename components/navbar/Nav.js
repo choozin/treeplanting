@@ -12,7 +12,7 @@ import { ref, get, onValue } from "firebase/database";
 
 import Cookies from "js-cookie";
 
-import { IconBulb, IconCheckbox, IconPlus, IconSearch, IconUser, IconInfoCircle } from "@tabler/icons-react";
+import { IconCheckbox, IconPlus, IconSearch, IconUser, IconInfoCircle, IconMessage } from "@tabler/icons-react";
 import {
     Badge,
     Box,
@@ -31,6 +31,7 @@ import {
 import classes from "./Navbar.module.css";
 import WeatherNavWidget from '../weather/WeatherNavWidget';
 
+// ... (SelfRegistrationAndLogin and CampSelector components remain unchanged) ...
 const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNavIsOpen }) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -264,6 +265,7 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCamps
         } else {
             Cookies.remove("campID");
         }
+        window.dispatchEvent(new Event('campChange'));
     };
 
     const campEntries = Object.entries(camps);
@@ -309,7 +311,8 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCamps
 });
 CampSelector.displayName = 'CampSelector';
 
-export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, navIsOpen, setNavIsOpen, handleComponentChange, effectiveRole }) {
+
+export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, navIsOpen, setNavIsOpen, handleComponentChange, effectiveRole, unreadCount, badgeColor }) {
     const [showCampGuide, setShowCampGuide] = useState(false);
     const [campsAvailableForGuide, setCampsAvailableForGuide] = useState(false);
     const campSelectorWrapperRef = useRef(null);
@@ -344,7 +347,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
     };
 
     const links = [
-        { icon: IconBulb, label: "Messages", notifications: 3, onClick: () => { handleComponentChange('messages'); setNavIsOpen(false); }, section: "messages", isFunctional: false },
+        { icon: IconMessage, label: "Messages", notifications: unreadCount, color: badgeColor, onClick: () => { handleComponentChange('messages'); setNavIsOpen(false); }, section: "messages", isFunctional: true },
         { icon: IconCheckbox, label: "Tasks", notifications: 4, onClick: () => { handleComponentChange('tasks'); setNavIsOpen(false); }, section: "tasks", isFunctional: false },
         { icon: IconUser, label: "Calendar", onClick: () => { handleComponentChange('calendar'); setNavIsOpen(false); }, section: "calendar", isFunctional: true },
     ];
@@ -358,6 +361,8 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         { emoji: "🎂", label: "Birthdays", onClick: () => { handleComponentChange('birthdays'); setNavIsOpen(false); }, section: "birthdays", isFunctional: true },
         { emoji: "👤", label: "My Account", onClick: () => { handleComponentChange('myAccount'); setNavIsOpen(false); }, section: "myAccount", isFunctional: true },
         { emoji: "👥", label: "User Management", onClick: () => { handleComponentChange('userManagement'); setNavIsOpen(false); }, section: "userManagement", isFunctional: true },
+        { emoji: "🏕️", label: "Camp Management", onClick: () => { handleComponentChange('campManagement'); setNavIsOpen(false); }, section: "campManagement", isFunctional: true },
+        { emoji: "👨‍👩‍👧‍👦", label: "Crew Management", onClick: () => { handleComponentChange('crewManagement'); setNavIsOpen(false); }, section: "crewManagement", isFunctional: true },
         { emoji: "📦", label: "Inventory", onClick: () => { handleComponentChange('inventory'); setNavIsOpen(false); }, section: "inventory", isFunctional: false },
         { emoji: "🍲", label: "Recipes", onClick: () => { handleComponentChange('recipes'); setNavIsOpen(false); }, section: "recipes", isFunctional: false },
         { emoji: "🛒", label: "Orders", onClick: () => { handleComponentChange('orders'); setNavIsOpen(false); }, section: "orders", isFunctional: false },
@@ -405,8 +410,8 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                     <item.icon size={20} className={classes.mainLinkIcon} stroke={1.5} />
                     <span>{item.label}</span>
                 </div>
-                {item.notifications && (
-                    <Badge size="sm" variant="filled" className={classes.mainLinkBadge}>
+                {item.notifications > 0 && (
+                    <Badge size="sm" variant="filled" className={classes.mainLinkBadge} color={item.color || 'blue'}>
                         {item.notifications}
                     </Badge>
                 )}

@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { useWeather } from '../../hooks/useWeather';
-import { Container, Title, Text, Paper, Alert, Button, Center } from '@mantine/core';
+import { Container, Title, Text, Paper, Alert, Button, Center, Group } from '@mantine/core';
 import SetLocationModal from './SetLocationModal';
+import { IconAlertCircle } from '@tabler/icons-react';
 
 const WeatherPage = ({ effectiveRole }) => {
     const { primary, secondary, temporary, refresh } = useWeather();
@@ -14,21 +15,8 @@ const WeatherPage = ({ effectiveRole }) => {
     const isLoading = primary.loading || temporary.loading;
     const error = primary.error || temporary.error;
 
-    if (isLoading) {
+    if (isLoading && !dataToShow) { // Only show full-page loader if there's no data to display
         return <Center><Text>Loading weather...</Text></Center>;
-    }
-
-    if (primary.status === 'no_location_set') {
-        return (
-            <Container size="sm">
-                <SetLocationModal opened={modalOpened} onClose={() => setModalOpened(false)} effectiveRole={effectiveRole} />
-                <Paper withBorder p="xl" radius="md" style={{ textAlign: 'center' }}>
-                    <Title order={3} mb="sm">No Location Set</Title>
-                    <Text c="dimmed" mb="xl">A primary location has not been set for this camp.</Text>
-                    <Button onClick={() => setModalOpened(true)}>Set Camp Location</Button>
-                </Paper>
-            </Container>
-        );
     }
 
     if (primary.status === 'no_camp_selected') {
@@ -54,6 +42,16 @@ const WeatherPage = ({ effectiveRole }) => {
     return (
         <Container>
             <SetLocationModal opened={modalOpened} onClose={() => setModalOpened(false)} effectiveRole={effectiveRole} />
+
+            {primary.status === 'using_default_location' && (
+                <Alert icon={<IconAlertCircle size="1rem" />} title="Showing Default Location" color="orange" withCloseButton mb="md">
+                    A primary location has not been set for this camp. Showing weather for Prince George, BC.
+                    <Button onClick={() => setModalOpened(true)} size="xs" variant="outline" color="orange" mt="sm">
+                        Set Camp Location
+                    </Button>
+                </Alert>
+            )}
+
             <Group justify="space-between" align="center">
                 <Title order={2}>Weather Forecast</Title>
                 <Button variant="outline" onClick={() => setModalOpened(true)}>Change Location</Button>

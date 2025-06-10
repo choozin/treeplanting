@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
-import { ref, get } from "firebase/database";
+import { ref, get, onValue } from "firebase/database";
 import { database } from '../firebase/firebase';
 
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
@@ -14,7 +14,10 @@ import CampSpecificAnnouncement from '../components/annoucements/CampSpecificAnn
 import PollsPage from '../components/polls/PollsPage';
 import MyAccount from '../components/MyAccount/MyAccount';
 import Birthdays from '../components/Birthdays/Birthdays';
-import WeatherPage from '../components/weather/WeatherPage'; // Import the new component
+import WeatherPage from '../components/weather/WeatherPage';
+import CampManagement from '../components/management/CampManagement';
+import CrewManagement from '../components/management/CrewManagement';
+import MessagesPage from '../components/messages/MessagesPage';
 import { Paper, Text } from '@mantine/core';
 
 export default function HomePage() {
@@ -22,6 +25,10 @@ export default function HomePage() {
   const [userData, setUserData] = useState(null);
   const [campID, setCampID] = useState(null);
   const [effectiveRole, setEffectiveRole] = useState(0);
+
+  // Notification state
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [badgeColor, setBadgeColor] = useState('blue');
 
   const [navIsOpen, setNavIsOpen] = useState(false);
   const [isGeneralAnnouncementVisible, setIsGeneralAnnouncementVisible] = useState(true);
@@ -33,7 +40,11 @@ export default function HomePage() {
   const [isPollsVisible, setIsPollsVisible] = useState(false);
   const [isMyAccountVisible, setIsMyAccountVisible] = useState(false);
   const [isBirthdaysVisible, setIsBirthdaysVisible] = useState(false);
-  const [isWeatherVisible, setIsWeatherVisible] = useState(false); // New state for weather page
+  const [isWeatherVisible, setIsWeatherVisible] = useState(false);
+  const [isCampManagementVisible, setIsCampManagementVisible] = useState(false);
+  const [isCrewManagementVisible, setIsCrewManagementVisible] = useState(false);
+  const [isMessagesVisible, setIsMessagesVisible] = useState(false);
+
 
   // Effect to handle campID based on user authentication state
   useEffect(() => {
@@ -87,6 +98,43 @@ export default function HomePage() {
     calculateEffectiveRole();
   }, [user, userData, campID]);
 
+  // Effect to listen for unread messages and update notification badge
+  useEffect(() => {
+      if (!user) {
+          setUnreadCount(0);
+          return;
+      }
+
+      const userInboxRef = ref(database, `user-inboxes/${user.uid}`);
+      const unsubscribe = onValue(userInboxRef, (snapshot) => {
+          if (!snapshot.exists()) {
+              setUnreadCount(0);
+              return;
+          }
+          
+          const inboxData = snapshot.val();
+          const unreadMessages = Object.values(inboxData).filter(msg => !msg.isRead);
+          setUnreadCount(unreadMessages.length);
+
+          const priorityOrder = { Formal: 1, Operational: 2, Social: 3, System: 4 };
+          const colorMap = { Formal: 'red', Operational: 'yellow', Social: 'green', System: 'blue' };
+          
+          let highestPriority = 5;
+          let highestPriorityType = 'System';
+
+          for (const msg of unreadMessages) {
+              if (priorityOrder[msg.messageType] < highestPriority) {
+                  highestPriority = priorityOrder[msg.messageType];
+                  highestPriorityType = msg.messageType;
+              }
+          }
+          
+          setBadgeColor(colorMap[highestPriorityType] || 'blue');
+      });
+
+      return () => unsubscribe();
+  }, [user]);
+
   const handleComponentChange = (visibleComponent) => {
     setNavIsOpen(false);
 
@@ -97,7 +145,10 @@ export default function HomePage() {
     setIsMyAccountVisible(false);
     setIsBirthdaysVisible(false);
     setIsPollsVisible(false);
-    setIsWeatherVisible(false); // Hide weather page
+    setIsWeatherVisible(false);
+    setIsCampManagementVisible(false);
+    setIsCrewManagementVisible(false);
+    setIsMessagesVisible(false);
 
     // Show the selected component
     switch (visibleComponent) {
@@ -119,8 +170,17 @@ export default function HomePage() {
       case 'birthdays':
         setIsBirthdaysVisible(true);
         break;
-      case 'weather': // Show weather page
+      case 'weather':
         setIsWeatherVisible(true);
+        break;
+      case 'campManagement':
+        setIsCampManagementVisible(true);
+        break;
+      case 'crewManagement':
+        setIsCrewManagementVisible(true);
+        break;
+      case 'messages':
+        setIsMessagesVisible(true);
         break;
       default:
         setIsCalendarVisible(true);
@@ -153,6 +213,8 @@ export default function HomePage() {
         setNavIsOpen={setNavIsOpen}
         handleComponentChange={handleComponentChange}
         effectiveRole={effectiveRole}
+        unreadCount={unreadCount}
+        badgeColor={badgeColor}
       />
 
       <main style={mainContentStyle}>
@@ -168,10 +230,22 @@ export default function HomePage() {
           campID={campID}
         />
 
+        {isMessagesVisible && user && (
+          <MessagesPage user={user} effectiveRole={effectiveRole} campID={campID} />
+        )}
+
         {isWeatherVisible && <WeatherPage />}
 
         {isPollsVisible && user && campID && (
           <PollsPage user={user} campID={campID} userData={userData} effectiveRole={effectiveRole} />
+        )}
+
+        {isCampManagementVisible && user && campID && (
+          <CampManagement campID={campID} effectiveRole={effectiveRole} />
+        )}
+
+        {isCrewManagementVisible && user && campID && (
+          <CrewManagement campID={campID} effectiveRole={effectiveRole} />
         )}
 
         {isCalendarVisible && user && campID && (
@@ -200,14 +274,14 @@ export default function HomePage() {
           />
         )}
 
-        {user && !campID && !isMyAccountVisible && !isWeatherVisible && (
+        {user && !campID && !isMyAccountVisible && !isWeatherVisible && !isMessagesVisible && (
           <Paper shadow="xs" p="xl" radius="md" withBorder style={{ textAlign: 'center', marginTop: '20px', backgroundColor: 'var(--mantine-color-gray-0)' }}>
             <Text size="lg" fw={500}>Welcome, {userData?.name || 'User'}!</Text>
             <Text c="dimmed" mt="sm">Please select a camp from the menu to view its tools and information.</Text>
           </Paper>
         )}
 
-        {!user && !isMyAccountVisible && !isWeatherVisible && (
+        {!user && !isMyAccountVisible && !isWeatherVisible && !isMessagesVisible && (
           <Paper shadow="xs" p="xl" radius="md" withBorder style={{ textAlign: 'center', marginTop: '20px', backgroundColor: 'var(--mantine-color-gray-0)' }}>
             <Text size="lg" fw={500}>Please log in to access the application features.</Text>
             <Text c="dimmed" mt="sm">You can open the menu to log in or register.</Text>
@@ -215,7 +289,7 @@ export default function HomePage() {
         )}
 
       </main>
-      <div style={{ colorSchemeToggleContainerStyle, display: 'none' }}>
+      <div style={colorSchemeToggleContainerStyle}>
         <ColorSchemeToggle />
       </div>
     </>

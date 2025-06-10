@@ -1,0 +1,115 @@
+.messageList {
+  border-right: 1px solid var(--mantine-color-gray-3);
+  height: calc(100vh - 120px); /* Adjust based on your header/footer */
+  display: flex;
+  flex-direction: column;
+}
+
+.messageListItem {
+  display: flex;
+  padding: var(--mantine-spacing-sm);
+  border-bottom: 1px solid var(--mantine-color-gray-2);
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.messageListItem:hover {
+  background-color: var(--mantine-color-gray-0);
+}
+
+.messageListItemSelected {
+  background-color: var(--mantine-color-blue-0);
+}
+
+.typeIndicator {
+  width: 4px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.bottomIndicator {
+  height: 2px;
+  position: absolute;
+  left: 4px;
+  right: 0;
+  bottom: 0;
+}
+
+.messageContent {
+  flex-grow: 1;
+  padding-left: var(--mantine-spacing-sm);
+  overflow: hidden;
+}
+
+.messageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.senderName {
+  font-weight: 700;
+}
+
+.senderNameUnread {
+  font-weight: 900;
+  color: var(--mantine-color-black);
+}
+
+.messageDate {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+  flex-shrink: 0;
+  margin-left: var(--mantine-spacing-sm);
+}
+
+.subject {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-text);
+}
+
+.subjectUnread {
+  font-weight: 700;
+}
+
+.recipientCount {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+
+.recipientCountHidden {
+  color: var(--mantine-color-gray-5);
+  font-style: italic;
+}
+
+.detailView {
+  padding: var(--mantine-spacing-lg);
+  height: calc(100vh - 120px); /* Adjust as needed */
+  display: flex;
+  flex-direction: column;
+}
+
+.detailHeader {
+  padding-bottom: var(--mantine-spacing-md);
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+}
+
+.detailBody {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-top: var(--mantine-spacing-md);
+  white-space: pre-wrap; /* To respect newlines in the message body */
+  line-height: 1.6;
+}
+
+.replySection {
+  margin-top: var(--mantine-spacing-lg);
+  padding-top: var(--mantine-spacing-lg);
+  border-top: 1px solid var(--mantine-color-gray-2);
+}
