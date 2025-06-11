@@ -30,11 +30,11 @@ export default function HomePage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [badgeColor, setBadgeColor] = useState('blue');
 
-  const [isGeneralAnnouncementVisible, setIsGeneralAnnouncementVisible] = useState(true);
-  const [isCampSpecificAnnouncementVisible, setIsCampSpecificAnnouncementVisible] = useState(true);
+  const [isGeneralAnnouncementVisible, setIsGeneralAnnouncementVisible] = useState(false);
+  const [isCampSpecificAnnouncementVisible, setIsCampSpecificAnnouncementVisible] = useState(false);
 
   // Component visibility state
-  const [visibleComponent, setVisibleComponent] = useState('calendar');
+  const [visibleComponent, setVisibleComponent] = useState(null);
 
   // Effect to handle campID based on user authentication state
   useEffect(() => {
@@ -155,11 +155,12 @@ export default function HomePage() {
         effectiveRole={effectiveRole}
         unreadCount={unreadCount}
         badgeColor={badgeColor}
+        visibleComponent={visibleComponent}
       />
 
       <main>
         {/* Main content is now conditionally rendered based on user state */}
-        {user ? (
+        {user && visibleComponent && (
           <>
             <GeneralAnnouncement
               isVisible={isGeneralAnnouncementVisible}
@@ -190,8 +191,8 @@ export default function HomePage() {
               </Paper>
             )}
           </>
-        ) : user === null && (
-          // Render a blank state while the login modal is open
+        )}
+        {user === null && (
           <div style={{ minHeight: '80vh' }} />
         )}
       </main>

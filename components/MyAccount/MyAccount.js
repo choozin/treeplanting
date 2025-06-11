@@ -51,7 +51,14 @@ const MyAccount = ({ user, setUserData }) => {
 
                 const weatherPrefsSnap = await get(weatherPrefsRef);
                 if (weatherPrefsSnap.exists()) {
-                    setWeatherPrefs(p => ({ ...p, ...weatherPrefsSnap.val() }));
+                    // Safely merge fetched preferences with default state
+                    const fetchedPrefs = weatherPrefsSnap.val();
+                    setWeatherPrefs(p => ({
+                        ...p,
+                        ...fetchedPrefs,
+                        navWidget: { ...p.navWidget, ...(fetchedPrefs.navWidget || {}) },
+                        homescreenWidget: { ...p.homescreenWidget, ...(fetchedPrefs.homescreenWidget || {}) },
+                    }));
                 }
             } catch (err) {
                 console.error('Error fetching user data:', err);
@@ -85,10 +92,14 @@ const MyAccount = ({ user, setUserData }) => {
                 const secondaryLocsSnap = await get(secondaryLocsRef);
                 if (secondaryLocsSnap.exists()) {
                     const data = secondaryLocsSnap.val();
-                    const options = Object.keys(data).map(key => ({
-                        value: key,
-                        label: data[key].name
-                    }));
+                    // *** FIX: Added a filter to safely handle malformed data ***
+                    // This prevents a crash if a location is null or missing a 'name'.
+                    const options = Object.entries(data)
+                        .filter(([key, value]) => value && typeof value === 'object' && value.name)
+                        .map(([key, value]) => ({
+                            value: key,
+                            label: value.name
+                        }));
                     setAvailableSecondaryLocations(options);
                 } else {
                     setAvailableSecondaryLocations([]);
@@ -144,6 +155,10 @@ const MyAccount = ({ user, setUserData }) => {
             let current = newPrefs;
             const keys = path.split('.');
             for (let i = 0; i < keys.length - 1; i++) {
+                // Ensure nested objects exist before trying to access them
+                if (!current[keys[i]]) {
+                    current[keys[i]] = {};
+                }
                 current = current[keys[i]];
             }
             current[keys[keys.length - 1]] = value;
@@ -237,16 +252,16 @@ const MyAccount = ({ user, setUserData }) => {
                 <Switch
                     mt="md"
                     label="Show Nav Widget"
-                    checked={weatherPrefs.navWidget.visible}
+                    checked={weatherPrefs.navWidget?.visible}
                     onChange={(e) => handleWeatherPrefChange('navWidget.visible', e.currentTarget.checked)}
                 />
                 <Select
                     label="Nav Widget Forecast Type"
                     data={['hourly', '6-hour', 'daily']}
-                    value={weatherPrefs.navWidget.displayMode}
+                    value={weatherPrefs.navWidget?.displayMode}
                     onChange={(value) => handleWeatherPrefChange('navWidget.displayMode', value)}
                     mt="sm"
-                    disabled={!weatherPrefs.navWidget.visible}
+                    disabled={!weatherPrefs.navWidget?.visible}
                 />
             </Paper>
 

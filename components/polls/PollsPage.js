@@ -504,38 +504,7 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
 
         try {
             await update(firebaseDatabaseRef(database), updates);
-
-            // --- Start of UI State Update ---
-            // Mark that the user has now voted
             setUserVotes(prev => ({ ...prev, [selectedPoll.id]: finalVoteData }));
-
-            // Manually update the local 'selectedPoll' state to reflect the new vote instantly
-            setSelectedPoll(prevPoll => {
-                if (!prevPoll) return null;
-
-                // Add the new vote to the usersVoted object
-                const newUsersVoted = {
-                    ...prevPoll.usersVoted,
-                    [user.uid]: finalVoteData
-                };
-
-                let newOptions = { ...prevPoll.options };
-                // If it's a standard poll, also increment the local vote count
-                if (prevPoll.pollType !== 'ranked_ballot') {
-                    if (newOptions[finalVoteData]) {
-                        newOptions[finalVoteData].voteCount = (newOptions[finalVoteData].voteCount || 0) + 1;
-                    }
-                }
-
-                return {
-                    ...prevPoll,
-                    usersVoted: newUsersVoted,
-                    options: newOptions
-                };
-            });
-            // --- End of UI State Update ---
-
-            alert("Vote submitted successfully!");
         } catch (e) {
             console.error("Error submitting vote:", e);
             alert("Failed to submit vote.");

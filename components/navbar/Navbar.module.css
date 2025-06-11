@@ -16,6 +16,14 @@
     backdrop-filter: blur(8px);
 }
 
+.headerTitle {
+    color: white;
+    margin-left: var(--mantine-spacing-md);
+    font-weight: 600;
+    flex-grow: 1;
+    /* Allows it to take up space */
+}
+
 .logo {
     height: 40px;
     width: 40px;
@@ -34,8 +42,8 @@
     right: 0;
     bottom: 0;
     z-index: 2000;
-    background-color: rgba(233, 236, 239, 0.92);
-    /* Darker light gray for better contrast */
+    background-color: rgba(20, 20, 20, 0.6);
+    /* Darker, more transparent background */
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
@@ -133,4 +141,21 @@
     justify-content: center;
     width: 100%;
     height: 100%;
+}
+
+.campBadgeContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--mantine-spacing-sm);
+    justify-content: center;
+    margin-top: var(--mantine-spacing-md);
+}
+
+.campBadge {
+    cursor: pointer;
+    transition: transform 0.1s ease-in-out;
+}
+
+.campBadge:hover {
+    transform: scale(1.05);
 }

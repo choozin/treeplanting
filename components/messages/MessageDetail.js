@@ -17,24 +17,13 @@ import {
     Tooltip,
     ScrollArea,
     Badge,
-    Stack
+    Stack,
+    Paper
 } from '@mantine/core';
-import { IconSend, IconCheck, IconX } from '@tabler/icons-react';
+import { IconSend, IconCheck, IconX, IconArrowLeft } from '@tabler/icons-react';
 import classes from './Messages.module.css';
 
-// A new sub-component to render each message in the thread
-const MessageBubble = ({ message, senderName }) => (
-    <Paper withBorder p="sm" mb="sm" shadow="xs">
-        <Group justify="space-between" mb="xs">
-            <Text fw={700} size="sm">{senderName || 'Unknown Sender'}</Text>
-            <Text size="xs" c="dimmed">{new Date(message.sentAt).toLocaleString()}</Text>
-        </Group>
-        <Text style={{ whiteSpace: 'pre-wrap' }}>{message.body}</Text>
-    </Paper>
-);
-
-
-const MessageDetail = ({ messageId, currentUser }) => {
+const MessageDetail = ({ messageId, currentUser, onBack }) => {
     const [thread, setThread] = useState([]);
     const [participants, setParticipants] = useState({});
     const [loading, setLoading] = useState(true);
@@ -52,7 +41,6 @@ const MessageDetail = ({ messageId, currentUser }) => {
 
         const fetchThread = async () => {
             try {
-                // First, get the selected message to find its threadId or parentId
                 const initialMsgRef = ref(database, `messages/${messageId}`);
                 const initialMsgSnap = await get(initialMsgRef);
                 if (!initialMsgSnap.exists()) {
@@ -61,25 +49,20 @@ const MessageDetail = ({ messageId, currentUser }) => {
                     return;
                 }
                 const initialMsg = initialMsgSnap.val();
-                const threadId = initialMsg.threadId || messageId; // A message is its own thread root if it has no threadId
+                const threadId = initialMsg.threadId || messageId;
 
-                // Now, query for all messages in that thread
                 const messagesRef = query(ref(database, 'messages'), orderByChild('threadId'), equalTo(threadId));
                 const threadSnapshot = await get(messagesRef);
 
                 let messagesInThread = [];
                 if (threadSnapshot.exists()) {
                     messagesInThread = Object.entries(threadSnapshot.val()).map(([id, data]) => ({ id, ...data }));
+                } else {
+                    messagesInThread.push({ id: messageId, ...initialMsg });
                 }
 
-                // Add the root message if it wasn't returned by the query (in case it has no threadId field)
-                if (!messagesInThread.some(msg => msg.id === threadId)) {
-                    messagesInThread.push({ id: threadId, ...initialMsg });
-                }
+                messagesInThread.sort((a, b) => a.sentAt - b.sentAt);
 
-                messagesInThread.sort((a, b) => b.sentAt - a.sentAt); // Newest first
-
-                // Get all participant names for the thread
                 const userIds = new Set(messagesInThread.map(msg => msg.senderId));
                 const userPromises = Array.from(userIds).map(uid => get(ref(database, `users/${uid}`)));
                 const userSnapshots = await Promise.all(userPromises);
@@ -93,7 +76,7 @@ const MessageDetail = ({ messageId, currentUser }) => {
 
             } catch (err) {
                 console.error("Failed to load message thread:", err);
-                setError("Could not load the conversation.");
+                setError("Could not load the conversation. Ensure database rules are set correctly.");
             } finally {
                 setLoading(false);
             }
@@ -108,6 +91,7 @@ const MessageDetail = ({ messageId, currentUser }) => {
 
         return () => unsubUserResponse();
     }, [messageId, currentUser]);
+
 
     const handleAction = async (action) => {
         const updates = {};
@@ -127,20 +111,29 @@ const MessageDetail = ({ messageId, currentUser }) => {
         if (!replyText.trim() || thread.length === 0) return;
         setIsSending(true);
 
-        const originalMessage = thread.find(m => m.id === messageId) || thread[thread.length - 1];
-        const rootMessage = thread[thread.length - 1];
+        const originalMessage = thread.find(m => m.id === messageId) || thread[0];
+        const rootMessage = thread[0];
 
         const newRecipients = {};
         if (replyType === 'reply') {
-            newRecipients[originalMessage.senderId] = true;
+            if (originalMessage.senderId !== currentUser.uid) {
+                newRecipients[originalMessage.senderId] = true;
+            }
         } else {
             Object.keys(originalMessage.recipients || {}).forEach(uid => {
                 if (uid !== currentUser.uid) newRecipients[uid] = true;
             });
-            newRecipients[originalMessage.senderId] = true;
+            if (originalMessage.senderId !== currentUser.uid) {
+                newRecipients[originalMessage.senderId] = true;
+            }
         }
 
         const recipientIds = Object.keys(newRecipients);
+        if (recipientIds.length === 0) {
+            notifications.show({ title: 'No recipients', message: "You are the only one in this conversation.", color: 'orange' });
+            setIsSending(false);
+            return;
+        }
 
         const replyMessage = {
             senderId: currentUser.uid,
@@ -150,7 +143,7 @@ const MessageDetail = ({ messageId, currentUser }) => {
             messageType: rootMessage.messageType,
             areRecipientsVisible: true,
             parentMessageId: messageId,
-            threadId: rootMessage.id, // Link back to the root message
+            threadId: rootMessage.threadId || rootMessage.id,
             liveCopies: recipientIds.length,
             recipients: newRecipients,
         };
@@ -192,25 +185,40 @@ const MessageDetail = ({ messageId, currentUser }) => {
     if (error) return <Alert color="red" title="Error">{error}</Alert>;
     if (thread.length === 0) return <Text>Message not found.</Text>;
 
-    const rootMessage = thread[thread.length - 1]; // Oldest message is the root
-    const originalMessage = thread.find(m => m.id === messageId);
-
-    const getBadgeColor = (response) => {
-        if (response === 'Confirmed') return 'green';
-        if (response === 'Denied') return 'red';
-        return 'gray';
-    };
+    const rootMessage = thread[0];
+    const originalMessage = thread.find(m => m.id === messageId) || rootMessage;
 
     return (
-        <Box className={classes.detailView}>
+        <Box className={classes.detailView} style={{ height: 'calc(100vh - var(--navbar-height))' }}>
             <div className={classes.detailHeader}>
-                <Title order={4}>{rootMessage.subject}</Title>
+                <Group>
+                    {onBack && (
+                        <ActionIcon onClick={onBack} variant="subtle" aria-label="Back to messages">
+                            <IconArrowLeft />
+                        </ActionIcon>
+                    )}
+                    <Title order={4}>{rootMessage.subject}</Title>
+                </Group>
             </div>
 
             <ScrollArea className={classes.detailBody}>
-                {thread.map(msg => (
-                    <MessageBubble key={msg.id} message={msg} senderName={participants[msg.senderId]} />
-                ))}
+                <Stack gap="md">
+                    {thread.map(msg => {
+                        const isCurrentUser = msg.senderId === currentUser.uid;
+                        const senderName = participants[msg.senderId] || 'Unknown';
+                        return (
+                            <div key={msg.id} className={`${classes.messageBubbleContainer} ${isCurrentUser ? classes.userMessage : classes.otherMessage}`}>
+                                {!isCurrentUser && (
+                                    <Text size="xs" c="dimmed" className={classes.bubbleHeader}>{senderName}</Text>
+                                )}
+                                <Paper shadow="sm" className={`${classes.messageBubble} ${isCurrentUser ? classes.userBubble : classes.otherBubble}`}>
+                                    <Text style={{ whiteSpace: 'pre-wrap' }}>{msg.body}</Text>
+                                </Paper>
+                                <Text size="xs" c="dimmed" className={classes.bubbleMeta}>{new Date(msg.sentAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
+                            </div>
+                        );
+                    })}
+                </Stack>
             </ScrollArea>
 
             <div className={classes.replySection}>
@@ -223,7 +231,7 @@ const MessageDetail = ({ messageId, currentUser }) => {
                         </Group>
                     </Box>
                 ) : userResponse ? (
-                    <Badge color={getBadgeColor(userResponse)} size="lg" variant="light">You responded: {userResponse}</Badge>
+                    <Badge color={userResponse === 'Confirmed' ? 'green' : 'red'} size="lg" variant="light">You responded: {userResponse}</Badge>
                 ) : (
                     <Group>
                         <Button variant="outline" onClick={() => { setIsReplying(true); setReplyType('reply'); }}>Reply</Button>

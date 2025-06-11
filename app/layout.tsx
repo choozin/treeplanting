@@ -8,8 +8,8 @@ import { theme } from '../theme';
 import { WeatherProvider } from '../context/WeatherProvider';
 
 export const metadata = {
-  title: 'Tree Planting Camp App',
-  description: 'An app to help with stuff in a tree planting camp.',
+  title: 'Plantiful',
+  description: 'A planning and logistics app for tree planting camps.',
 };
 
 export default function RootLayout({ children }: { children: any }) {

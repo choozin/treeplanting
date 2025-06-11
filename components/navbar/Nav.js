@@ -16,7 +16,7 @@ import { ref, get, onValue, set, update, push as firebasePush } from "firebase/d
 import Cookies from "js-cookie";
 import { useWeather } from '../../hooks/useWeather';
 
-import { IconCheckbox, IconPlus, IconUser, IconInfoCircle, IconMessage, IconX, IconLogout } from "@tabler/icons-react";
+import { IconCheckbox, IconPlus, IconUser, IconInfoCircle, IconMessage, IconX, IconLogout, IconAlertCircle } from "@tabler/icons-react";
 import {
     Badge,
     Box,
@@ -32,7 +32,9 @@ import {
     Burger,
     ActionIcon,
     Title,
-    Select
+    Select,
+    Alert,
+    Divider
 } from "@mantine/core";
 
 import classes from "./Navbar.module.css";
@@ -158,35 +160,6 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCamps
     const [loadingCamps, setLoadingCamps] = useState(true);
     const [errorCamps, setErrorCamps] = useState(null);
 
-    useEffect(() => {
-        if (!user || !user.uid) {
-            setLoadingCamps(false);
-            if (onCampsLoaded) onCampsLoaded(false);
-            return;
-        }
-        const fetchAssignedCamps = async () => {
-            setLoadingCamps(true);
-            setErrorCamps(null);
-            try {
-                const userAssignedCampsRef = ref(database, `users/${user.uid}/assignedCamps`);
-                const snapshot = await get(userAssignedCampsRef);
-                let fetchedCampsData = {};
-                if (snapshot.exists()) {
-                    fetchedCampsData = snapshot.val();
-                    setCamps(fetchedCampsData);
-                } else {
-                    setErrorCamps("No assigned camps found.");
-                }
-                if (onCampsLoaded) onCampsLoaded(snapshot.exists() && Object.keys(fetchedCampsData).length > 0);
-            } catch (fetchError) {
-                setErrorCamps("Error fetching assigned camps: " + fetchError.message);
-                if (onCampsLoaded) onCampsLoaded(false);
-            }
-            setLoadingCamps(false);
-        };
-        fetchAssignedCamps();
-    }, [user, onCampsLoaded]);
-
     const handleCampChange = (value) => {
         onCampSelect(value);
         if (value && user) {
@@ -197,35 +170,102 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCamps
         window.dispatchEvent(new Event('campChange'));
     };
 
+    useEffect(() => {
+        if (!user || !user.uid) {
+            setLoadingCamps(false);
+            if (onCampsLoaded) onCampsLoaded(false);
+            return;
+        }
+
+        const fetchAssignedCamps = async () => {
+            setLoadingCamps(true);
+            setErrorCamps(null);
+            try {
+                const userAssignedCampsRef = ref(database, `users/${user.uid}/assignedCamps`);
+                const snapshot = await get(userAssignedCampsRef);
+                let fetchedCampsData = {};
+
+                if (snapshot.exists()) {
+                    fetchedCampsData = snapshot.val();
+                    setCamps(fetchedCampsData);
+
+                    const campKeys = Object.keys(fetchedCampsData);
+                    if (campKeys.length === 1 && !campID) {
+                        handleCampChange(campKeys[0]);
+                    }
+                } else {
+                    setErrorCamps("You must be assigned to a camp to access camp-specific features.");
+                }
+
+                if (onCampsLoaded) {
+                    onCampsLoaded(snapshot.exists() && Object.keys(fetchedCampsData).length > 0);
+                }
+            } catch (fetchError) {
+                setErrorCamps("Error fetching assigned camps: " + fetchError.message);
+                if (onCampsLoaded) onCampsLoaded(false);
+            }
+            setLoadingCamps(false);
+        };
+
+        fetchAssignedCamps();
+    }, [user, onCampsLoaded]); // Note: handleCampChange is defined outside so it's stable
+
     const campOptions = Object.entries(camps).map(([id, campData]) => ({
-        value: id,
+        id,
         label: campData.campName || `Unnamed Camp (${id})`
     }));
 
     const roleName = effectiveRole > 0 ? (['Disabled', 'Visitor', 'Apprentice', 'Jr. Crew Member', 'Crew Member', 'Crew Boss', 'Camp Boss', 'Company Boss', 'Company Owner', 'App Admin', 'Super Admin'][effectiveRole] || 'Unknown') : 'N/A';
 
     return (
-        <div ref={forwardedRef} style={{ display: "flex", flexDirection: 'column', gap: "8px", width: '100%' }}>
-            <Select
-                label="Active Camp"
-                placeholder={loadingCamps ? "Loading camps..." : "Select a Camp"}
-                data={campOptions}
-                value={campID}
-                onChange={handleCampChange}
-                disabled={loadingCamps || campOptions.length === 0}
-                searchable
-                nothingFoundMessage="No camps found"
-            />
-            {campID && (
-                <div style={{ fontSize: "14px", color: "#495057" }}>
-                    Effective Role: {roleName} ({effectiveRole})
-                </div>
-            )}
-            {errorCamps && campOptions.length === 0 && !loadingCamps && (
-                <Text c="red" size="xs" mt={4}>{errorCamps}</Text>
-            )}
-            {!loadingCamps && campOptions.length === 0 && !errorCamps && (
-                <Text size="xs" c="dimmed" mt={4}>No camps assigned to your profile.</Text>
+        <div ref={forwardedRef} style={{ width: '100%' }}>
+            {loadingCamps ? (
+                <Text>Loading camps...</Text>
+            ) : campID ? (
+                <>
+                    <Title order={3} ta="center">{camps[campID]?.campName || 'Selected Camp'}</Title>
+                    <Text size="sm" c="dimmed" ta="center">Effective Role: {roleName}</Text>
+                    {campOptions.length > 1 && (
+                        <>
+                            <Divider my="sm" label="Switch Camp" labelPosition="center" />
+                            <Group justify="center" gap="sm" className={classes.campBadgeContainer}>
+                                {campOptions.map(camp => (
+                                    <Badge
+                                        key={camp.id}
+                                        size="xl"
+                                        radius="sm"
+                                        variant={camp.id === campID ? "filled" : "light"}
+                                        color={camp.id === campID ? "blue" : "gray"}
+                                        onClick={() => handleCampChange(camp.id)}
+                                        className={classes.campBadge}
+                                    >
+                                        {camp.label}
+                                    </Badge>
+                                ))}
+                            </Group>
+                        </>
+                    )}
+                </>
+            ) : (
+                <>
+                    <Text ta="center" fw={500} size="lg">Please select your active camp:</Text>
+                    <Group justify="center" gap="sm" className={classes.campBadgeContainer}>
+                        {campOptions.length > 0 ? campOptions.map(camp => (
+                            <Badge
+                                key={camp.id}
+                                size="xl"
+                                radius="sm"
+                                variant="light"
+                                onClick={() => handleCampChange(camp.id)}
+                                className={classes.campBadge}
+                            >
+                                {camp.label}
+                            </Badge>
+                        )) : (
+                            <Text c="dimmed">{errorCamps || "You must be assigned to a camp to access camp-specific features."}</Text>
+                        )}
+                    </Group>
+                </>
             )}
         </div>
     );
@@ -617,15 +657,15 @@ const AuthForm = ({ user, setUser, userData, setUserData, campID, setCampID }) =
     );
 }
 
-export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, handleComponentChange, effectiveRole, unreadCount, badgeColor }) {
-    const [navIsOpen, setNavIsOpen] = useState(false);
+export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, handleComponentChange, effectiveRole, unreadCount, badgeColor, visibleComponent }) {
+    const [navIsOpen, setNavIsOpen] = useState(true);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
     useEffect(() => {
-        if (user === null) {
+        if (user === null || visibleComponent === null) {
             setNavIsOpen(true);
         }
-    }, [user]);
+    }, [user, visibleComponent]);
 
     const confirmLogout = async () => {
         if (user) {
@@ -637,6 +677,34 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         setCampID(null);
         setIsLogoutModalOpen(false);
         setNavIsOpen(true);
+        handleComponentChange(null);
+    };
+
+    const getPageTitle = (component) => {
+        if (!component) return 'Plantiful';
+        const componentMap = {
+            messages: 'Messages',
+            tasks: 'Tasks',
+            calendar: 'Calendar',
+            appFeedback: 'App Feedback',
+            weather: 'Weather',
+            polls: 'Polls',
+            trade: 'Buy/Sell/Trade',
+            music: 'Planting Music',
+            birthdays: 'Birthdays',
+            myAccount: 'My Account',
+            userManagement: 'User Management',
+            campManagement: 'Camp Management',
+            crewManagement: 'Crew Management',
+            inventory: 'Inventory',
+            recipes: 'Recipes',
+            orders: 'Orders',
+            deliveries: 'Deliveries',
+            budget: 'Budget',
+            reports: 'Reports',
+            staff: 'Staff List',
+        };
+        return componentMap[component] || 'Plantiful';
     };
 
     const links = [
@@ -721,6 +789,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
         <>
             <header className={classes.appHeader}>
                 <Image src="/icons/icon-192x192.png" alt="App Logo" width={40} height={40} className={classes.logo} />
+                <Title order={4} className={classes.headerTitle}>{getPageTitle(visibleComponent)}</Title>
                 <Burger opened={navIsOpen} onClick={() => setNavIsOpen((o) => !o)} color="white" aria-label="Toggle navigation" className={classes.menuButton} />
             </header>
 

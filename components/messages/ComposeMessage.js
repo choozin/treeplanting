@@ -82,6 +82,7 @@ const ComposeMessage = ({
             return;
         }
         setIsSubmitting(true);
+        // We pass the new messageId to be used as threadId in onSubmit
         await onSubmit({
             recipients,
             subject,

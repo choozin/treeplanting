@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { database } from '../../firebase/firebase';
-import { ref, onValue, update, remove, set, push, serverTimestamp, runTransaction } from 'firebase/database';
+import { ref, onValue, update, set, push, serverTimestamp } from 'firebase/database';
 import { Container, Grid, Paper, Title, Text, Button, Alert, Center, Group } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { IconPlus, IconAlertCircle } from '@tabler/icons-react';
 import ComposeMessage from './ComposeMessage';
 import MessageList from './MessageList';
@@ -15,6 +16,7 @@ const MessagesPage = ({ user, effectiveRole, campID }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
+    const isMobile = useMediaQuery('(max-width: 768px)');
 
     useEffect(() => {
         if (!user) {
@@ -66,6 +68,7 @@ const MessagesPage = ({ user, effectiveRole, campID }) => {
             ...rest,
             senderId: user.uid,
             sentAt: serverTimestamp(),
+            threadId: messageId, // A new message starts its own thread.
             liveCopies: recipients.length, // Reference counter
             recipients: recipients.reduce((acc, uid) => ({ ...acc, [uid]: true }), {}),
         };
@@ -105,6 +108,45 @@ const MessagesPage = ({ user, effectiveRole, campID }) => {
         );
     }
 
+    // On mobile, show either the list or the detail view. On desktop, show both.
+    if (isMobile) {
+        return (
+            <Container fluid>
+                <ComposeMessage
+                    opened={isComposeModalOpen}
+                    onClose={() => setIsComposeModalOpen(false)}
+                    onSubmit={handleComposeSubmit}
+                    currentUser={user}
+                    effectiveRole={effectiveRole}
+                    campID={campID}
+                />
+                {selectedMessage ? (
+                    <MessageDetail
+                        messageId={selectedMessage.id}
+                        currentUser={user}
+                        onBack={() => setSelectedMessage(null)}
+                    />
+                ) : (
+                    <Paper withBorder>
+                        <Group justify="space-between" p="md">
+                            <Title order={4}>Inbox</Title>
+                            <Button onClick={() => setIsComposeModalOpen(true)} size="xs" leftSection={<IconPlus size={16} />}>
+                                New Message
+                            </Button>
+                        </Group>
+                        <MessageList
+                            messages={messages}
+                            onSelectMessage={handleSelectMessage}
+                            selectedMessageId={null} // No message is "selected" when the list is visible
+                            currentUser={user}
+                        />
+                    </Paper>
+                )}
+            </Container>
+        );
+    }
+
+    // Desktop view
     return (
         <Container fluid>
             <ComposeMessage
@@ -115,9 +157,8 @@ const MessagesPage = ({ user, effectiveRole, campID }) => {
                 effectiveRole={effectiveRole}
                 campID={campID}
             />
-
             <Grid>
-                <Grid.Col span={{ base: 12, md: 4 }}>
+                <Grid.Col span={4}>
                     <Paper withBorder>
                         <Group justify="space-between" p="md">
                             <Title order={4}>Inbox</Title>
@@ -133,7 +174,7 @@ const MessagesPage = ({ user, effectiveRole, campID }) => {
                         />
                     </Paper>
                 </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 8 }}>
+                <Grid.Col span={8}>
                     <Paper withBorder style={{ minHeight: 'calc(100vh - 120px)' }}>
                         {selectedMessage ? (
                             <MessageDetail
