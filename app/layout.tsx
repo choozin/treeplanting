@@ -13,6 +13,10 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: any }) {
+  const mainStyle = {
+    paddingTop: '60px', // The height of our fixed navbar
+  };
+
   return (
     <html lang="en" {...mantineHtmlProps}>
       <head>
@@ -29,7 +33,8 @@ export default function RootLayout({ children }: { children: any }) {
           <ModalsProvider>
             <Notifications />
             <WeatherProvider>
-              {children}
+              {/* All children will now be rendered inside this main tag with top padding */}
+              <main style={mainStyle}>{children}</main>
             </WeatherProvider>
           </ModalsProvider>
         </MantineProvider>

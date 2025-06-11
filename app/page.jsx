@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
 import { ref, get, onValue } from "firebase/database";
-import { database } from '../firebase/firebase';
+import { database, auth } from '../firebase/firebase';
 
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import Nav from '../components/navbar/Nav';
@@ -21,7 +21,7 @@ import MessagesPage from '../components/messages/MessagesPage';
 import { Paper, Text } from '@mantine/core';
 
 export default function HomePage() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(undefined); // Start as undefined to track auth state
   const [userData, setUserData] = useState(null);
   const [campID, setCampID] = useState(null);
   const [effectiveRole, setEffectiveRole] = useState(0);
@@ -30,40 +30,41 @@ export default function HomePage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [badgeColor, setBadgeColor] = useState('blue');
 
-  const [navIsOpen, setNavIsOpen] = useState(false);
   const [isGeneralAnnouncementVisible, setIsGeneralAnnouncementVisible] = useState(true);
   const [isCampSpecificAnnouncementVisible, setIsCampSpecificAnnouncementVisible] = useState(true);
 
-  const [isCalendarVisible, setIsCalendarVisible] = useState(true);
-  const [isRecipesListVisible, setIsRecipesListVisible] = useState(false);
-  const [isUserManagementVisible, setIsUserManagementVisible] = useState(false);
-  const [isPollsVisible, setIsPollsVisible] = useState(false);
-  const [isMyAccountVisible, setIsMyAccountVisible] = useState(false);
-  const [isBirthdaysVisible, setIsBirthdaysVisible] = useState(false);
-  const [isWeatherVisible, setIsWeatherVisible] = useState(false);
-  const [isCampManagementVisible, setIsCampManagementVisible] = useState(false);
-  const [isCrewManagementVisible, setIsCrewManagementVisible] = useState(false);
-  const [isMessagesVisible, setIsMessagesVisible] = useState(false);
-
+  // Component visibility state
+  const [visibleComponent, setVisibleComponent] = useState('calendar');
 
   // Effect to handle campID based on user authentication state
   useEffect(() => {
-    if (user && userData?.assignedCamps) {
-      const storedCampID = Cookies.get("campID");
-      // Only set campID from cookie if it's a valid camp for the current user
-      if (storedCampID && userData.assignedCamps[storedCampID]) {
-        setCampID(storedCampID);
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const userRef = ref(database, `users/${currentUser.uid}`);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+          const uData = snapshot.val();
+          setUserData(uData);
+          // Read user-specific cookie
+          const storedCampID = Cookies.get(`campID_${currentUser.uid}`);
+          if (storedCampID && uData.assignedCamps?.[storedCampID]) {
+            setCampID(storedCampID);
+          } else {
+            setCampID(null);
+            Cookies.remove(`campID_${currentUser.uid}`); // Clean up if invalid
+          }
+        } else {
+          setUserData(null);
+          setCampID(null);
+        }
       } else {
-        // If the cookie holds an invalid camp, or no camp, clear it.
+        setUserData(null);
         setCampID(null);
-        Cookies.remove("campID");
       }
-    } else if (!user) {
-      // If there is no user, ensure campID state and cookie are cleared.
-      setCampID(null);
-      Cookies.remove("campID");
-    }
-  }, [user, userData]);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Effect to calculate the user's effective role
   useEffect(() => {
@@ -100,105 +101,46 @@ export default function HomePage() {
 
   // Effect to listen for unread messages and update notification badge
   useEffect(() => {
-      if (!user) {
-          setUnreadCount(0);
-          return;
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const userInboxRef = ref(database, `user-inboxes/${user.uid}`);
+    const unsubscribe = onValue(userInboxRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        setUnreadCount(0);
+        return;
       }
 
-      const userInboxRef = ref(database, `user-inboxes/${user.uid}`);
-      const unsubscribe = onValue(userInboxRef, (snapshot) => {
-          if (!snapshot.exists()) {
-              setUnreadCount(0);
-              return;
+      const inboxData = snapshot.val();
+      const unreadMessages = Object.values(inboxData).filter(msg => !msg.isRead);
+      setUnreadCount(unreadMessages.length);
+
+      const priorityOrder = { Formal: 1, Operational: 2, Social: 3, System: 4 };
+      const colorMap = { Formal: 'red', Operational: 'yellow', Social: 'green', System: 'blue' };
+
+      let highestPriority = 5;
+      let highestPriorityType = 'System';
+
+      for (const msg of unreadMessages) {
+        if (!msg.isRead) {
+          if (!highestPriorityType || priorityOrder[msg.messageType] < priorityOrder[highestPriorityType]) {
+            highestPriority = priorityOrder[msg.messageType];
+            highestPriorityType = msg.messageType;
           }
-          
-          const inboxData = snapshot.val();
-          const unreadMessages = Object.values(inboxData).filter(msg => !msg.isRead);
-          setUnreadCount(unreadMessages.length);
+        }
+      }
 
-          const priorityOrder = { Formal: 1, Operational: 2, Social: 3, System: 4 };
-          const colorMap = { Formal: 'red', Operational: 'yellow', Social: 'green', System: 'blue' };
-          
-          let highestPriority = 5;
-          let highestPriorityType = 'System';
+      setBadgeColor(colorMap[highestPriorityType] || 'blue');
+    });
 
-          for (const msg of unreadMessages) {
-              if (priorityOrder[msg.messageType] < highestPriority) {
-                  highestPriority = priorityOrder[msg.messageType];
-                  highestPriorityType = msg.messageType;
-              }
-          }
-          
-          setBadgeColor(colorMap[highestPriorityType] || 'blue');
-      });
-
-      return () => unsubscribe();
+    return () => unsubscribe();
   }, [user]);
 
-  const handleComponentChange = (visibleComponent) => {
-    setNavIsOpen(false);
-
-    // Hide all functional components first
-    setIsCalendarVisible(false);
-    setIsRecipesListVisible(false);
-    setIsUserManagementVisible(false);
-    setIsMyAccountVisible(false);
-    setIsBirthdaysVisible(false);
-    setIsPollsVisible(false);
-    setIsWeatherVisible(false);
-    setIsCampManagementVisible(false);
-    setIsCrewManagementVisible(false);
-    setIsMessagesVisible(false);
-
-    // Show the selected component
-    switch (visibleComponent) {
-      case 'calendar':
-        setIsCalendarVisible(true);
-        break;
-      case 'recipes':
-        setIsRecipesListVisible(true);
-        break;
-      case 'userManagement':
-        setIsUserManagementVisible(true);
-        break;
-      case 'polls':
-        setIsPollsVisible(true);
-        break;
-      case 'myAccount':
-        setIsMyAccountVisible(true);
-        break;
-      case 'birthdays':
-        setIsBirthdaysVisible(true);
-        break;
-      case 'weather':
-        setIsWeatherVisible(true);
-        break;
-      case 'campManagement':
-        setIsCampManagementVisible(true);
-        break;
-      case 'crewManagement':
-        setIsCrewManagementVisible(true);
-        break;
-      case 'messages':
-        setIsMessagesVisible(true);
-        break;
-      default:
-        setIsCalendarVisible(true);
-        break;
-    }
+  const handleComponentChange = (component) => {
+    setVisibleComponent(component);
   };
-
-  const mainContentStyle = {
-    padding: '16px',
-    marginTop: user ? '20px' : '70px',
-  };
-
-  const colorSchemeToggleContainerStyle = {
-    padding: '24px',
-    textAlign: 'center',
-    marginTop: '24px',
-  };
-
 
   return (
     <>
@@ -209,87 +151,52 @@ export default function HomePage() {
         setUserData={setUserData}
         campID={campID}
         setCampID={setCampID}
-        navIsOpen={navIsOpen}
-        setNavIsOpen={setNavIsOpen}
         handleComponentChange={handleComponentChange}
         effectiveRole={effectiveRole}
         unreadCount={unreadCount}
         badgeColor={badgeColor}
       />
 
-      <main style={mainContentStyle}>
-        <GeneralAnnouncement
-          isVisible={isGeneralAnnouncementVisible}
-          onClose={() => setIsGeneralAnnouncementVisible(false)}
-        />
+      <main>
+        {/* Main content is now conditionally rendered based on user state */}
+        {user ? (
+          <>
+            <GeneralAnnouncement
+              isVisible={isGeneralAnnouncementVisible}
+              onClose={() => setIsGeneralAnnouncementVisible(false)}
+            />
+            <CampSpecificAnnouncement
+              isVisible={isCampSpecificAnnouncementVisible}
+              onClose={() => setIsCampSpecificAnnouncementVisible(false)}
+              user={user}
+              campID={campID}
+            />
 
-        <CampSpecificAnnouncement
-          isVisible={isCampSpecificAnnouncementVisible}
-          onClose={() => setIsCampSpecificAnnouncementVisible(false)}
-          user={user}
-          campID={campID}
-        />
+            {visibleComponent === 'messages' && <MessagesPage user={user} effectiveRole={effectiveRole} campID={campID} />}
+            {visibleComponent === 'weather' && <WeatherPage />}
+            {visibleComponent === 'polls' && campID && <PollsPage user={user} campID={campID} userData={userData} effectiveRole={effectiveRole} />}
+            {visibleComponent === 'campManagement' && campID && <CampManagement campID={campID} effectiveRole={effectiveRole} />}
+            {visibleComponent === 'crewManagement' && campID && <CrewManagement campID={campID} effectiveRole={effectiveRole} />}
+            {visibleComponent === 'calendar' && campID && <CalendarViews user={user} campID={campID} />}
+            {visibleComponent === 'recipes' && campID && <RecipesList user={user} campID={campID} />}
+            {visibleComponent === 'myAccount' && <MyAccount user={user} setUserData={setUserData} />}
+            {visibleComponent === 'birthdays' && <Birthdays />}
+            {visibleComponent === 'userManagement' && userData && effectiveRole >= 5 && <UserManagement currentUser={user} campID={campID} effectiveRole={effectiveRole} />}
 
-        {isMessagesVisible && user && (
-          <MessagesPage user={user} effectiveRole={effectiveRole} campID={campID} />
+            {!campID && !['myAccount', 'weather', 'messages', 'userManagement'].includes(visibleComponent) && (
+              <Paper shadow="xs" p="xl" radius="md" withBorder style={{ textAlign: 'center', marginTop: '20px' }}>
+                <Text size="lg" fw={500}>Welcome, {userData?.name || 'User'}!</Text>
+                <Text c="dimmed" mt="sm">Please select a camp from the menu to view its tools and information.</Text>
+              </Paper>
+            )}
+          </>
+        ) : user === null && (
+          // Render a blank state while the login modal is open
+          <div style={{ minHeight: '80vh' }} />
         )}
-
-        {isWeatherVisible && <WeatherPage />}
-
-        {isPollsVisible && user && campID && (
-          <PollsPage user={user} campID={campID} userData={userData} effectiveRole={effectiveRole} />
-        )}
-
-        {isCampManagementVisible && user && campID && (
-          <CampManagement campID={campID} effectiveRole={effectiveRole} />
-        )}
-
-        {isCrewManagementVisible && user && campID && (
-          <CrewManagement campID={campID} effectiveRole={effectiveRole} />
-        )}
-
-        {isCalendarVisible && user && campID && (
-          <CalendarViews
-            user={user}
-            campID={campID}
-          />
-        )}
-        {isRecipesListVisible && user && campID && (
-          <RecipesList
-            user={user}
-            campID={campID}
-            setIsRecipesListVisible={setIsRecipesListVisible}
-          />
-        )}
-
-        {isMyAccountVisible && <MyAccount user={user} setUserData={setUserData} />}
-
-        {isBirthdaysVisible && <Birthdays />}
-
-        {isUserManagementVisible && user && userData && effectiveRole >= 5 && (
-          <UserManagement
-            currentUser={user}
-            campID={campID}
-            effectiveRole={effectiveRole}
-          />
-        )}
-
-        {user && !campID && !isMyAccountVisible && !isWeatherVisible && !isMessagesVisible && (
-          <Paper shadow="xs" p="xl" radius="md" withBorder style={{ textAlign: 'center', marginTop: '20px', backgroundColor: 'var(--mantine-color-gray-0)' }}>
-            <Text size="lg" fw={500}>Welcome, {userData?.name || 'User'}!</Text>
-            <Text c="dimmed" mt="sm">Please select a camp from the menu to view its tools and information.</Text>
-          </Paper>
-        )}
-
-        {!user && !isMyAccountVisible && !isWeatherVisible && !isMessagesVisible && (
-          <Paper shadow="xs" p="xl" radius="md" withBorder style={{ textAlign: 'center', marginTop: '20px', backgroundColor: 'var(--mantine-color-gray-0)' }}>
-            <Text size="lg" fw={500}>Please log in to access the application features.</Text>
-            <Text c="dimmed" mt="sm">You can open the menu to log in or register.</Text>
-          </Paper>
-        )}
-
       </main>
-      <div style={colorSchemeToggleContainerStyle}>
+
+      <div style={{ display: 'none' }}>
         <ColorSchemeToggle />
       </div>
     </>
