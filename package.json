@@ -20,6 +20,7 @@
     "storybook:build": "storybook build"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@mantine/core": "^7.17.1",
     "@mantine/hooks": "^7.17.1",
     "@mantine/modals": "^7.17.8",
@@ -31,7 +32,7 @@
     "framer-motion": "^12.15.0",
     "js-cookie": "^3.0.5",
     "md5": "^2.3.0",
-    "next": "15.1.5",
+    "next": "^15.3.3",
     "react": "19.0.0",
     "react-dom": "19.0.0"
   },

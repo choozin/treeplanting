@@ -18,12 +18,13 @@ export default function RootLayout({ children }: { children: any }) {
       <head>
         <ColorSchemeScript />
         <link rel="shortcut icon" href="/favicon.svg" />
+        <link rel="manifest" href="/manifest.json" />
         <meta
           name="viewport"
           content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no"
         />
       </head>
-      <body suppressHydrationWarning={true}>
+      <body suppressHydrationWarning>
         <MantineProvider theme={theme}>
           <ModalsProvider>
             <Notifications />
