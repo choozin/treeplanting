@@ -1,11 +1,13 @@
 import '@mantine/core/styles.css';
 
 import React from 'react';
-import { ColorSchemeScript, mantineHtmlProps, MantineProvider } from '@mantine/core';
+import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
 import { theme } from '../theme';
 import WeatherProvider from '../context/WeatherProvider';
+import AuthProvider from '../context/AuthProvider';
+import Nav from '../components/navbar/Nav';
 
 export const metadata = {
   title: 'Plantiful',
@@ -13,12 +15,12 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: any }) {
-  const mainStyle = {
-    paddingTop: '60px', // The height of our fixed navbar
+  const mainStyle: React.CSSProperties = {
+    paddingTop: 'var(--navbar-height)',
   };
 
   return (
-    <html lang="en" {...mantineHtmlProps}>
+    <html lang="en">
       <head>
         <ColorSchemeScript />
         <link rel="shortcut icon" href="/favicon.svg" />
@@ -28,13 +30,15 @@ export default function RootLayout({ children }: { children: any }) {
           content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no"
         />
       </head>
-      <body suppressHydrationWarning>
+      <body>
         <MantineProvider theme={theme}>
           <ModalsProvider>
             <Notifications />
             <WeatherProvider>
-              {/* All children will now be rendered inside this main tag with top padding */}
-              <main style={mainStyle}>{children}</main>
+              <AuthProvider>
+                <Nav />
+                <main style={mainStyle}>{children}</main>
+              </AuthProvider>
             </WeatherProvider>
           </ModalsProvider>
         </MantineProvider>

@@ -19,6 +19,7 @@ interface SixHourChunk {
     temperature: number;
     precipitation: number;
     weatherCode: number;
+    windSpeed: number; // Added wind speed
 }
 
 interface WeatherData {
@@ -55,6 +56,7 @@ interface WeatherData {
         sunset: string[];
         precipitation_sum: number[];
         precipitation_probability_max: number[];
+        wind_speed_10m_max: number[]; // Added daily wind speed
     };
     sixHourForecast?: SixHourChunk[];
 }
@@ -71,7 +73,7 @@ interface WeatherContextType {
     primary: WeatherState & { location: WeatherLocation | null };
     secondary: WeatherState & { location: WeatherLocation | null };
     temporary: WeatherState;
-    preferences: any; // Can be more specific later
+    preferences: any;
     campID: string | null;
     refresh: () => void;
     fetchTemporaryWeather: (lat: number, long: number) => void;
@@ -90,11 +92,11 @@ const isDataStale = (timestamp: number | null): boolean => {
 const processSixHourForecast = (hourly: WeatherData['hourly']): SixHourChunk[] => {
     if (!hourly || !hourly.time || hourly.time.length === 0) return [];
 
-    const chunks: Record<string, { temps: number[], codes: number[], precip: number[] }> = {
-        Morning: { temps: [], codes: [], precip: [] },
-        Afternoon: { temps: [], codes: [], precip: [] },
-        Evening: { temps: [], codes: [], precip: [] },
-        Overnight: { temps: [], codes: [], precip: [] },
+    const chunks: Record<string, { temps: number[], codes: number[], precip: number[], winds: number[] }> = {
+        Morning: { temps: [], codes: [], precip: [], winds: [] },
+        Afternoon: { temps: [], codes: [], precip: [], winds: [] },
+        Evening: { temps: [], codes: [], precip: [], winds: [] },
+        Overnight: { temps: [], codes: [], precip: [], winds: [] },
     };
 
     hourly.time.forEach((t, i) => {
@@ -106,12 +108,14 @@ const processSixHourForecast = (hourly: WeatherData['hourly']): SixHourChunk[] =
         chunks[period].temps.push(hourly.temperature_2m[i]);
         chunks[period].codes.push(hourly.weather_code[i]);
         chunks[period].precip.push(hourly.precipitation_probability[i]);
+        chunks[period].winds.push(hourly.wind_speed_10m[i]);
     });
 
     return Object.entries(chunks).map(([name, data]) => {
         if (data.temps.length === 0) return null;
         const avgTemp = data.temps.reduce((a, b) => a + b, 0) / data.temps.length;
         const maxPrecip = Math.max(...data.precip);
+        const avgWind = data.winds.reduce((a, b) => a + b, 0) / data.winds.length;
         const codeCounts = data.codes.reduce((acc, code) => {
             acc[code] = (acc[code] || 0) + 1;
             return acc;
@@ -123,6 +127,7 @@ const processSixHourForecast = (hourly: WeatherData['hourly']): SixHourChunk[] =
             temperature: Math.round(avgTemp),
             precipitation: maxPrecip,
             weatherCode: parseInt(dominantCode, 10),
+            windSpeed: Math.round(avgWind),
         };
     }).filter((chunk): chunk is SixHourChunk => chunk !== null);
 };
@@ -241,7 +246,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
             longitude: String(location.longitude),
             current: "temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,relative_humidity_2m",
             hourly: "temperature_2m,precipitation_probability,weather_code,wind_speed_10m",
-            daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max",
+            daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max",
             timezone: "auto"
         });
 

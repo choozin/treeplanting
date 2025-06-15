@@ -1,29 +1,22 @@
 'use client';
 import { useState, useEffect, useRef, forwardRef } from "react";
 import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    registerUser,
-    registerOtherUser,
-    loginUser,
-    logoutUser,
-    auth,
-    database,
-    onAuthStateChanged
-} from "../../firebase/firebase";
-import { ref, get, onValue, set, update, push as firebasePush } from "firebase/database";
+import { logoutUser, auth, database } from "../../firebase/firebase";
+import { ref, get, onValue } from "firebase/database";
 import { ROLES, PAGE_TITLES, MAIN_LINKS, ALL_COLLECTIONS } from "../../lib/constants";
+import { useAuth } from '../../hooks/useAuth';
 
 import Cookies from "js-cookie";
 import { useWeather } from '../../hooks/useWeather';
 
-import { IconCheckbox, IconPlus, IconUser, IconInfoCircle, IconMessage, IconX, IconLogout, IconAlertCircle } from "@tabler/icons-react";
 import {
     Badge,
     Box,
     Group,
     Text,
-    TextInput,
     UnstyledButton,
     Button,
     Popover,
@@ -37,19 +30,16 @@ import {
     Alert,
     Divider
 } from "@mantine/core";
+import { IconX, IconLogout } from "@tabler/icons-react";
 
 import classes from "./Navbar.module.css";
 import WeatherNavWidget from '../weather/WeatherNavWidget';
 
-// This new wrapper component will conditionally render the weather section
 const WeatherSectionWrapper = () => {
     const { primary, preferences } = useWeather();
-
-    // Only render the section if the widget is enabled and has data
     if (!preferences?.navWidget?.visible || !primary.data) {
         return null;
     }
-
     return (
         <div className={classes.navSection}>
             <WeatherNavWidget />
@@ -57,106 +47,18 @@ const WeatherSectionWrapper = () => {
     );
 };
 
-const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setNavIsOpen }) => {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [passwordConfirm, setPasswordConfirm] = useState("");
-    const [name, setName] = useState("");
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [error, setError] = useState(null);
-    const [rememberMe, setRememberMe] = useState(false);
-
-    useEffect(() => {
-        const savedEmail = Cookies.get("rememberedEmail");
-        if (savedEmail) {
-            setEmail(savedEmail);
-            setRememberMe(true);
-        }
-    }, []);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-
-        if (isRegistering) {
-            if (password !== passwordConfirm) {
-                setError("Passwords do not match.");
-                return;
-            }
-            try {
-                const userResult = await registerUser(email, password, name);
-                if (userResult) {
-                    setUser(userResult);
-                    const userDataRef = ref(database, `users/${userResult.uid}`);
-                    const snapshot = await get(userDataRef);
-                    if (snapshot.exists()) {
-                        setUserData(snapshot.val());
-                    } else {
-                        setError("No user data found for this account.");
-                    }
-                } else {
-                    setError("Registration failed. Please try again.");
-                }
-            } catch (authError) {
-                setError(authError.message);
-            }
-        } else {
-            try {
-                const userResult = await loginUser(email, password);
-                if (userResult) {
-                    setUser(userResult);
-                    const userDataRef = ref(database, `users/${userResult.uid}`);
-                    const snapshot = await get(userDataRef);
-                    if (snapshot.exists()) {
-                        setUserData(snapshot.val());
-                    } else {
-                        setError("No user data found for this account.");
-                    }
-                    if (rememberMe) {
-                        Cookies.set("rememberedEmail", email, { expires: 30 });
-                    } else {
-                        Cookies.remove("rememberedEmail");
-                    }
-                } else {
-                    setError("Login failed. Please check your credentials.");
-                }
-            } catch (authError) {
-                setError(authError.message);
-            }
-        }
-    };
-
+const SelfRegistrationAndLogin = ({ setNavIsOpen }) => {
     return (
         <div className={classes.loginContainer}>
             <Paper withBorder p="xl" radius="md" style={{ width: '400px', maxWidth: '95vw' }}>
-                <Title order={2} ta="center" mb="xl">{isRegistering ? 'Create Account' : 'Welcome Back'}</Title>
-                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    {isRegistering && (
-                        <TextInput label="Name" placeholder="Your name" value={name} onChange={(event) => setName(event.currentTarget.value)} required size="md" />
-                    )}
-                    <TextInput label="Email" placeholder="your@email.com" value={email} onChange={(event) => setEmail(event.currentTarget.value)} required size="md" />
-                    <TextInput label="Password" type="password" placeholder="Your password" value={password} onChange={(event) => setPassword(event.currentTarget.value)} required size="md" />
-                    {isRegistering && (
-                        <TextInput label="Repeat Password" type="password" placeholder="Repeat your password" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.currentTarget.value)} required size="md" />
-                    )}
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#868e96" }}>
-                        <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} style={{ marginRight: '4px' }} />
-                        Remember me
-                    </label>
-                    <Button type="submit" fullWidth size="md">
-                        {isRegistering ? "Register" : "Login"}
-                    </Button>
-                    <Button type="button" variant="default" fullWidth onClick={() => setIsRegistering(!isRegistering)} size="md">
-                        {isRegistering ? "Already have an account? Login" : "Need an account? Register"}
-                    </Button>
-                    {error && <Text c="red" ta="center" size="sm" mt="xs">{error}</Text>}
-                </form>
+                <Title order={2} ta="center" mb="xl">Welcome</Title>
+                <Text ta="center">Please log in to continue.</Text>
             </Paper>
         </div>
     );
 };
 
-const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCampsLoaded, effectiveRole }, forwardedRef) => {
+const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, effectiveRole }, forwardedRef) => {
     const [camps, setCamps] = useState({});
     const [loadingCamps, setLoadingCamps] = useState(true);
     const [errorCamps, setErrorCamps] = useState(null);
@@ -174,7 +76,6 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCamps
     useEffect(() => {
         if (!user || !user.uid) {
             setLoadingCamps(false);
-            if (onCampsLoaded) onCampsLoaded(false);
             return;
         }
 
@@ -189,27 +90,17 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCamps
                 if (snapshot.exists()) {
                     fetchedCampsData = snapshot.val();
                     setCamps(fetchedCampsData);
-
-                    const campKeys = Object.keys(fetchedCampsData);
-                    if (campKeys.length === 1 && !campID) {
-                        handleCampChange(campKeys[0]);
-                    }
                 } else {
                     setErrorCamps("You must be assigned to a camp to access camp-specific features.");
                 }
-
-                if (onCampsLoaded) {
-                    onCampsLoaded(snapshot.exists() && Object.keys(fetchedCampsData).length > 0);
-                }
             } catch (fetchError) {
                 setErrorCamps("Error fetching assigned camps: " + fetchError.message);
-                if (onCampsLoaded) onCampsLoaded(false);
             }
             setLoadingCamps(false);
         };
 
         fetchAssignedCamps();
-    }, [user, onCampsLoaded]); // Note: handleCampChange is defined outside so it's stable
+    }, [user]);
 
     const campOptions = Object.entries(camps).map(([id, campData]) => ({
         id,
@@ -273,493 +164,113 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCamps
 });
 CampSelector.displayName = 'CampSelector';
 
-const PrintDBButton = () => {
-    const [dbData, setDbData] = useState(null);
-    const [showPopup, setShowPopup] = useState(false);
-    const [copySuccess, setCopySuccess] = useState(false);
-
-    const styles = {
-        popup: {
-            position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000,
-        },
-        popupContent: {
-            backgroundColor: "white", padding: "20px", borderRadius: "10px", width: "80%", maxWidth: "600px", position: "relative",
-        },
-        closeButton: {
-            position: "absolute", top: "10px", right: "10px", background: "red", color: "white",
-            border: "none", cursor: "pointer", padding: "5px", fontSize: "16px", borderRadius: "5px",
-        },
-        copyButton: {
-            background: "#007BFF", color: "white", border: "none", cursor: "pointer",
-            padding: "8px 12px", fontSize: "14px", borderRadius: "5px", marginBottom: "10px",
-        },
-        copySuccess: { marginLeft: "10px", color: "green", fontWeight: "bold" },
-        textarea: { width: "100%", height: "300px", resize: "none", fontFamily: "monospace", fontSize: "14px", padding: "10px", border: "1px solid #ccc", borderRadius: "5px" },
-    };
-
-    const handlePrintDB = async () => {
-        try {
-            const dbRef = ref(database, "/");
-            const snapshot = await get(dbRef);
-            if (snapshot.exists()) {
-                setDbData(JSON.stringify(snapshot.val(), null, 2));
-                setShowPopup(true);
-            } else {
-                alert("Database is empty.");
-            }
-        } catch (error) {
-            alert("Error fetching database: " + error.message);
-        }
-    };
-
-    const handleCopyToClipboard = () => {
-        navigator.clipboard.writeText(dbData)
-            .then(() => { setCopySuccess(true); setTimeout(() => setCopySuccess(false), 2000); })
-            .catch((err) => console.error("Copy failed:", err));
-    };
-
-    return (
-        <>
-            <button onClick={handlePrintDB}>Print DB</button>
-            {showPopup && (
-                <div style={styles.popup}>
-                    <div style={styles.popupContent}>
-                        <button style={styles.closeButton} onClick={() => setShowPopup(false)}>✖</button>
-                        <h3>Database Output</h3>
-                        <button style={styles.copyButton} onClick={handleCopyToClipboard}>
-                            📋 Copy to Clipboard
-                        </button>
-                        {copySuccess && <span style={styles.copySuccess}>✔ Copied!</span>}
-                        <textarea readOnly value={dbData} style={styles.textarea} />
-                    </div>
-                </div>
-            )}
-        </>
-    );
-};
-
-const RegisterOtherUser = ({ user, setUser }) => {
-    const [email, setEmail] = useState("");
-    const [name, setName] = useState("");
-    const [role, setRole] = useState("3"); // Default to a common role
-    const [error, setError] = useState(null);
-    const [isOpen, setIsOpen] = useState(false);
-
-    const handleRegistration = async (e) => {
-        e.preventDefault();
-        try {
-            await registerOtherUser(email, name, parseInt(role, 10));
-            alert(`User ${name} registered successfully!`);
-            setIsOpen(false);
-            // Reset form
-            setEmail("");
-            setName("");
-            setRole("3");
-        } catch (error) {
-            setError(error.message);
-        }
-    };
-
-    const roleOptions = Object.entries(ROLES)
-        .map(([level, name]) => ({ value: level, label: name }))
-        .filter(option => parseInt(option.value, 10) > 0 && parseInt(option.value, 10) <= 9);
-
-    return (
-        <div style={{ marginBottom: "20px" }}>
-            {isOpen && (
-                <div style={{
-                    position: 'fixed',
-                    width: '100vw',
-                    height: '100vh',
-                    top: 0,
-                    left: 0,
-                    background: 'rgba(0,0,0,0.8)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }}>
-                    <div
-                        style={{
-                            width: '600px',
-                            maxWidth: '98vw',
-                            padding: '1rem',
-                            backgroundColor: 'tan',
-                            position: 'relative'
-                        }}
-                    >
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            style={{
-                                position: 'absolute',
-                                top: '10px',
-                                right: '10px',
-                                background: 'red',
-                                color: 'white',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: '5px',
-                                fontSize: '16px',
-                                borderRadius: '5px'
-                            }}
-                        >
-                            ✖
-                        </button>
-                        <form onSubmit={handleRegistration} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <input
-                                type="email"
-                                placeholder="Email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                style={{ padding: '8px', fontSize: '16px' }}
-                            />
-                            <input
-                                type="text"
-                                placeholder="Name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
-                                style={{ padding: '8px', fontSize: '16px' }}
-                            />
-                            <select
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                                required
-                                style={{ padding: '8px', fontSize: '16px' }}
-                            >
-                                <option value="">Select a role</option>
-                                {roleOptions.map(option => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                            <button type="submit" style={{
-                                padding: '10px',
-                                backgroundColor: 'brown',
-                                color: 'white',
-                                border: 'none',
-                                cursor: 'pointer',
-                            }}>
-                                Register
-                            </button>
-                            {error && <p style={{ color: 'red' }}>{error}</p>}
-                        </form>
-                    </div>
-                </div>
-            )}
-            <button onClick={() => setIsOpen(true)}>Register Other User</button>
-        </div>
-    );
-};
-
-const SelectAUserDropdown = ({ onUserSelected }) => {
-    const [users, setUsers] = useState([]);
-
-    useEffect(() => {
-        const usersRef = ref(database, 'users');
-        get(usersRef)
-            .then((snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    const userArray = Object.entries(data).map(([userID, userInfo]) => ({
-                        id: userID,
-                        name: userInfo.name || userInfo.email || `Unnamed User (${userID})`,
-                    }));
-                    setUsers(userArray);
-                } else {
-                    setUsers([]);
-                }
-            })
-            .catch((error) => {
-                console.error("Error fetching users:", error);
-            });
-    }, []);
-
-    const handleChange = (event) => {
-        const selectedUserId = event.target.value;
-        onUserSelected(selectedUserId);
-    };
-
-    return (
-        <div>
-            <label htmlFor="userSelect">Select a User Account to Modify:</label>
-            <select id="userSelect" onChange={handleChange}>
-                <option value="">-- Select --</option>
-                {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                        {user.name}
-                    </option>
-                ))}
-            </select>
-        </div>
-    );
-};
-
-const SelectACampDropdown = ({ onCampSelected }) => {
-    const [camps, setCamps] = useState([]);
-
-    useEffect(() => {
-        const campsRef = ref(database, 'camps');
-
-        get(campsRef)
-            .then((snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    const campArray = Object.entries(data).map(([campID, campInfo]) => ({
-                        id: campID,
-                        name: campInfo.campName || `Unnamed Camp (${campID})`,
-                    }));
-                    setCamps(campArray);
-                } else {
-                    setCamps([]);
-                }
-            })
-            .catch((error) => {
-                console.error("Error fetching camps:", error);
-            });
-    }, []);
-
-    const handleChange = (event) => {
-        const selectedCampID = event.target.value;
-        const selectedCamp = camps.find(camp => camp.id === selectedCampID) || null;
-        onCampSelected(selectedCamp);
-    };
-
-    return (
-        <div>
-            <label htmlFor="campSelect">Select a camp: // still need to have this update the camp's user list too</label>
-            <select id="campSelect" onChange={handleChange}>
-                <option value="">-- Select --</option>
-                {camps.map((camp) => (
-                    <option key={camp.id} value={camp.id}>
-                        {camp.name}
-                    </option>
-                ))}
-            </select>
-        </div>
-    );
-};
-
-const AddUserToCamp = ({ selectedUserID, currentUserRole }) => {
-    const [selectedCamp, setSelectedCamp] = useState(null);
-    const [selectedRole, setSelectedRole] = useState(1);
-    const maxAssignableRole = currentUserRole ? Math.max(currentUserRole, 1) : 1;
-
-    const roleOptions = Object.entries(ROLES)
-        .map(([level, name]) => ({ value: level, label: name }))
-        .filter(option => parseInt(option.value, 10) > 0 && parseInt(option.value, 10) <= maxAssignableRole);
-
-
-    const handleAssign = async () => {
-        if (!selectedUserID || !selectedCamp) {
-            alert("Please select a camp and a role.");
-            return;
-        }
-        try {
-            const updates = {};
-            updates[`users/${selectedUserID}/assignedCamps/${selectedCamp.id}`] = { role: selectedRole, campName: selectedCamp.name };
-            updates[`camps/${selectedCamp.id}/users/${selectedUserID}`] = { role: selectedRole, };
-            await update(ref(database), updates);
-            alert(`User assigned to ${selectedCamp.name} with role ${ROLES[selectedRole]}`);
-        } catch (error) { console.error('Error assigning user to camp:', error); }
-    };
-
-    return (
-        <div>
-            <h4>Assign User to Camp</h4>
-            <SelectACampDropdown onCampSelected={setSelectedCamp} />
-            <div style={{ marginTop: "10px" }}>
-                <label htmlFor="roleSelect">Select Role:</label>
-                <select id="roleSelect" value={selectedRole} onChange={(e) => setSelectedRole(parseInt(e.target.value, 10))}>
-                    {roleOptions.map((option) => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                </select>
-            </div>
-            <button onClick={handleAssign} style={{ marginTop: "10px" }}>Assign User to Camp</button>
-        </div>
-    );
-};
-
-const UserManagement = ({ currentUserRole }) => {
-    const [isRegisterOtherUserOpen, setIsRegisterOtherUserOpen] = useState(false);
-    const [selectedUserID, setSelectedUserID] = useState(null);
-    const [assignedCamps, setAssignedCamps] = useState(null);
-
-    useEffect(() => {
-        if (selectedUserID) {
-            const assignedCampsRef = ref(database, `users/${selectedUserID}/assignedCamps`);
-            get(assignedCampsRef)
-                .then((snapshot) => { setAssignedCamps(snapshot.exists() ? snapshot.val() : {}); })
-                .catch((error) => { console.error("Error fetching assigned camps:", error); setAssignedCamps({}); });
-        } else {
-            setAssignedCamps(null);
-        }
-    }, [selectedUserID]);
-
-    return (
-        <div style={{ border: 'solid 1px red', padding: '48px', width: '100%', marginTop: "10px" }}>
-            <h2>User Accounts Management</h2>
-            <RegisterOtherUser />
-            <SelectAUserDropdown onUserSelected={setSelectedUserID} />
-            {selectedUserID && (
-                <>
-                    <AddUserToCamp selectedUserID={selectedUserID} currentUserRole={currentUserRole} />
-                    <div style={{ marginTop: "16px" }}>
-                        <h4>Assigned Camps for Selected User:</h4>
-                        {assignedCamps && Object.keys(assignedCamps).length > 0 ? (
-                            <ul>
-                                {Object.entries(assignedCamps).map(([campID, campData]) => (
-                                    <li key={campID}>
-                                        {campData.campName} (Role: {ROLES[campData.role] || 'Unknown'})
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (<p>No assigned camps.</p>)}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
-
-const AuthForm = ({ user, setUser, userData, setUserData, campID, setCampID }) => {
-    const [isHydrated, setIsHydrated] = useState(false);
-
-    useEffect(() => {
-        if (typeof window !== "undefined") { setIsHydrated(true); }
-    }, []);
-
-    useEffect(() => {
-        if (!isHydrated) return;
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-                try {
-                    const userRef = ref(database, `users/${currentUser.uid}`);
-                    const snapshot = await get(userRef);
-                    setUserData(snapshot.exists() ? snapshot.val() : null);
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    setUserData(null);
-                }
-            } else {
-                setUser(null);
-                setUserData(null);
-            }
-        });
-        return () => unsubscribe();
-    }, [isHydrated, setUser, setUserData]);
-
-    if (!isHydrated || user === undefined || userData === undefined) return null;
-
-    return (
-        <div>
-            test
-            <PrintDBButton />
-            <UserManagement currentUserRole={userData ? userData.role : 9} />
-            <CampSelector user={user} userData={userData} campID={campID} onCampSelect={setCampID} />
-        </div>
-    );
-}
-
-export default function Nav({ user, setUser, userData, setUserData, campID, setCampID, handleComponentChange, effectiveRole, unreadCount, badgeColor, visibleComponent }) {
+export default function Nav() {
+    const { user, userData, campID, setCampID, effectiveRole } = useAuth();
+    const pathname = usePathname();
     const [navIsOpen, setNavIsOpen] = useState(true);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [badgeColor, setBadgeColor] = useState('blue');
+
     useEffect(() => {
-        if (user === null || visibleComponent === null) {
+        if (user === null) {
             setNavIsOpen(true);
         }
-    }, [user, visibleComponent]);
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) {
+            setUnreadCount(0);
+            return;
+        }
+
+        const userInboxRef = ref(database, `user-inboxes/${user.uid}`);
+        const unsubscribe = onValue(userInboxRef, (snapshot) => {
+            if (!snapshot.exists()) {
+                setUnreadCount(0);
+                return;
+            }
+
+            const inboxData = snapshot.val();
+            const unreadMessages = Object.values(inboxData).filter(msg => !msg.isRead);
+            setUnreadCount(unreadMessages.length);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
 
     const confirmLogout = async () => {
-        if (user) {
-            Cookies.remove(`campID_${user.uid}`);
-        }
+        if (user) Cookies.remove(`campID_${user.uid}`);
         await logoutUser();
-        setUser(null);
-        setUserData(null);
-        setCampID(null);
         setIsLogoutModalOpen(false);
         setNavIsOpen(true);
-        handleComponentChange(null);
     };
 
-    const getPageTitle = (component) => {
-        if (!component) return 'Plantiful';
-        return PAGE_TITLES[component] || 'Plantiful';
+    const getPageTitle = () => {
+        const routeKey = pathname.substring(1);
+        if (!routeKey) return 'Plantiful';
+        return PAGE_TITLES[routeKey] || 'Plantiful';
     };
-
-    const collections = [
-        ...ALL_COLLECTIONS.filter(item => item.isFunctional),
-        ...ALL_COLLECTIONS.filter(item => !item.isFunctional)
-    ];
 
     const renderNavItem = (item, isCollectionLink = false) => {
+        const { key, label, icon: Icon, isFunctional } = item;
+        const href = `/${key}`;
+
         const itemOnClick = (event) => {
-            event.preventDefault();
-            if (item.isFunctional && item.onClick) {
-                item.onClick();
-            } else if (!item.isFunctional) {
-                console.log(`${item.label} is coming soon!`);
+            if (!isFunctional) {
+                event.preventDefault();
+                return;
             }
+            setNavIsOpen(false);
         };
 
-        const content = isCollectionLink ? (
-            <a href="#" onClick={itemOnClick} className={classes.collectionLink} style={{ opacity: item.isFunctional ? 1 : 0.5, cursor: item.isFunctional ? 'pointer' : 'not-allowed' }}>
-                <Box component="span" mr={9} fz="1.75rem">{item.emoji}</Box>
-                {item.label}
-            </a>
-        ) : (
-            <UnstyledButton onClick={itemOnClick} className={classes.mainLink} style={{ opacity: item.isFunctional ? 1 : 0.5, cursor: item.isFunctional ? 'pointer' : 'not-allowed' }}>
+        const content = (
+            <Link
+                href={href}
+                onClick={itemOnClick}
+                className={isCollectionLink ? classes.collectionLink : classes.mainLink}
+                style={{ opacity: isFunctional ? 1 : 0.5, cursor: isFunctional ? 'pointer' : 'not-allowed' }}
+            >
                 <div className={classes.mainLinkInner}>
-                    <item.icon size={28} className={classes.mainLinkIcon} stroke={1.5} />
-                    <span>{item.label}</span>
+                    {isCollectionLink ? (
+                        <Box component="span" mr={9} fz="1.75rem">{item.emoji}</Box>
+                    ) : (
+                        <Icon size={28} className={classes.mainLinkIcon} stroke={1.5} />
+                    )}
+                    <span>{label}</span>
                 </div>
-                {item.notifications > 0 && (
-                    <Badge size="lg" variant="filled" className={classes.mainLinkBadge} color={item.color || 'blue'}>
-                        {item.notifications}
+                {key === 'messages' && unreadCount > 0 && (
+                    <Badge size="lg" variant="filled" className={classes.mainLinkBadge} color={badgeColor}>
+                        {unreadCount}
                     </Badge>
                 )}
-            </UnstyledButton>
+            </Link>
         );
 
-        if (!item.isFunctional) {
+        if (!isFunctional) {
             return (
-                <Tooltip label="Coming soon!" key={item.key} position="right" withArrow openDelay={300} withinPortal>
-                    <div style={{ display: 'block' }} onClick={(e) => { if (!item.isFunctional) e.stopPropagation(); }}>{content}</div>
+                <Tooltip label="Coming soon!" key={key} position="right" withArrow openDelay={300} withinPortal>
+                    {content}
                 </Tooltip>
             );
         }
-        return <div key={item.key}>{content}</div>;
+        return <div key={key}>{content}</div>;
     };
 
-    const mainLinks = MAIN_LINKS.map(item => {
-        const props = { ...item };
-        if (item.key === 'messages') {
-            props.notifications = unreadCount;
-            props.color = badgeColor;
-        }
-        props.onClick = () => { handleComponentChange(item.key); setNavIsOpen(false); };
-        return renderNavItem(props);
-    });
-
-    const collectionLinks = collections.map(item => {
-        const props = { ...item };
-        props.onClick = () => { handleComponentChange(item.key); setNavIsOpen(false); };
-        return renderNavItem(props, true);
-    });
+    const mainLinks = MAIN_LINKS.map(item => renderNavItem(item));
+    const collectionLinks = ALL_COLLECTIONS.map(item => renderNavItem(item, true));
 
     const overlayVariants = {
-        hidden: { opacity: 0, transition: { duration: 0.2 } },
-        visible: { opacity: 1, transition: { duration: 0.2 } },
+        hidden: { opacity: 0 },
+        visible: { opacity: 1 },
     };
 
     return (
         <>
             <header className={classes.appHeader}>
                 <Image src="/icons/icon-192x192.png" alt="App Logo" width={40} height={40} className={classes.logo} />
-                <Title order={4} className={classes.headerTitle}>{getPageTitle(visibleComponent)}</Title>
+                <Title order={4} className={classes.headerTitle}>{getPageTitle()}</Title>
                 <Burger opened={navIsOpen} onClick={() => setNavIsOpen((o) => !o)} color="white" aria-label="Toggle navigation" className={classes.menuButton} />
             </header>
 
@@ -774,7 +285,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                     >
                         <div className={classes.overlayContent}>
-                            {visibleComponent && (
+                            {pathname !== '/' && (
                                 <div className={classes.closeButtonContainer}>
                                     <ActionIcon onClick={() => setNavIsOpen(false)} variant="transparent" size="xl" aria-label="Close menu">
                                         <IconX color="#495057" size={36} />
@@ -783,9 +294,7 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                             )}
 
                             {!user ? (
-                                <SelfRegistrationAndLogin
-                                    user={user} setUser={setUser} userData={userData} setUserData={setUserData} setNavIsOpen={setNavIsOpen}
-                                />
+                                <SelfRegistrationAndLogin setNavIsOpen={setNavIsOpen} />
                             ) : (
                                 <Box mt={40} style={{ width: '100%', maxWidth: '800px', margin: 'auto' }}>
                                     <div className={classes.navSection}>
