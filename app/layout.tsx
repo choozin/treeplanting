@@ -5,7 +5,7 @@ import { ColorSchemeScript, mantineHtmlProps, MantineProvider } from '@mantine/c
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
 import { theme } from '../theme';
-import { WeatherProvider } from '../context/WeatherProvider';
+import WeatherProvider from '../context/WeatherProvider';
 
 export const metadata = {
   title: 'Plantiful',

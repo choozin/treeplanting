@@ -12,6 +12,7 @@ import {
     onAuthStateChanged
 } from "../../firebase/firebase";
 import { ref, get, onValue, set, update, push as firebasePush } from "firebase/database";
+import { ROLES, PAGE_TITLES, MAIN_LINKS, ALL_COLLECTIONS } from "../../lib/constants";
 
 import Cookies from "js-cookie";
 import { useWeather } from '../../hooks/useWeather';
@@ -215,7 +216,7 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCamps
         label: campData.campName || `Unnamed Camp (${id})`
     }));
 
-    const roleName = effectiveRole > 0 ? (['Disabled', 'Visitor', 'Apprentice', 'Jr. Crew Member', 'Crew Member', 'Crew Boss', 'Camp Boss', 'Company Boss', 'Company Owner', 'App Admin', 'Super Admin'][effectiveRole] || 'Unknown') : 'N/A';
+    const roleName = effectiveRole > 0 ? (ROLES[effectiveRole] || 'Unknown') : 'N/A';
 
     return (
         <div ref={forwardedRef} style={{ width: '100%' }}>
@@ -223,7 +224,7 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, onCamps
                 <Text>Loading camps...</Text>
             ) : campID ? (
                 <>
-                    <Title order={3} ta="center">{camps[campID]?.campName || 'Selected Camp'}</Title>
+                    <Title order={3} ta="center" className={classes.campTitle}>{camps[campID]?.campName || 'Selected Camp'}</Title>
                     <Text size="sm" c="dimmed" ta="center">Effective Role: {roleName}</Text>
                     {campOptions.length > 1 && (
                         <>
@@ -341,19 +342,28 @@ const PrintDBButton = () => {
 const RegisterOtherUser = ({ user, setUser }) => {
     const [email, setEmail] = useState("");
     const [name, setName] = useState("");
-    const [role, setRole] = useState("");
+    const [role, setRole] = useState("3"); // Default to a common role
     const [error, setError] = useState(null);
     const [isOpen, setIsOpen] = useState(false);
 
     const handleRegistration = async (e) => {
         e.preventDefault();
         try {
-            const user = await registerOtherUser(email, name, role);
-            setUser(user);
+            await registerOtherUser(email, name, parseInt(role, 10));
+            alert(`User ${name} registered successfully!`);
+            setIsOpen(false);
+            // Reset form
+            setEmail("");
+            setName("");
+            setRole("3");
         } catch (error) {
             setError(error.message);
         }
     };
+
+    const roleOptions = Object.entries(ROLES)
+        .map(([level, name]) => ({ value: level, label: name }))
+        .filter(option => parseInt(option.value, 10) > 0 && parseInt(option.value, 10) <= 9);
 
     return (
         <div style={{ marginBottom: "20px" }}>
@@ -420,14 +430,9 @@ const RegisterOtherUser = ({ user, setUser }) => {
                                 style={{ padding: '8px', fontSize: '16px' }}
                             >
                                 <option value="">Select a role</option>
-                                <option value="9">App Creator</option>
-                                <option value="8">App Manager</option>
-                                <option value="7">Client</option>
-                                <option value="6">Camp Boss</option>
-                                <option value="5">Foreman</option>
-                                <option value="4">Employee</option>
-                                <option value="3">Trainee</option>
-                                <option value="2">Visitor</option>
+                                {roleOptions.map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
                             </select>
                             <button type="submit" style={{
                                 padding: '10px',
@@ -540,11 +545,11 @@ const AddUserToCamp = ({ selectedUserID, currentUserRole }) => {
     const [selectedCamp, setSelectedCamp] = useState(null);
     const [selectedRole, setSelectedRole] = useState(1);
     const maxAssignableRole = currentUserRole ? Math.max(currentUserRole, 1) : 1;
-    const roleOptions = [];
-    const labels = ["", "Unassigned", "Visitor", "Trainee", "Employee", "Foreman", "Camp Boss", "Client", "App Manager", "App Creator"];
-    for (let i = 1; i <= maxAssignableRole && i <= 9; i++) {
-        roleOptions.push({ role: i, label: labels[i] });
-    }
+
+    const roleOptions = Object.entries(ROLES)
+        .map(([level, name]) => ({ value: level, label: name }))
+        .filter(option => parseInt(option.value, 10) > 0 && parseInt(option.value, 10) <= maxAssignableRole);
+
 
     const handleAssign = async () => {
         if (!selectedUserID || !selectedCamp) {
@@ -556,7 +561,7 @@ const AddUserToCamp = ({ selectedUserID, currentUserRole }) => {
             updates[`users/${selectedUserID}/assignedCamps/${selectedCamp.id}`] = { role: selectedRole, campName: selectedCamp.name };
             updates[`camps/${selectedCamp.id}/users/${selectedUserID}`] = { role: selectedRole, };
             await update(ref(database), updates);
-            alert(`User assigned to ${selectedCamp.name} with role ${selectedRole}`);
+            alert(`User assigned to ${selectedCamp.name} with role ${ROLES[selectedRole]}`);
         } catch (error) { console.error('Error assigning user to camp:', error); }
     };
 
@@ -567,7 +572,7 @@ const AddUserToCamp = ({ selectedUserID, currentUserRole }) => {
             <div style={{ marginTop: "10px" }}>
                 <label htmlFor="roleSelect">Select Role:</label>
                 <select id="roleSelect" value={selectedRole} onChange={(e) => setSelectedRole(parseInt(e.target.value, 10))}>
-                    {roleOptions.map((roleOption) => (<option key={roleOption.role} value={roleOption.role}>{roleOption.label}</option>))}
+                    {roleOptions.map((option) => (<option key={option.value} value={option.value}>{option.label}</option>))}
                 </select>
             </div>
             <button onClick={handleAssign} style={{ marginTop: "10px" }}>Assign User to Camp</button>
@@ -605,7 +610,7 @@ const UserManagement = ({ currentUserRole }) => {
                             <ul>
                                 {Object.entries(assignedCamps).map(([campID, campData]) => (
                                     <li key={campID}>
-                                        {campData.campName} (Role: {campData.role})
+                                        {campData.campName} (Role: {ROLES[campData.role] || 'Unknown'})
                                     </li>
                                 ))}
                             </ul>
@@ -682,60 +687,12 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
 
     const getPageTitle = (component) => {
         if (!component) return 'Plantiful';
-        const componentMap = {
-            messages: 'Messages',
-            tasks: 'Tasks',
-            calendar: 'Calendar',
-            appFeedback: 'App Feedback',
-            weather: 'Weather',
-            polls: 'Polls',
-            trade: 'Buy/Sell/Trade',
-            music: 'Planting Music',
-            birthdays: 'Birthdays',
-            myAccount: 'My Account',
-            userManagement: 'User Management',
-            campManagement: 'Camp Management',
-            crewManagement: 'Crew Management',
-            inventory: 'Inventory',
-            recipes: 'Recipes',
-            orders: 'Orders',
-            deliveries: 'Deliveries',
-            budget: 'Budget',
-            reports: 'Reports',
-            staff: 'Staff List',
-        };
-        return componentMap[component] || 'Plantiful';
+        return PAGE_TITLES[component] || 'Plantiful';
     };
 
-    const links = [
-        { icon: IconMessage, label: "Messages", notifications: unreadCount, color: badgeColor, onClick: () => { handleComponentChange('messages'); setNavIsOpen(false); }, section: "messages", isFunctional: true },
-        { icon: IconCheckbox, label: "Tasks", notifications: 0, onClick: () => { handleComponentChange('tasks'); setNavIsOpen(false); }, section: "tasks", isFunctional: false },
-        { icon: IconUser, label: "Calendar", onClick: () => { handleComponentChange('calendar'); setNavIsOpen(false); }, section: "calendar", isFunctional: true },
-    ];
-
-    const allCollections = [
-        { emoji: "💡", label: "App Feedback", onClick: () => { handleComponentChange('appFeedback'); setNavIsOpen(false); }, section: "appFeedback", isFunctional: false },
-        { emoji: "🌦️", label: "Weather", onClick: () => { handleComponentChange('weather'); setNavIsOpen(false); }, section: "weather", isFunctional: true },
-        { emoji: "📊", label: "Polls", onClick: () => { handleComponentChange('polls'); setNavIsOpen(false); }, section: "polls", isFunctional: true },
-        { emoji: "🤝", label: "Buy/Sell/Trade", onClick: () => { handleComponentChange('trade'); setNavIsOpen(false); }, section: "trade", isFunctional: false },
-        { emoji: "🎵", label: "Planting Music", onClick: () => { handleComponentChange('music'); setNavIsOpen(false); }, section: "music", isFunctional: false },
-        { emoji: "🎂", label: "Birthdays", onClick: () => { handleComponentChange('birthdays'); setNavIsOpen(false); }, section: "birthdays", isFunctional: true },
-        { emoji: "👤", label: "My Account", onClick: () => { handleComponentChange('myAccount'); setNavIsOpen(false); }, section: "myAccount", isFunctional: true },
-        { emoji: "👥", label: "User Management", onClick: () => { handleComponentChange('userManagement'); setNavIsOpen(false); }, section: "userManagement", isFunctional: true },
-        { emoji: "🏕️", label: "Camp Management", onClick: () => { handleComponentChange('campManagement'); setNavIsOpen(false); }, section: "campManagement", isFunctional: true },
-        { emoji: "👨‍👩‍👧‍👦", label: "Crew Management", onClick: () => { handleComponentChange('crewManagement'); setNavIsOpen(false); }, section: "crewManagement", isFunctional: true },
-        { emoji: "📦", label: "Inventory", onClick: () => { handleComponentChange('inventory'); setNavIsOpen(false); }, section: "inventory", isFunctional: false },
-        { emoji: "🍲", label: "Recipes", onClick: () => { handleComponentChange('recipes'); setNavIsOpen(false); }, section: "recipes", isFunctional: false },
-        { emoji: "🛒", label: "Orders", onClick: () => { handleComponentChange('orders'); setNavIsOpen(false); }, section: "orders", isFunctional: false },
-        { emoji: "🚚", label: "Deliveries", onClick: () => { handleComponentChange('deliveries'); setNavIsOpen(false); }, section: "deliveries", isFunctional: false },
-        { emoji: "💸", label: "Budget", onClick: () => { handleComponentChange('budget'); setNavIsOpen(false); }, section: "budget", isFunctional: false },
-        { emoji: "📊", label: "Reports", onClick: () => { handleComponentChange('reports'); setNavIsOpen(false); }, section: "reports", isFunctional: false },
-        { emoji: "📋", label: "Staff List", onClick: () => { handleComponentChange('staff'); setNavIsOpen(false); }, section: "staff", isFunctional: false },
-    ];
-
     const collections = [
-        ...allCollections.filter(item => item.isFunctional),
-        ...allCollections.filter(item => !item.isFunctional)
+        ...ALL_COLLECTIONS.filter(item => item.isFunctional),
+        ...ALL_COLLECTIONS.filter(item => !item.isFunctional)
     ];
 
     const renderNavItem = (item, isCollectionLink = false) => {
@@ -750,13 +707,13 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
 
         const content = isCollectionLink ? (
             <a href="#" onClick={itemOnClick} className={classes.collectionLink} style={{ opacity: item.isFunctional ? 1 : 0.5, cursor: item.isFunctional ? 'pointer' : 'not-allowed' }}>
-                <Box component="span" mr={9} fz={16}>{item.emoji}</Box>
+                <Box component="span" mr={9} fz="1.75rem">{item.emoji}</Box>
                 {item.label}
             </a>
         ) : (
             <UnstyledButton onClick={itemOnClick} className={classes.mainLink} style={{ opacity: item.isFunctional ? 1 : 0.5, cursor: item.isFunctional ? 'pointer' : 'not-allowed' }}>
                 <div className={classes.mainLinkInner}>
-                    <item.icon size={22} className={classes.mainLinkIcon} stroke={1.5} />
+                    <item.icon size={28} className={classes.mainLinkIcon} stroke={1.5} />
                     <span>{item.label}</span>
                 </div>
                 {item.notifications > 0 && (
@@ -769,16 +726,29 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
 
         if (!item.isFunctional) {
             return (
-                <Tooltip label="Coming soon!" key={item.label} position="right" withArrow openDelay={300} withinPortal>
+                <Tooltip label="Coming soon!" key={item.key} position="right" withArrow openDelay={300} withinPortal>
                     <div style={{ display: 'block' }} onClick={(e) => { if (!item.isFunctional) e.stopPropagation(); }}>{content}</div>
                 </Tooltip>
             );
         }
-        return <div key={item.label}>{content}</div>;
+        return <div key={item.key}>{content}</div>;
     };
 
-    const mainLinks = links.map(link => renderNavItem(link));
-    const collectionLinks = collections.map(collection => renderNavItem(collection, true));
+    const mainLinks = MAIN_LINKS.map(item => {
+        const props = { ...item };
+        if (item.key === 'messages') {
+            props.notifications = unreadCount;
+            props.color = badgeColor;
+        }
+        props.onClick = () => { handleComponentChange(item.key); setNavIsOpen(false); };
+        return renderNavItem(props);
+    });
+
+    const collectionLinks = collections.map(item => {
+        const props = { ...item };
+        props.onClick = () => { handleComponentChange(item.key); setNavIsOpen(false); };
+        return renderNavItem(props, true);
+    });
 
     const overlayVariants = {
         hidden: { opacity: 0, transition: { duration: 0.2 } },
@@ -804,11 +774,13 @@ export default function Nav({ user, setUser, userData, setUserData, campID, setC
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                     >
                         <div className={classes.overlayContent}>
-                            <div className={classes.closeButtonContainer}>
-                                <ActionIcon onClick={() => setNavIsOpen(false)} variant="transparent" size="xl" aria-label="Close menu">
-                                    <IconX color="#495057" size={36} />
-                                </ActionIcon>
-                            </div>
+                            {visibleComponent && (
+                                <div className={classes.closeButtonContainer}>
+                                    <ActionIcon onClick={() => setNavIsOpen(false)} variant="transparent" size="xl" aria-label="Close menu">
+                                        <IconX color="#495057" size={36} />
+                                    </ActionIcon>
+                                </div>
+                            )}
 
                             {!user ? (
                                 <SelfRegistrationAndLogin

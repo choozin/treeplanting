@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, FC } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     getDatabase,
@@ -14,8 +14,7 @@ import {
     increment,
     remove
 } from 'firebase/database';
-import { database } from '../../firebase/firebase'; // Your Firebase setup
-
+import { database } from '../../firebase/firebase';
 import {
     Button, Text, Paper, Modal, Radio, TextInput, Textarea, Progress, Group, ActionIcon,
     ScrollArea, Container, Title, Divider, Tooltip, Box, Switch, MultiSelect, Alert, SimpleGrid, Card, Badge, Stack, Flex
@@ -25,9 +24,62 @@ import {
     IconCircleCheck, IconCircleX, IconAlertCircle, IconLockAccess, IconSettings, IconEye, IconPencil, IconTrash,
     IconArrowUp, IconArrowDown, IconHelpCircle
 } from '@tabler/icons-react';
+import { User } from 'firebase/auth';
 
-// Helper function to format dates
-const formatDate = (isoStringOrTimestamp) => {
+// --- TypeScript Interfaces ---
+interface PollOption {
+    text: string;
+    createdByUserID: string;
+    isInitialOption: boolean;
+    isApproved: boolean;
+    voteCount: number;
+    submittedAt?: number;
+    approvedByUserID?: string;
+    optionApprovedAt?: number;
+    isRejected?: boolean;
+}
+
+interface Poll {
+    id: string;
+    questionText: string;
+    description?: string;
+    pollType: 'standard' | 'ranked_ballot';
+    options: Record<string, PollOption>;
+    closesAt?: string | null;
+    allowUserOptionSubmissions: boolean;
+    resultsVisibility: 'always_visible' | 'after_voting' | 'after_close' | 'admin_only';
+    tags?: string[];
+    createdByUserID: string;
+    creatorRoleAtCreation: number;
+    createdAt: number;
+    lastUpdatedAt: number;
+    isApprovedForDisplay: boolean;
+    approvedByUserID?: string | null;
+    approvedAt?: number | null;
+    isRejectedForDisplay: boolean;
+    isOpenForVoting: boolean;
+    usersVoted: Record<string, string | string[] | boolean>;
+    maxVotesPerUser: number;
+}
+
+interface RankedVoteRound {
+    round: number;
+    voteCounts: Record<string, number>;
+    eliminated: string | null;
+    winner: string | null;
+    exhaustedBallots: number;
+}
+
+interface PollsPageProps {
+    user: User | null;
+    campID: string | null;
+    userData: any; // Consider creating a more specific UserData type
+    effectiveRole: number;
+}
+
+// --- Helper Components & Functions ---
+
+const formatDate = (isoStringOrTimestamp?: string | number): string => {
     if (!isoStringOrTimestamp) return 'N/A';
     try {
         const date = new Date(isoStringOrTimestamp);
@@ -40,7 +92,7 @@ const formatDate = (isoStringOrTimestamp) => {
     }
 };
 
-const RankedVoteHelpModal = ({ opened, onClose }) => (
+const RankedVoteHelpModal: FC<{ opened: boolean, onClose: () => void }> = ({ opened, onClose }) => (
     <Modal opened={opened} onClose={onClose} title="How Ranked Ballot Voting Works" size="lg" centered zIndex={2000}>
         <Stack gap="md">
             <Text>This system helps find the option that the most people prefer overall, not just the one with the most first-place votes.</Text>
@@ -65,8 +117,8 @@ const RankedVoteHelpModal = ({ opened, onClose }) => (
     </Modal>
 );
 
-const RankedVoteInterface = ({ poll, onVote }) => {
-    const [rankedOrder, setRankedOrder] = useState([]);
+const RankedVoteInterface: FC<{ poll: Poll, onVote: (rankedOrder: string[]) => void }> = ({ poll, onVote }) => {
+    const [rankedOrder, setRankedOrder] = useState<string[]>([]);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
     const availableOptions = useMemo(() =>
@@ -76,15 +128,15 @@ const RankedVoteInterface = ({ poll, onVote }) => {
         [poll.options, rankedOrder]
     );
 
-    const handleSelectOption = (optionId) => {
+    const handleSelectOption = (optionId: string) => {
         setRankedOrder(prev => [...prev, optionId]);
     };
 
-    const handleRemoveOption = (optionId) => {
+    const handleRemoveOption = (optionId: string) => {
         setRankedOrder(prev => prev.filter(id => id !== optionId));
     };
 
-    const moveOption = (index, direction) => {
+    const moveOption = (index: number, direction: number) => {
         const newOrder = [...rankedOrder];
         const newIndex = index + direction;
         if (newIndex < 0 || newIndex >= newOrder.length) return;
@@ -130,19 +182,19 @@ const RankedVoteInterface = ({ poll, onVote }) => {
     );
 };
 
-const calculateRankedChoiceWinner = (poll) => {
+const calculateRankedChoiceWinner = (poll: Poll): { rounds: RankedVoteRound[], winner: string | null, error?: string } => {
     if (!poll.usersVoted || Object.keys(poll.usersVoted).length === 0) {
         return { rounds: [], winner: null, error: "No votes have been cast yet." };
     }
-    let ballots = Object.values(poll.usersVoted).filter(vote => Array.isArray(vote) && vote.length > 0);
+    const ballots = Object.values(poll.usersVoted).filter(vote => Array.isArray(vote) && vote.length > 0) as string[][];
     let activeOptions = Object.keys(poll.options || {}).filter(optId => poll.options[optId]?.isApproved);
-    const rounds = [];
+    const rounds: RankedVoteRound[] = [];
     const totalVoters = ballots.length;
     if (totalVoters === 0) {
         return { rounds: [], winner: null, error: "No valid ranked ballots were found." };
     }
     while (activeOptions.length > 1) {
-        const voteCounts = activeOptions.reduce((acc, optId) => ({ ...acc, [optId]: 0 }), {});
+        const voteCounts = activeOptions.reduce((acc, optId) => ({ ...acc, [optId]: 0 }), {} as Record<string, number>);
         let exhaustedBallots = 0;
         for (const ballot of ballots) {
             let voted = false;
@@ -157,7 +209,7 @@ const calculateRankedChoiceWinner = (poll) => {
                 exhaustedBallots++;
             }
         }
-        const currentRound = {
+        const currentRound: RankedVoteRound = {
             round: rounds.length + 1, voteCounts: { ...voteCounts },
             eliminated: null, winner: null, exhaustedBallots
         };
@@ -200,7 +252,7 @@ const calculateRankedChoiceWinner = (poll) => {
     return { rounds, winner: finalWinner };
 };
 
-const RankedResultsDisplay = ({ poll }) => {
+const RankedResultsDisplay: FC<{ poll: Poll }> = ({ poll }) => {
     const { rounds, winner, error } = useMemo(() => calculateRankedChoiceWinner(poll), [poll]);
     if (error) return <Alert color="blue" title="Results" icon={<IconAlertCircle />}>{error}</Alert>;
     if (!poll || !poll.options) return <Text>Loading results...</Text>
@@ -240,20 +292,20 @@ const RankedResultsDisplay = ({ poll }) => {
     );
 };
 
-const PollsPage = ({ user, campID, userData, effectiveRole }) => {
-    const [polls, setPolls] = useState([]);
-    const [usersDataMap, setUsersDataMap] = useState({});
-    const [selectedPoll, setSelectedPoll] = useState(null);
-    const [userVotes, setUserVotes] = useState({});
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }) => {
+    const [polls, setPolls] = useState<Poll[]>([]);
+    const [usersDataMap, setUsersDataMap] = useState<Record<string, string>>({});
+    const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
+    const [userVotes, setUserVotes] = useState<Record<string, string | string[] | boolean>>({});
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const [selectedOption, setSelectedOption] = useState('');
-    const [newOptionText, setNewOptionText] = useState('');
-    const [optionSubmissionMessage, setOptionSubmissionMessage] = useState('');
+    const [selectedOption, setSelectedOption] = useState<string>('');
+    const [newOptionText, setNewOptionText] = useState<string>('');
+    const [optionSubmissionMessage, setOptionSubmissionMessage] = useState<string>('');
 
-    const [pollCreationStep, setPollCreationStep] = useState(null); // null, 'type_selection', or 'form_details'
-    const [newPollType, setNewPollType] = useState('standard');
+    const [pollCreationStep, setPollCreationStep] = useState<'type_selection' | 'form_details' | null>(null);
+    const [newPollType, setNewPollType] = useState<'standard' | 'ranked_ballot'>('standard');
     const [newPollData, setNewPollData] = useState({
         questionText: '',
         description: '',
@@ -261,28 +313,26 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
         closesAtDate: '',
         closesAtTime: '',
         allowUserOptionSubmissions: true,
-        resultsVisibility: 'after_voting',
-        tags: []
+        resultsVisibility: 'after_voting' as Poll['resultsVisibility'],
+        tags: [] as string[]
     });
 
     // --- Permission Helpers ---
-    const canUserCreatePoll = useCallback(() => effectiveRole >= 5, [effectiveRole]);
-    const canUserManagePollDisplay = useCallback(() => effectiveRole >= 6, [effectiveRole]);
-    const canUserManageOption = useCallback((poll) => {
-        if (!poll || !user) return false;
-        return effectiveRole >= 6 || (poll.createdByUserID === user.uid && poll.creatorRoleAtCreation === 5);
-    }, [effectiveRole, user]);
+    const canUserCreatePoll = useCallback(() => effectiveRole >= 4, [effectiveRole]);
+    const canUserApprovePoll = useCallback(() => effectiveRole >= 4, [effectiveRole]);
+    const canUserRejectPoll = useCallback(() => effectiveRole >= 6, [effectiveRole]);
+    const canUserManageOption = useCallback(() => effectiveRole >= 4, [effectiveRole]);
 
 
-    // Fetch all users once to map creator IDs to names (from global /users node)
+    // Fetch all users once to map creator IDs to names
     useEffect(() => {
         const usersRefGlobal = firebaseDatabaseRef(database, 'users');
         const unsubscribeUsers = onValue(usersRefGlobal, (snapshot) => {
             if (snapshot.exists()) {
                 const users = snapshot.val();
-                const map = {};
-                for (const uid_global in users) {
-                    map[uid_global] = users[uid_global].name || 'Unknown User';
+                const map: Record<string, string> = {};
+                for (const uid in users) {
+                    map[uid] = users[uid].name || 'Unknown User';
                 }
                 setUsersDataMap(map);
             }
@@ -292,7 +342,7 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
         return () => unsubscribeUsers();
     }, []);
 
-    // Fetch polls for the current camp and user's vote status
+    // Fetch polls and user's vote status
     useEffect(() => {
         if (!campID || !user) {
             setPolls([]);
@@ -307,7 +357,7 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
         const unsubscribePolls = onValue(pollsRef, async (snapshot) => {
             const pollsData = snapshot.val();
             if (pollsData) {
-                const pollsArray = [];
+                const pollsArray: Poll[] = [];
                 const voteCheckPromises = [];
 
                 for (const pollId in pollsData) {
@@ -318,14 +368,14 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                     );
                 }
 
-                pollsArray.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+                pollsArray.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 setPolls(pollsArray);
 
                 const votesResults = await Promise.all(voteCheckPromises);
                 const newUserVotes = votesResults.reduce((acc, voteInfo) => {
                     acc[voteInfo.pollId] = voteInfo.voteData;
                     return acc;
-                }, {});
+                }, {} as Record<string, any>);
                 setUserVotes(newUserVotes);
                 setError(null);
             } else {
@@ -345,40 +395,33 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
         return () => unsubscribePolls();
     }, [campID, user]);
 
-    // ---- Poll Selection Handler ----
-    const handlePollSelect = (poll) => {
+    const handlePollSelect = (poll: Poll) => {
         setSelectedPoll(poll);
         setSelectedOption('');
         setNewOptionText('');
         setOptionSubmissionMessage('');
     };
 
-    const handleCloseModal = () => {
-        setSelectedPoll(null);
-    };
+    const handleCloseModal = () => setSelectedPoll(null);
 
-    // ---- Poll Creation Handlers ----
-    const handleNewPollInputChange = (field, value) => {
+    const handleNewPollInputChange = (field: string, value: any) => {
         setNewPollData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleNewPollOptionChange = (index, value) => {
+    const handleNewPollOptionChange = (index: number, value: string) => {
         const updatedOptions = [...newPollData.options];
         updatedOptions[index] = value;
         setNewPollData(prev => ({ ...prev, options: updatedOptions }));
     };
 
-    const addPollOptionField = () => {
-        setNewPollData(prev => ({ ...prev, options: [...prev.options, ''] }));
-    };
+    const addPollOptionField = () => setNewPollData(prev => ({ ...prev, options: [...prev.options, ''] }));
 
-    const removePollOptionField = (index) => {
+    const removePollOptionField = (index: number) => {
         if (newPollData.options.length <= 2) {
             alert("A poll must have at least two options.");
             return;
         }
-        const updatedOptions = newPollData.options.filter((_, i) => i !== index);
-        setNewPollData(prev => ({ ...prev, options: updatedOptions }));
+        setNewPollData(prev => ({ ...prev, options: prev.options.filter((_, i) => i !== index) }));
     };
 
     const handleCloseCreatePoll = () => {
@@ -392,18 +435,20 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
     };
 
     const handleCreatePollSubmit = async () => {
-        if (!newPollData.questionText.trim()) { alert("Poll question cannot be empty."); return; }
+        if (!newPollData.questionText.trim() || !user) { alert("Poll question cannot be empty."); return; }
         const validOptions = newPollData.options.filter(opt => opt.trim() !== '');
         if (validOptions.length < 2) { alert("Please provide at least two valid options."); return; }
-        let combinedClosesAt = null;
+
+        let combinedClosesAt: string | null = null;
         if (newPollData.closesAtDate) {
             const timePart = newPollData.closesAtTime || "00:00";
             combinedClosesAt = new Date(`${newPollData.closesAtDate}T${timePart}`).toISOString();
         }
-        const isCreatorAdmin = effectiveRole >= 6;
-        const pollObject = {
+
+        const isCreatorAdmin = effectiveRole >= 4;
+        const pollObject: Omit<Poll, 'id' | 'createdAt' | 'lastUpdatedAt'> & { createdAt: object, lastUpdatedAt: object } = {
             questionText: newPollData.questionText.trim(),
-            description: newPollData.description.trim() || null,
+            description: newPollData.description.trim() || undefined,
             pollType: newPollType,
             options: validOptions.reduce((obj, optionText, index) => {
                 obj[`initial_opt_${index + 1}`] = {
@@ -411,33 +456,41 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                     isInitialOption: true, isApproved: true, voteCount: 0
                 };
                 return obj;
-            }, {}),
+            }, {} as Record<string, PollOption>),
             closesAt: combinedClosesAt,
             allowUserOptionSubmissions: newPollType === 'standard' ? newPollData.allowUserOptionSubmissions : false,
-            resultsVisibility: newPollData.resultsVisibility, tags: newPollData.tags || [],
-            createdByUserID: user.uid, creatorRoleAtCreation: effectiveRole,
-            createdAt: serverTimestamp(), lastUpdatedAt: serverTimestamp(),
-            isApprovedForDisplay: isCreatorAdmin, approvedByUserID: isCreatorAdmin ? user.uid : null,
-            approvedAt: isCreatorAdmin ? serverTimestamp() : null, isRejectedForDisplay: false,
+            resultsVisibility: newPollData.resultsVisibility,
+            tags: newPollData.tags || [],
+            createdByUserID: user.uid,
+            creatorRoleAtCreation: effectiveRole,
+            isApprovedForDisplay: isCreatorAdmin,
+            approvedByUserID: isCreatorAdmin ? user.uid : null,
+            approvedAt: isCreatorAdmin ? serverTimestamp() : null,
+            isRejectedForDisplay: false,
             isOpenForVoting: isCreatorAdmin && (!combinedClosesAt || new Date(combinedClosesAt) > new Date()),
-            usersVoted: {}, maxVotesPerUser: 1,
+            usersVoted: {},
+            maxVotesPerUser: 1,
+            createdAt: serverTimestamp(),
+            lastUpdatedAt: serverTimestamp(),
         };
+
         try {
             const newPollRef = push(firebaseDatabaseRef(database, `camps/${campID}/polls`));
             await set(newPollRef, pollObject);
-            alert(isCreatorAdmin ? "Poll created and automatically approved!" : "Poll created! It needs approval from a Camp Boss or higher to be displayed.");
+            alert(isCreatorAdmin ? "Poll created and automatically approved!" : "Poll created! It needs approval from a Sr. Planter or higher to be displayed.");
             handleCloseCreatePoll();
         } catch (e) {
-            console.error("Error creating poll:", e); alert("Failed to create poll: " + e.message);
+            console.error("Error creating poll:", e);
+            alert("Failed to create poll: " + (e as Error).message);
         }
     };
 
-    // ---- Poll & Option Approval/Rejection Handlers ----
-    const handlePollDisplayApproval = async (pollId, approve) => {
+    const handlePollDisplayApproval = async (pollId: string, approve: boolean) => {
+        if (!user) return;
         const pollToUpdate = polls.find(p => p.id === pollId);
         if (!pollToUpdate) return;
 
-        const updates = {};
+        const updates: any = {};
         if (approve) {
             updates[`isApprovedForDisplay`] = true;
             updates[`isOpenForVoting`] = !pollToUpdate.closesAt || new Date(pollToUpdate.closesAt) > new Date();
@@ -450,6 +503,7 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
             updates[`isRejectedForDisplay`] = true;
         }
         updates[`lastUpdatedAt`] = serverTimestamp();
+
         try {
             await update(firebaseDatabaseRef(database, `camps/${campID}/polls/${pollId}`), updates);
             alert(`Poll ${approve ? 'approved' : 'rejected'} successfully.`);
@@ -459,8 +513,9 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
         }
     };
 
-    const handleSubmittedOptionApproval = async (pollId, optionId, approve) => {
-        const optionUpdates = {}; // Renamed to avoid conflict with 'updates' in outer scope if any
+    const handleSubmittedOptionApproval = async (pollId: string, optionId: string, approve: boolean) => {
+        if (!user) return;
+        const optionUpdates: any = {};
         if (approve) {
             optionUpdates[`isApproved`] = true;
             optionUpdates[`approvedByUserID`] = user.uid;
@@ -481,9 +536,8 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
         }
     };
 
-    // ---- Voting Handlers ----
-    const handleVoteSubmit = async (voteData) => {
-        const finalVoteData = selectedPoll.pollType === 'ranked_ballot' ? voteData : selectedOption;
+    const handleVoteSubmit = async (voteData: string | string[]) => {
+        const finalVoteData = selectedPoll?.pollType === 'ranked_ballot' ? voteData : selectedOption;
 
         if ((!finalVoteData || (Array.isArray(finalVoteData) && finalVoteData.length === 0)) || !selectedPoll || !user || !campID) {
             alert("Please make a selection before submitting.");
@@ -494,11 +548,11 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
             return;
         }
 
-        const updates = {};
+        const updates: any = {};
         updates[`camps/${campID}/polls/${selectedPoll.id}/usersVoted/${user.uid}`] = finalVoteData;
         updates[`camps/${campID}/polls/${selectedPoll.id}/lastUpdatedAt`] = serverTimestamp();
 
-        if (selectedPoll.pollType !== 'ranked_ballot') {
+        if (selectedPoll.pollType !== 'ranked_ballot' && typeof finalVoteData === 'string') {
             updates[`camps/${campID}/polls/${selectedPoll.id}/options/${finalVoteData}/voteCount`] = increment(1);
         }
 
@@ -517,19 +571,19 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
             return;
         }
 
-        const newOptionKey = push(firebaseDatabaseRef(database, `camps/${campID}/polls/${selectedPoll.id}/options`)).key;
-        const optionData = {
+        const newOptionRef = push(firebaseDatabaseRef(database, `camps/${campID}/polls/${selectedPoll.id}/options`));
+        const optionData: Omit<PollOption, 'voteCount'> & { voteCount?: number, submittedAt: object } = {
             text: newOptionText.trim(),
             createdByUserID: user.uid,
             submittedAt: serverTimestamp(),
             isInitialOption: false,
             isApproved: false,
             isRejected: false,
-            voteCount: 0
         };
+        optionData.voteCount = 0;
 
-        const updates = {};
-        updates[`camps/${campID}/polls/${selectedPoll.id}/options/${newOptionKey}`] = optionData;
+        const updates: any = {};
+        updates[`camps/${campID}/polls/${selectedPoll.id}/options/${newOptionRef.key}`] = optionData;
         updates[`camps/${campID}/polls/${selectedPoll.id}/lastUpdatedAt`] = serverTimestamp();
 
         try {
@@ -542,57 +596,44 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
         }
     };
 
-    const calculateTotalVotes = (poll) => {
+    const calculateTotalVotes = (poll: Poll) => {
         if (!poll || !poll.options) return 0;
         return Object.values(poll.options)
             .filter(opt => opt.isApproved)
             .reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
     };
 
-    // --- Filtering for Display ---
     const pollsAwaitingDisplayApproval = polls.filter(p => !p.isApprovedForDisplay && !p.isRejectedForDisplay);
     const optionsAwaitingApproval = polls.reduce((acc, poll) => {
         if (poll.options) {
             Object.entries(poll.options).forEach(([optionId, option]) => {
                 if (!option.isInitialOption && !option.isApproved && !option.isRejected) {
-                    if (canUserManageOption(poll)) {
+                    if (canUserManageOption()) {
                         acc.push({ ...option, optionId, pollId: poll.id, pollQuestion: poll.questionText });
                     }
                 }
             });
         }
         return acc;
-    }, []);
+    }, [] as (PollOption & { optionId: string, pollId: string, pollQuestion: string })[]);
 
     const openAndApprovedPolls = polls.filter(p => p.isApprovedForDisplay && !p.isRejectedForDisplay && p.isOpenForVoting);
     const closedOrNotOpenButApprovedPolls = polls.filter(p => p.isApprovedForDisplay && !p.isRejectedForDisplay && !p.isOpenForVoting);
 
-    // ---- STYLING ----
-    const listContainerStyle = { display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' };
-    const pollItemStyle = (isClosedOrPending) => ({
+    const listContainerStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' };
+    const pollItemStyle = (isClosedOrPending: boolean): React.CSSProperties => ({
         padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer',
         transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
         backgroundColor: 'var(--mantine-color-body)',
         color: isClosedOrPending ? 'var(--mantine-color-dimmed)' : 'var(--mantine-color-text)',
         opacity: isClosedOrPending ? 0.7 : 1,
     });
-    const pollItemHoverStyle = { backgroundColor: 'var(--mantine-color-gray-0)', boxShadow: 'var(--mantine-shadow-sm)' };
-    const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 };
-    const modalContentStyle = { backgroundColor: 'var(--mantine-color-body)', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' };
-    const modalHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' };
-    const modalBodyStyle = { flexGrow: 1, minHeight: 0 };
-    const adminSectionStyle = { padding: '1rem', marginBottom: '2rem', border: '1px dashed var(--mantine-color-gray-4)', borderRadius: 'var(--mantine-radius-md)', backgroundColor: 'var(--mantine-color-gray-0)' };
-    const createPollFormStyle = { padding: '1rem', border: '1px solid var(--mantine-color-blue-2)', borderRadius: 'var(--mantine-radius-md)', backgroundColor: 'var(--mantine-color-blue-0)', marginBottom: '1rem' };
-    const nativeDateTimeInputStyle = {
-        padding: 'var(--mantine-spacing-xs)',
-        fontSize: 'var(--mantine-font-size-sm)',
-        borderRadius: 'var(--mantine-radius-sm)',
-        border: '1px solid var(--mantine-color-gray-4)',
-        backgroundColor: 'var(--mantine-color-body)',
-        color: 'var(--mantine-color-text)',
-        width: '100%'
-    };
-
+    const pollItemHoverStyle: React.CSSProperties = { backgroundColor: 'var(--mantine-color-gray-0)', boxShadow: 'var(--mantine-shadow-sm)' };
+    const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 };
+    const modalContentStyle: React.CSSProperties = { backgroundColor: 'var(--mantine-color-body)', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' };
+    const modalHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' };
+    const modalBodyStyle: React.CSSProperties = { flexGrow: 1, minHeight: 0 };
+    const adminSectionStyle: React.CSSProperties = { padding: '1rem', marginBottom: '2rem', border: '1px dashed var(--mantine-color-gray-4)', borderRadius: 'var(--mantine-radius-md)', backgroundColor: 'var(--mantine-color-gray-0)' };
 
     if (isLoading) return <Paper p="xl" shadow="xs" style={{ textAlign: 'center' }}><Text>Loading polls...</Text></Paper>;
     if (error) return <Paper p="xl" shadow="xs" style={{ textAlign: 'center' }}><Text c="red">{error}</Text></Paper>;
@@ -639,38 +680,18 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                             </Group>
                         ))}
                         <Button onClick={addPollOptionField} variant="light" size="xs" leftSection={<IconPlus size={14} />}>Add Option</Button>
-                        <Text fw={500} size="sm" mt="xs">Poll Closes At (Optional)</Text>
-                        <Flex gap="sm">
-                            <input type="date" value={newPollData.closesAtDate} onChange={(e) => handleNewPollInputChange('closesAtDate', e.target.value)} style={{ ...nativeDateTimeInputStyle, flex: 1 }} />
-                            <input type="time" value={newPollData.closesAtTime} onChange={(e) => handleNewPollInputChange('closesAtTime', e.target.value)} style={{ ...nativeDateTimeInputStyle, flex: 1 }} />
-                        </Flex>
-                        {newPollType === 'standard' && <Switch mt="sm" label="Allow users to submit their own options?" checked={newPollData.allowUserOptionSubmissions} onChange={(e) => handleNewPollInputChange('allowUserOptionSubmissions', e.currentTarget.checked)} />}
-                        <Radio.Group label="Results Visibility" value={newPollData.resultsVisibility} onChange={(value) => handleNewPollInputChange('resultsVisibility', value)} required mt="sm">
+                        <Radio.Group label="Results Visibility" value={newPollData.resultsVisibility} onChange={(value) => handleNewPollInputChange('resultsVisibility', value as Poll['resultsVisibility'])} required mt="sm">
                             <Group mt="xs"><Radio value="always_visible" label="Always Visible" /><Radio value="after_voting" label="After Voting" /><Radio value="after_close" label="After Poll Closes" /><Radio value="admin_only" label="Admins Only" /></Group>
                         </Radio.Group>
-                        {newPollType === 'standard' && (
-                            <MultiSelect
-                                label="Tags (Optional)"
-                                placeholder="Add tags, press Enter to create new"
-                                data={[]}
-                                value={newPollData.tags}
-                                onChange={(value) => handleNewPollInputChange('tags', value)}
-                                searchable
-                                creatable
-                                getCreateLabel={(query) => `+ Create "${query}"`}
-                                mt="sm"
-                            />
-                        )}
                         <Button onClick={handleCreatePollSubmit} mt="md" leftSection={<IconPlus size={18} />} size="md">Create Poll</Button>
                     </Stack>
                 </Paper>
             </Modal>
 
-            {(canUserManagePollDisplay() || polls.some(p => canUserManageOption(p) && Object.values(p.options || {}).some(opt => !opt.isInitialOption && !opt.isApproved && !opt.isRejected))) && (
+            {(canUserApprovePoll() || canUserRejectPoll()) && (pollsAwaitingDisplayApproval.length > 0 || optionsAwaitingApproval.length > 0) && (
                 <Paper p="lg" radius="md" withBorder style={adminSectionStyle}>
-                    <Title order={3} mb="lg" style={{ color: 'var(--mantine-color-orange-7)' }}>Admin Approval Area</Title>
-
-                    {canUserManagePollDisplay() && pollsAwaitingDisplayApproval.length > 0 && (
+                    <Title order={3} mb="lg" c="orange.7">Admin Approval Area</Title>
+                    {pollsAwaitingDisplayApproval.length > 0 && (
                         <Box mb="xl">
                             <Title order={4} mb="sm">Polls Awaiting Display Approval</Title>
                             {pollsAwaitingDisplayApproval.map(poll => (
@@ -678,33 +699,24 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                                     <Text fw={500}>{poll.questionText}</Text>
                                     <Text size="xs" c="dimmed">Created by: {usersDataMap[poll.createdByUserID] || 'Unknown'} on {formatDate(poll.createdAt)}</Text>
                                     <Group mt="xs">
-                                        <Button size="xs" color="green" onClick={() => handlePollDisplayApproval(poll.id, true)} leftSection={<IconCircleCheck size={16} />}>Approve & Open</Button>
-                                        <Button size="xs" color="red" onClick={() => handlePollDisplayApproval(poll.id, false)} leftSection={<IconCircleX size={16} />}>Reject</Button>
+                                        {canUserApprovePoll() && <Button size="xs" color="green" onClick={() => handlePollDisplayApproval(poll.id, true)} leftSection={<IconCircleCheck size={16} />}>Approve & Open</Button>}
+                                        {canUserRejectPoll() && <Button size="xs" color="red" onClick={() => handlePollDisplayApproval(poll.id, false)} leftSection={<IconCircleX size={16} />}>Reject</Button>}
                                     </Group>
                                 </Paper>
                             ))}
                         </Box>
                     )}
-
-                    {optionsAwaitingApproval.length > 0 && (
-                        <Box>
-                            <Title order={4} mb="sm">Options Awaiting Approval</Title>
-                            {optionsAwaitingApproval.map(opt => (
-                                <Paper key={opt.optionId} p="sm" shadow="xs" withBorder radius="sm" mb="xs">
-                                    <Text>Option: <Text span fw={500}>"{opt.text}"</Text></Text>
-                                    <Text size="xs" c="dimmed">For Poll: "{opt.pollQuestion}"</Text>
-                                    <Text size="xs" c="dimmed">Suggested by: {usersDataMap[opt.createdByUserID] || 'Unknown'} on {formatDate(opt.submittedAt)}</Text>
-                                    <Group mt="xs">
-                                        <Button size="xs" color="green" onClick={() => handleSubmittedOptionApproval(opt.pollId, opt.optionId, true)} leftSection={<IconCircleCheck size={16} />}>Approve Option</Button>
-                                        <Button size="xs" color="red" onClick={() => handleSubmittedOptionApproval(opt.pollId, opt.optionId, false)} leftSection={<IconCircleX size={16} />}>Reject Option</Button>
-                                    </Group>
-                                </Paper>
-                            ))}
-                        </Box>
-                    )}
-                    {(pollsAwaitingDisplayApproval.length === 0 && optionsAwaitingApproval.length === 0 && (canUserManagePollDisplay() || polls.some(p => canUserManageOption(p) && Object.values(p.options || {}).some(opt => !opt.isInitialOption && !opt.isApproved && !opt.isRejected)))) && (
-                        <Text c="dimmed">No items currently awaiting your approval.</Text>
-                    )}
+                    {optionsAwaitingApproval.map(opt => (
+                        <Paper key={opt.optionId} p="sm" shadow="xs" withBorder radius="sm" mb="xs">
+                            <Text>Option: <Text span fw={500}>"{opt.text}"</Text></Text>
+                            <Text size="xs" c="dimmed">For Poll: "{opt.pollQuestion}"</Text>
+                            <Text size="xs" c="dimmed">Suggested by: {usersDataMap[opt.createdByUserID] || 'Unknown'} on {formatDate(opt.submittedAt)}</Text>
+                            <Group mt="xs">
+                                <Button size="xs" color="green" onClick={() => handleSubmittedOptionApproval(opt.pollId, opt.optionId, true)} leftSection={<IconCircleCheck size={16} />}>Approve</Button>
+                                <Button size="xs" color="red" onClick={() => handleSubmittedOptionApproval(opt.pollId, opt.optionId, false)} leftSection={<IconCircleX size={16} />}>Reject</Button>
+                            </Group>
+                        </Paper>
+                    ))}
                 </Paper>
             )}
 
@@ -758,14 +770,6 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                 </motion.div>
             )}
 
-            {(polls.filter(p => p.isApprovedForDisplay && !p.isRejectedForDisplay).length === 0 && !isLoading) && (
-                <Paper p="xl" shadow="xs" style={{ textAlign: 'center', marginTop: '2rem' }}>
-                    <IconChartBar size={48} stroke={1.5} style={{ color: 'var(--mantine-color-gray-5)' }} />
-                    <Text size="lg" mt="md">No active or closed polls to display for this camp yet.</Text>
-                    {canUserCreatePoll() && <Text c="dimmed">Why not create one?</Text>}
-                </Paper>
-            )}
-
             <AnimatePresence>
                 {selectedPoll && (
                     <motion.div
@@ -799,7 +803,7 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                                         <Text fw={500} mb="sm" c={userVotes[selectedPoll.id] ? "green" : "orange"}>
                                             {userVotes[selectedPoll.id] ? "You have already voted in this poll." : "This poll is currently closed for voting."}
                                         </Text>
-                                        {(selectedPoll.resultsVisibility === 'always_visible' || (selectedPoll.resultsVisibility === 'after_voting' && userVotes[selectedPoll.id]) || (selectedPoll.resultsVisibility === 'after_close' && !selectedPoll.isOpenForVoting) || canUserManagePollDisplay()) ? (
+                                        {(selectedPoll.resultsVisibility === 'always_visible' || (selectedPoll.resultsVisibility === 'after_voting' && userVotes[selectedPoll.id]) || (selectedPoll.resultsVisibility === 'after_close' && !selectedPoll.isOpenForVoting) || canUserApprovePoll()) ? (
                                             <div>
                                                 <Text size="lg" fw={500} mb="md">Results:</Text>
                                                 {selectedPoll.pollType === 'ranked_ballot' ? (

@@ -53,21 +53,21 @@
     flex-direction: column;
     height: 100vh;
     height: 100svh;
-    padding: var(--mantine-spacing-xl);
-    padding-top: calc(var(--navbar-height) + var(--mantine-spacing-xl));
+    padding: var(--mantine-spacing-sm);
+    padding-top: calc(var(--navbar-height) + var(--mantine-spacing-sm));
     /* Add space for close button */
     overflow-y: auto;
 }
 
 .closeButtonContainer {
     position: absolute;
-    top: 10px;
+    top: 70px;
     right: var(--mantine-spacing-md);
     z-index: 2001;
 }
 
 .navSection {
-    margin-bottom: var(--mantine-spacing-xl);
+    margin-bottom: var(--mantine-spacing-sm);
     padding: var(--mantine-spacing-md);
     border-radius: var(--mantine-radius-md);
     background-color: rgba(255, 255, 255, 0.85);
@@ -87,7 +87,7 @@
     align-items: center;
     width: 100%;
     font-size: var(--mantine-font-size-lg);
-    padding: var(--mantine-spacing-md);
+    padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
     border-radius: var(--mantine-radius-md);
     font-weight: 500;
     color: var(--mantine-color-dark-6);
@@ -131,10 +131,6 @@
     color: var(--mantine-color-gray-7);
 }
 
-.collectionLink {
-    font-size: var(--mantine-font-size-md);
-}
-
 .loginContainer {
     display: flex;
     align-items: center;
@@ -158,4 +154,9 @@
 
 .campBadge:hover {
     transform: scale(1.05);
+}
+
+.campTitle {
+    color: #333;
+    font-size: 1.75rem;
 }

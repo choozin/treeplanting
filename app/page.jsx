@@ -8,7 +8,7 @@ import { ColorSchemeToggle } from '../components/ColorSchemeToggle/ColorSchemeTo
 import Nav from '../components/navbar/Nav';
 import CalendarViews from '../components/calendar/CalendarViews';
 import RecipesList from '../components/Recipes/RecipeList';
-import UserManagement from '../components/auth/UserManagement';
+import UserManagement from '../components/management/UserManagement'; // <-- Like, look at its new home!
 import GeneralAnnouncement from '../components/annoucements/GeneralAnnouncement';
 import CampSpecificAnnouncement from '../components/annoucements/CampSpecificAnnouncement';
 import PollsPage from '../components/polls/PollsPage';
@@ -174,7 +174,7 @@ export default function HomePage() {
             />
 
             {visibleComponent === 'messages' && <MessagesPage user={user} effectiveRole={effectiveRole} campID={campID} />}
-            {visibleComponent === 'weather' && <WeatherPage />}
+            {visibleComponent === 'weather' && <WeatherPage effectiveRole={effectiveRole} />}
             {visibleComponent === 'polls' && campID && <PollsPage user={user} campID={campID} userData={userData} effectiveRole={effectiveRole} />}
             {visibleComponent === 'campManagement' && campID && <CampManagement campID={campID} effectiveRole={effectiveRole} />}
             {visibleComponent === 'crewManagement' && campID && <CrewManagement campID={campID} effectiveRole={effectiveRole} />}

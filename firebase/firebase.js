@@ -10,7 +10,7 @@ import {
     signOut,
     onAuthStateChanged
 } from "firebase/auth";
-import { getDatabase, ref, set } from "firebase/database";
+import { getDatabase, ref, set, update } from "firebase/database";
 
 // Firebase config
 const firebaseConfig = {
@@ -33,12 +33,25 @@ const registerUser = async (email, password, name) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        await set(ref(database, `users/${user.uid}`), {
+        const updates = {};
+        const userData = {
             email: user.email,
             name: name,
-            role: 1, // Default role set to 1
-            createdAt: new Date().toISOString()
-        });
+            role: 1, // Default global role set to 1
+            createdAt: new Date().toISOString(),
+            assignedCamps: {
+                scooter: {
+                    campName: "Scooter's Camp",
+                    role: 3
+                }
+            }
+        };
+        updates[`/users/${user.uid}`] = userData;
+        updates[`/camps/scooter/users/${user.uid}`] = {
+            role: 3
+        };
+
+        await update(ref(database), updates);
 
         alert(`Registration successful for ${user.email}`);
         return user;
@@ -103,4 +116,3 @@ const logoutUser = async () => {
 
 // Export everything
 export { app, auth, database, registerUser, registerOtherUser, loginUser, logoutUser, onAuthStateChanged };
-
