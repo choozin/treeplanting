@@ -105,7 +105,8 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, effecti
         label: campData.campName || `Unnamed Camp (${id})`
     }));
 
-    const roleName = effectiveRole > 0 ? (ROLES[effectiveRole] || 'Unknown') : 'N/A';
+    const roleTitle = effectiveRole > 0 ? (ROLES[effectiveRole] || 'Member') : 'N/A';
+    const displayName = userData?.profile?.nickname || userData?.name;
 
     return (
         <div ref={forwardedRef} style={{ width: '100%' }}>
@@ -114,7 +115,7 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, effecti
             ) : campID ? (
                 <>
                     <Title order={3} ta="center" className={classes.campTitle}>{camps[campID]?.campName || 'Selected Camp'}</Title>
-                    <Text size="sm" c="dimmed" ta="center">Effective Role: {roleName}</Text>
+                    <Text size="sm" c="dimmed" ta="center">Welcome, {roleTitle} {displayName}</Text>
                     {campOptions.length > 1 && (
                         <>
                             <Divider my="sm" label="Switch Camp" labelPosition="center" />
@@ -219,8 +220,8 @@ export default function Nav() {
             ...rest,
             senderId: user.uid,
             sentAt: serverTimestamp(),
-            threadId: messageId,
-            liveCopies: recipients.length,
+            threadId: messageId, // A new message starts its own thread.
+            liveCopies: recipients.length, // Reference counter
             recipients: recipients.reduce((acc, uid) => ({ ...acc, [uid]: true }), {}),
         };
 
@@ -334,7 +335,7 @@ export default function Nav() {
                             {pathname !== '/' && (
                                 <div className={classes.closeButtonContainer}>
                                     <ActionIcon onClick={() => setNavIsOpen(false)} variant="transparent" size="xl" aria-label="Close menu">
-                                        <IconX color="#495057" size={36} />
+                                        <IconX size={36} className={classes.closeIcon} />
                                     </ActionIcon>
                                 </div>
                             )}

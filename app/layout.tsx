@@ -28,7 +28,6 @@ export default function RootLayout({ children }: { children: any }) {
     <html lang="en" className={nunito.variable}>
       <head>
         <ColorSchemeScript defaultColorScheme="auto" />
-        <link rel="shortcut icon" href="/favicon.svg" />
         <link rel="manifest" href="/manifest.json" />
         <meta
           name="viewport"
