@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../firebase/firebase';
-import { ref, onValue, set, update, push as firebasePush, get } from 'firebase/database';
+import { ref, get } from 'firebase/database';
 import useSWR from 'swr';
 import {
     AppShell,
@@ -22,34 +22,16 @@ import FilterBar from './FilterBar';
 import SongCard from './SongCard';
 import AddSongModal from './AddSongModal';
 
-// --- Data Schema Comment ---
-/*
-  Recommendation object structure in Firebase at `camps/{campID}/music_recommendations/{recommendationId}`:
-  {
-    id: string, // Firebase push key
-    songTitle: string,
-    artistName: string,
-    albumArtUrl: string,
-    bpm: number,
-    genres: string[],
-    previewUrl: string,
-    externalUrl: string,
-    apiSongId: string,
-    recommenderId: string, // links to user.uid
-    recommenderName: string,
-    campId: string,
-    crewId: string,
-    createdAt: number, // Firebase.ServerValue.TIMESTAMP
-    upvotes: string[], // Array of user UIDs
-  }
-*/
-
 const fetcher = (path) => get(ref(database, path)).then(snapshot => {
     if (snapshot.exists()) {
         const data = snapshot.val();
         return Object.keys(data).map(key => ({ id: key, ...data[key] }));
     }
     return [];
+});
+
+const objectFetcher = (path) => get(ref(database, path)).then(snapshot => {
+    return snapshot.exists() ? snapshot.val() : null;
 });
 
 const MusicShare = () => {
@@ -66,6 +48,11 @@ const MusicShare = () => {
     const musicPath = campID ? `camps/${campID}/music_recommendations` : null;
     const { data: fetchedData, error, isLoading } = useSWR(musicPath, fetcher);
 
+    const userCrewId = userData?.assignedCamps?.[campID]?.crewId;
+    const crewPath = campID && userCrewId ? `camps/${campID}/crews/${userCrewId}` : null;
+    const { data: crewData } = useSWR(crewPath, objectFetcher);
+    const campName = userData?.assignedCamps?.[campID]?.campName;
+
     useEffect(() => {
         if (fetchedData) {
             setRecommendations(fetchedData);
@@ -77,21 +64,16 @@ const MusicShare = () => {
 
         let filtered = [...recommendations];
 
-        // Scope filter
-        if (scope === 'My Crew' && userData?.assignedCamps?.[campID]?.crewId) {
-            const userCrewId = userData.assignedCamps[campID].crewId;
+        if (scope === 'My Crew' && userCrewId) {
             filtered = filtered.filter(rec => rec.crewId === userCrewId);
         }
 
-        // BPM filter
         filtered = filtered.filter(rec => rec.bpm >= bpmRange[0] && rec.bpm <= bpmRange[1]);
 
-        // Genre filter
         if (selectedGenres.length > 0) {
             filtered = filtered.filter(rec => rec.genres && selectedGenres.every(g => rec.genres.includes(g)));
         }
 
-        // Sorting
         switch (sortBy) {
             case 'Popularity':
                 filtered.sort((a, b) => (b.upvotes?.length || 0) - (a.upvotes?.length || 0));
@@ -106,10 +88,9 @@ const MusicShare = () => {
         }
 
         return filtered;
-    }, [recommendations, scope, bpmRange, selectedGenres, sortBy, userData, campID]);
+    }, [recommendations, scope, bpmRange, selectedGenres, sortBy, userCrewId]);
 
     const handleUpvote = (songId) => {
-        // Placeholder for offline queueing
         if (!navigator.onLine) {
             handleOfflineUpvote(songId);
             return;
@@ -119,8 +100,6 @@ const MusicShare = () => {
 
     const handleOfflineUpvote = (songId) => {
         console.log(`(Offline) Queuing upvote for song: ${songId}`);
-        // In a real implementation, you would add this to an IndexedDB queue.
-        // The service worker's 'sync' event would then handle sending it.
         alert("You're offline! Your upvote will be synced when you're back online.");
     };
 
@@ -149,6 +128,9 @@ const MusicShare = () => {
                         sortBy={sortBy}
                         setSortBy={setSortBy}
                         allSongs={recommendations}
+                        campName={campName || 'My Camp'}
+                        crewName={crewData?.crewName || 'My Crew'}
+                        hasCrew={!!userCrewId}
                     />
                 </AppShell.Header>
 
@@ -189,7 +171,7 @@ const MusicShare = () => {
                 onClose={() => setIsModalOpen(false)}
                 user={user}
                 campId={campID}
-                crewId={userData?.assignedCamps?.[campID]?.crewId}
+                crewId={userCrewId}
             />
         </Container>
     );
