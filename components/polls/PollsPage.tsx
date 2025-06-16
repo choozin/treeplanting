@@ -841,12 +841,14 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
                                         {selectedPoll.pollType === 'ranked_ballot' ? (
                                             <RankedVoteInterface poll={selectedPoll} onVote={handleVoteSubmit} />
                                         ) : (
-                                            <Radio.Group value={selectedOption} onChange={setSelectedOption} name={`poll-${selectedPoll.id}`} orientation="vertical" spacing="sm" style={{ marginBottom: '1rem' }}>
-                                                {Object.entries(selectedPoll.options || {}).filter(([_, opt]) => opt.isApproved).map(([optionId, option]) => (
-                                                    <Paper key={optionId} p="xs" radius="sm" withBorder style={{ cursor: 'pointer', transition: 'background-color 0.2s ease', backgroundColor: selectedOption === optionId ? 'var(--mantine-color-blue-0)' : 'transparent' }} onClick={() => setSelectedOption(optionId)}>
-                                                        <Radio value={optionId} label={option.text} styles={{ label: { cursor: 'pointer' } }} />
-                                                    </Paper>
-                                                ))}
+                                            <Radio.Group value={selectedOption} onChange={setSelectedOption} name={`poll-${selectedPoll.id}`} style={{ marginBottom: '1rem' }}>
+                                                <Stack spacing="sm">
+                                                    {Object.entries(selectedPoll.options || {}).filter(([_, opt]) => opt.isApproved).map(([optionId, option]) => (
+                                                        <Paper key={optionId} p="xs" radius="sm" withBorder style={{ cursor: 'pointer', transition: 'background-color 0.2s ease', backgroundColor: selectedOption === optionId ? 'var(--mantine-color-blue-0)' : 'transparent' }} onClick={() => setSelectedOption(optionId)}>
+                                                            <Radio value={optionId} label={option.text} styles={{ label: { cursor: 'pointer' } }} />
+                                                        </Paper>
+                                                    ))}
+                                                </Stack>
                                             </Radio.Group>
                                         )}
 
