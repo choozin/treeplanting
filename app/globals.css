@@ -44,6 +44,11 @@ a {
   text-decoration: none;
 }
 
+.poll-list-item:hover {
+  background-color: var(--mantine-color-gray-0);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;

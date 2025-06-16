@@ -92,6 +92,37 @@ const formatDate = (isoStringOrTimestamp?: string | number | object): string => 
     }
 };
 
+const pollItemStyle = (isClosedOrPending: boolean): React.CSSProperties => ({
+    padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer',
+    transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
+    backgroundColor: 'var(--mantine-color-body)',
+    color: isClosedOrPending ? 'var(--mantine-color-dimmed)' : 'var(--mantine-color-text)',
+    opacity: isClosedOrPending ? 0.7 : 1,
+});
+
+const PollListItem = React.memo(({ poll, isClosed, onSelect, usersDataMap }: { poll: Poll, isClosed: boolean, onSelect: (p: Poll) => void, usersDataMap: Record<string, string> }) => (
+    <motion.div
+        className="poll-list-item"
+        layout
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+        style={pollItemStyle(isClosed)}
+        onClick={() => onSelect(poll)}
+        role="button"
+        tabIndex={0}
+        onKeyPress={(e) => e.key === 'Enter' && onSelect(poll)}
+    >
+        <Text fw={500} size="lg" mb={4}>{poll.questionText}</Text>
+        <Text size="xs" c="dimmed">
+            {poll.closesAt && <>Closes on: {formatDate(poll.closesAt)} &bull; </>}
+            Created by: {usersDataMap[poll.createdByUserID] || 'Unknown'}
+        </Text>
+    </motion.div>
+));
+PollListItem.displayName = 'PollListItem';
+
 const RankedVoteHelpModal: FC<{ opened: boolean, onClose: () => void }> = ({ opened, onClose }) => (
     <Modal opened={opened} onClose={onClose} title="How Ranked Ballot Voting Works" size="lg" centered zIndex={2000}>
         <Stack gap="md">
@@ -368,7 +399,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
                     );
                 }
 
-                pollsArray.sort((a, b) => (b.createdAt as number || 0) - (a.createdAt as number || 0));
+                pollsArray.sort((a, b) => ((b.createdAt as number) || 0) - ((a.createdAt as number) || 0));
                 setPolls(pollsArray);
 
                 const votesResults = await Promise.all(voteCheckPromises);
@@ -621,44 +652,12 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     const closedOrNotOpenButApprovedPolls = polls.filter(p => p.isApprovedForDisplay && !p.isRejectedForDisplay && !p.isOpenForVoting);
 
     const listContainerStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' };
-    const pollItemHoverStyle: React.CSSProperties = { backgroundColor: 'var(--mantine-color-gray-0)', boxShadow: 'var(--mantine-shadow-sm)' };
-    const pollItemStyle = (isClosedOrPending: boolean): React.CSSProperties => ({
-        padding: '1rem', border: '1px solid #e0e0e0', borderRadius: '8px', cursor: 'pointer',
-        transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
-        backgroundColor: 'var(--mantine-color-body)',
-        color: isClosedOrPending ? 'var(--mantine-color-dimmed)' : 'var(--mantine-color-text)',
-        opacity: isClosedOrPending ? 0.7 : 1,
-    });
+
     const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 };
     const modalContentStyle: React.CSSProperties = { backgroundColor: 'var(--mantine-color-body)', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' };
     const modalHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' };
     const modalBodyStyle: React.CSSProperties = { flexGrow: 1, minHeight: 0 };
     const adminSectionStyle: React.CSSProperties = { padding: '1rem', marginBottom: '2rem', border: '1px dashed var(--mantine-color-gray-4)', borderRadius: 'var(--mantine-radius-md)', backgroundColor: 'var(--mantine-color-gray-0)' };
-
-    // --- Start: Refactored PollListItem Component ---
-    const PollListItem = React.memo(({ poll, isClosed, onSelect }: { poll: Poll, isClosed: boolean, onSelect: (p: Poll) => void }) => (
-        <motion.div
-            layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            whileHover={pollItemHoverStyle}
-            style={pollItemStyle(isClosed)}
-            onClick={() => onSelect(poll)}
-            role="button"
-            tabIndex={0}
-            onKeyPress={(e) => e.key === 'Enter' && onSelect(poll)}
-        >
-            <Text fw={500} size="lg" mb={4}>{poll.questionText}</Text>
-            <Text size="xs" c="dimmed">
-                {poll.closesAt && <>Closes on: {formatDate(poll.closesAt)} &bull; </>}
-                Created by: {usersDataMap[poll.createdByUserID] || 'Unknown'}
-            </Text>
-        </motion.div>
-    ));
-    PollListItem.displayName = 'PollListItem';
-    // --- End: Refactored PollListItem Component ---
 
     if (isLoading) return <Paper p="xl" shadow="xs" style={{ textAlign: 'center' }}><Text>Loading polls...</Text></Paper>;
     if (error) return <Paper p="xl" shadow="xs" style={{ textAlign: 'center' }}><Text c="red">{error}</Text></Paper>;
@@ -750,7 +749,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
                     <Title order={4} style={{ marginBottom: '1rem', color: 'var(--mantine-color-gray-7)', marginTop: '2rem' }}>Open Polls</Title>
                     <div style={listContainerStyle}>
                         {openAndApprovedPolls.map(poll => (
-                            <PollListItem key={poll.id} poll={poll} isClosed={false} onSelect={handlePollSelect} />
+                            <PollListItem key={poll.id} poll={poll} isClosed={false} onSelect={handlePollSelect} usersDataMap={usersDataMap} />
                         ))}
                     </div>
                 </motion.div>
@@ -761,7 +760,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
                     <Title order={4} style={{ marginBottom: '1rem', color: 'var(--mantine-color-gray-7)' }}>Closed / Archived Polls</Title>
                     <div style={listContainerStyle}>
                         {closedOrNotOpenButApprovedPolls.map(poll => (
-                            <PollListItem key={poll.id} poll={poll} isClosed={true} onSelect={handlePollSelect} />
+                            <PollListItem key={poll.id} poll={poll} isClosed={true} onSelect={handlePollSelect} usersDataMap={usersDataMap} />
                         ))}
                     </div>
                 </motion.div>
