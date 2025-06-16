@@ -84,7 +84,7 @@ interface WeatherContextType {
 export const WeatherContext = createContext<WeatherContextType | null>(null);
 
 // --- Helper Functions ---
-const isDataStale = (timestamp: number | null): boolean => {
+const isDataStale = (timestamp: number | null | undefined): boolean => {
     if (!timestamp) return true;
     return (Date.now() - timestamp) > 3 * 60 * 60 * 1000; // 3 hours
 };
