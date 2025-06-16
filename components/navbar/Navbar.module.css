@@ -6,7 +6,6 @@
     height: var(--navbar-height);
     z-index: 1000;
     background-color: #2D2D2D;
-    /* Reverted to original dark charcoal */
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -14,14 +13,14 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
+    gap: var(--mantine-spacing-md);
+    /* Added gap for spacing */
 }
 
 .headerTitle {
     color: white;
-    margin-left: var(--mantine-spacing-md);
     font-weight: 600;
     flex-grow: 1;
-    /* Allows it to take up space */
 }
 
 .logo {
@@ -43,7 +42,6 @@
     bottom: 0;
     z-index: 2000;
     background-color: rgba(20, 20, 20, 0.6);
-    /* Darker, more transparent background */
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
@@ -55,7 +53,6 @@
     height: 100svh;
     padding: var(--mantine-spacing-sm);
     padding-top: calc(var(--navbar-height) + var(--mantine-spacing-sm));
-    /* Add space for close button */
     overflow-y: auto;
 }
 
@@ -71,7 +68,6 @@
     padding: var(--mantine-spacing-md);
     border-radius: var(--mantine-radius-md);
     background-color: rgba(255, 255, 255, 0.85);
-    /* Slightly more opaque white sections */
     border: 1px solid var(--mantine-color-gray-2);
 }
 

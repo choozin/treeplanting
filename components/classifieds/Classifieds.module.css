@@ -1,0 +1,50 @@
+.placeholderImage {
+    background-color: var(--mantine-color-gray-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+    color: var(--mantine-color-gray-5);
+    border-radius: var(--mantine-radius-sm);
+}
+
+.listItem {
+    padding: 0; /* Remove padding from the main container */
+    border: 1px solid var(--mantine-color-gray-2);
+    position: relative;
+    overflow: hidden;
+    transition: background-color 0.15s ease;
+}
+
+.clickableWrapper {
+    display: flex;
+    gap: var(--mantine-spacing-md);
+    padding: var(--mantine-spacing-md);
+    cursor: pointer;
+    align-items: flex-start;
+}
+
+.clickableWrapper:hover {
+    background-color: var(--mantine-color-gray-0);
+}
+
+.itemContent {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mantine-spacing-xs);
+    flex-grow: 1;
+}
+
+.typeIndicator {
+    width: 6px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.chevron {
+    align-self: center;
+}

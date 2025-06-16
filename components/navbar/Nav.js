@@ -19,21 +19,19 @@ import {
     Text,
     UnstyledButton,
     Button,
-    Popover,
     Paper,
     Tooltip,
     Modal,
     Burger,
     ActionIcon,
     Title,
-    Select,
-    Alert,
     Divider
 } from "@mantine/core";
 import { IconX, IconLogout } from "@tabler/icons-react";
 
 import classes from "./Navbar.module.css";
 import WeatherNavWidget from '../weather/WeatherNavWidget';
+import ComposeMessage from '../messages/ComposeMessage';
 
 const WeatherSectionWrapper = () => {
     const { primary, preferences } = useWeather();
@@ -47,7 +45,7 @@ const WeatherSectionWrapper = () => {
     );
 };
 
-const SelfRegistrationAndLogin = ({ setNavIsOpen }) => {
+const SelfRegistrationAndLogin = () => {
     return (
         <div className={classes.loginContainer}>
             <Paper withBorder p="xl" radius="md" style={{ width: '400px', maxWidth: '95vw' }}>
@@ -165,7 +163,7 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, effecti
 CampSelector.displayName = 'CampSelector';
 
 export default function Nav() {
-    const { user, userData, campID, setCampID, effectiveRole } = useAuth();
+    const { user, userData, campID, setCampID, effectiveRole, isComposeModalOpen, closeComposeModal, composeInitialState } = useAuth();
     const pathname = usePathname();
     const [navIsOpen, setNavIsOpen] = useState(true);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -191,7 +189,6 @@ export default function Nav() {
                 setUnreadCount(0);
                 return;
             }
-
             const inboxData = snapshot.val();
             const unreadMessages = Object.values(inboxData).filter(msg => !msg.isRead);
             setUnreadCount(unreadMessages.length);
@@ -209,8 +206,47 @@ export default function Nav() {
 
     const getPageTitle = () => {
         const routeKey = pathname.substring(1);
-        if (!routeKey) return 'Plantiful';
-        return PAGE_TITLES[routeKey] || 'Plantiful';
+        if (!routeKey) return 'plantcamp';
+        return PAGE_TITLES[routeKey] || 'plantcamp';
+    };
+
+    const handleComposeSubmit = async (messageData) => {
+        const { recipients, ...rest } = messageData;
+        const newMessageRef = push(ref(database, 'messages'));
+        const messageId = newMessageRef.key;
+
+        const messageContent = {
+            ...rest,
+            senderId: user.uid,
+            sentAt: serverTimestamp(),
+            threadId: messageId,
+            liveCopies: recipients.length,
+            recipients: recipients.reduce((acc, uid) => ({ ...acc, [uid]: true }), {}),
+        };
+
+        const fanOutUpdates = {};
+        fanOutUpdates[`/messages/${messageId}`] = messageContent;
+
+        const senderName = userData?.name || user.email;
+
+        recipients.forEach(uid => {
+            fanOutUpdates[`/user-inboxes/${uid}/${messageId}`] = {
+                isRead: false,
+                senderName,
+                subject: messageContent.subject,
+                sentAt: serverTimestamp(),
+                messageType: messageContent.messageType,
+                recipientCount: recipients.length,
+                areRecipientsVisible: messageContent.areRecipientsVisible,
+            };
+        });
+
+        try {
+            await update(ref(database), fanOutUpdates);
+        } catch (err) {
+            console.error("Failed to send message:", err);
+            alert("Error: Could not send message.");
+        }
     };
 
     const renderNavItem = (item, isCollectionLink = false) => {
@@ -273,6 +309,16 @@ export default function Nav() {
                 <Title order={4} className={classes.headerTitle}>{getPageTitle()}</Title>
                 <Burger opened={navIsOpen} onClick={() => setNavIsOpen((o) => !o)} color="white" aria-label="Toggle navigation" className={classes.menuButton} />
             </header>
+
+            <ComposeMessage
+                opened={isComposeModalOpen}
+                onClose={closeComposeModal}
+                onSubmit={handleComposeSubmit}
+                currentUser={user}
+                effectiveRole={effectiveRole}
+                campID={campID}
+                initialState={composeInitialState}
+            />
 
             <AnimatePresence>
                 {navIsOpen && (

@@ -7,8 +7,6 @@ import { database, auth } from '../firebase/firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { ROLES } from '../lib/constants';
 
-// --- TypeScript Interfaces ---
-
 interface UserData {
   name: string;
   email: string;
@@ -17,25 +15,37 @@ interface UserData {
   profile?: any;
 }
 
+interface ComposeModalState {
+    recipientId?: string;
+    recipientName?: string;
+    subject?: string;
+    isClassifiedsMessage?: boolean;
+}
+
 interface AuthContextType {
-  user: User | null | undefined; // undefined for initial loading state
+  user: User | null | undefined;
   userData: UserData | null;
   campID: string | null;
   setCampID: (campID: string | null) => void;
   effectiveRole: number;
   loading: boolean;
+  isComposeModalOpen: boolean;
+  openComposeModal: (initialState?: ComposeModalState) => void;
+  closeComposeModal: () => void;
+  composeInitialState: ComposeModalState | null;
 }
 
-// --- Context Definition ---
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-// --- Provider Component ---
 const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null | undefined>(undefined);
     const [userData, setUserData] = useState<UserData | null>(null);
     const [campID, setCampIDState] = useState<string | null>(null);
     const [effectiveRole, setEffectiveRole] = useState<number>(0);
     const [loading, setLoading] = useState(true);
+    
+    const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
+    const [composeInitialState, setComposeInitialState] = useState<ComposeModalState | null>(null);
 
     const setCampID = useCallback((newCampID: string | null) => {
         if (user) {
@@ -46,9 +56,18 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }
         }
         setCampIDState(newCampID);
-        // Dispatch an event to notify other parts of the app, like WeatherProvider
         window.dispatchEvent(new Event('campChange'));
     }, [user]);
+    
+    const openComposeModal = useCallback((initialState: ComposeModalState = {}) => {
+        setComposeInitialState(initialState);
+        setIsComposeModalOpen(true);
+    }, []);
+
+    const closeComposeModal = useCallback(() => {
+        setIsComposeModalOpen(false);
+        setComposeInitialState(null);
+    }, []);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -87,17 +106,13 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setEffectiveRole(0);
             return;
         }
-
         const globalRole = userData.role || 0;
-
         if (!campID) {
             setEffectiveRole(globalRole);
             return;
         }
-
         const campSpecificRole = userData.assignedCamps?.[campID]?.role || 0;
         setEffectiveRole(Math.max(globalRole, campSpecificRole));
-
     }, [user, userData, campID]);
 
     const value = useMemo(() => ({
@@ -107,7 +122,11 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setCampID,
         effectiveRole,
         loading,
-    }), [user, userData, campID, setCampID, effectiveRole, loading]);
+        isComposeModalOpen,
+        openComposeModal,
+        closeComposeModal,
+        composeInitialState,
+    }), [user, userData, campID, setCampID, effectiveRole, loading, isComposeModalOpen, openComposeModal, closeComposeModal, composeInitialState]);
 
     return (
         <AuthContext.Provider value={value}>
