@@ -31,7 +31,7 @@ const mealDifficultyColors = (difficulty) => {
   }
 };
 
-const CalendarViews = ({ user, campID, isCalendarVisible, setIsCalendarVisible, handleComponentChange }) => {
+const CalendarViews = ({ user, campID }) => {
   const [calendarData, setCalendarData] = useState(null);
   const [activeView, setActiveView] = useState("calendar");
 
