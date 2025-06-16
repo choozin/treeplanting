@@ -31,6 +31,7 @@ import {
     IconTrash, IconUserOff, IconAlertCircle, IconPencil, IconChevronUp, IconChevronDown, IconPlus
 } from '@tabler/icons-react';
 import { User as FirebaseUser } from 'firebase/auth';
+import CrewManagement from './CrewManagement';
 
 // --- TypeScript Interfaces ---
 interface AppUser {
@@ -265,7 +266,7 @@ const UserManagement: FC<UserManagementProps> = ({ currentUser, campID, effectiv
                 </Tabs.Panel>
 
                 <Tabs.Panel value="crew" pt="lg">
-                    {/* JSX for crew management would go here */}
+                    <CrewManagement />
                 </Tabs.Panel>
             </Tabs>
         </Container>
