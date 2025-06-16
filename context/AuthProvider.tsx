@@ -27,6 +27,7 @@ interface AuthContextType {
   userData: UserData | null;
   campID: string | null;
   setCampID: (campID: string | null) => void;
+  refreshUserData: () => void; // Added this function
   effectiveRole: number;
   loading: boolean;
   isComposeModalOpen: boolean;
@@ -46,6 +47,31 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     
     const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
     const [composeInitialState, setComposeInitialState] = useState<ComposeModalState | null>(null);
+
+    const fetchCurrentUserData = useCallback(async (currentUser: User | null) => {
+        if (currentUser) {
+            const userRef = ref(database, `users/${currentUser.uid}`);
+            try {
+                const snapshot = await get(userRef);
+                const uData = snapshot.exists() ? snapshot.val() : null;
+                setUserData(uData);
+                return uData;
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+                setUserData(null);
+                return null;
+            }
+        } else {
+            setUserData(null);
+            return null;
+        }
+    }, []);
+
+    const refreshUserData = useCallback(() => {
+        if (user) {
+            fetchCurrentUserData(user);
+        }
+    }, [user, fetchCurrentUserData]);
 
     const setCampID = useCallback((newCampID: string | null) => {
         if (user) {
@@ -73,24 +99,14 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setLoading(true);
             setUser(currentUser);
-            if (currentUser) {
-                const userRef = ref(database, `users/${currentUser.uid}`);
-                try {
-                    const snapshot = await get(userRef);
-                    const uData = snapshot.exists() ? snapshot.val() : null;
-                    setUserData(uData);
-
-                    const storedCampID = Cookies.get(`campID_${currentUser.uid}`);
-                    if (storedCampID && uData?.assignedCamps?.[storedCampID]) {
-                        setCampIDState(storedCampID);
-                    } else {
-                        setCampIDState(null);
-                        Cookies.remove(`campID_${currentUser.uid}`);
-                    }
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
-                    setUserData(null);
+            const uData = await fetchCurrentUserData(currentUser);
+            if (currentUser && uData) {
+                const storedCampID = Cookies.get(`campID_${currentUser.uid}`);
+                if (storedCampID && uData.assignedCamps?.[storedCampID]) {
+                    setCampIDState(storedCampID);
+                } else {
                     setCampIDState(null);
+                    Cookies.remove(`campID_${currentUser.uid}`);
                 }
             } else {
                 setUserData(null);
@@ -99,7 +115,7 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setLoading(false);
         });
         return () => unsubscribe();
-    }, []);
+    }, [fetchCurrentUserData]);
 
     useEffect(() => {
         if (!user || !userData) {
@@ -120,13 +136,14 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         userData,
         campID,
         setCampID,
+        refreshUserData,
         effectiveRole,
         loading,
         isComposeModalOpen,
         openComposeModal,
         closeComposeModal,
         composeInitialState,
-    }), [user, userData, campID, setCampID, effectiveRole, loading, isComposeModalOpen, openComposeModal, closeComposeModal, composeInitialState]);
+    }), [user, userData, campID, setCampID, refreshUserData, effectiveRole, loading, isComposeModalOpen, openComposeModal, closeComposeModal, composeInitialState]);
 
     return (
         <AuthContext.Provider value={value}>

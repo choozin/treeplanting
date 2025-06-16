@@ -5,11 +5,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { Center, Loader } from '@mantine/core';
 
 export default function MyAccountPage() {
-    const { user, setUserData, loading } = useAuth();
+    const { user, loading } = useAuth();
 
     if (loading) {
         return <Center style={{ height: '80vh' }}><Loader /></Center>;
     }
 
-    return <MyAccount user={user} setUserData={setUserData} />;
+    return <MyAccount />;
 }
