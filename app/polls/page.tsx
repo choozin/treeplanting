@@ -13,3 +13,5 @@ export default function Polls() {
 
     return <PollsPage user={user} campID={campID} userData={userData} effectiveRole={effectiveRole} />;
 }
+
+// to make sure git takes this
