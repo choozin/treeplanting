@@ -33,9 +33,9 @@ interface PollOption {
     isInitialOption: boolean;
     isApproved: boolean;
     voteCount: number;
-    submittedAt?: number;
+    submittedAt?: number | object;
     approvedByUserID?: string;
-    optionApprovedAt?: number;
+    optionApprovedAt?: number | object;
     isRejected?: boolean;
 }
 
@@ -51,11 +51,11 @@ interface Poll {
     tags?: string[];
     createdByUserID: string;
     creatorRoleAtCreation: number;
-    createdAt: number;
-    lastUpdatedAt: number;
+    createdAt: number | object;
+    lastUpdatedAt: number | object;
     isApprovedForDisplay: boolean;
     approvedByUserID?: string | null;
-    approvedAt?: number | null;
+    approvedAt?: number | object | null;
     isRejectedForDisplay: boolean;
     isOpenForVoting: boolean;
     usersVoted: Record<string, string | string[] | boolean>;
@@ -368,7 +368,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
                     );
                 }
 
-                pollsArray.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                pollsArray.sort((a, b) => (b.createdAt as number || 0) - (a.createdAt as number || 0));
                 setPolls(pollsArray);
 
                 const votesResults = await Promise.all(voteCheckPromises);
@@ -446,7 +446,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         }
 
         const isCreatorAdmin = effectiveRole >= 4;
-        const pollObject: Omit<Poll, 'id' | 'createdAt' | 'lastUpdatedAt'> & { createdAt: object, lastUpdatedAt: object } = {
+        const pollObject: Omit<Poll, 'id'> = {
             questionText: newPollData.questionText.trim(),
             description: newPollData.description.trim() || undefined,
             pollType: newPollType,
@@ -697,7 +697,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
                             {pollsAwaitingDisplayApproval.map(poll => (
                                 <Paper key={poll.id} p="sm" shadow="xs" withBorder radius="sm" mb="xs">
                                     <Text fw={500}>{poll.questionText}</Text>
-                                    <Text size="xs" c="dimmed">Created by: {usersDataMap[poll.createdByUserID] || 'Unknown'} on {formatDate(poll.createdAt)}</Text>
+                                    <Text size="xs" c="dimmed">Created by: {usersDataMap[poll.createdByUserID] || 'Unknown'} on {formatDate(poll.createdAt as number)}</Text>
                                     <Group mt="xs">
                                         {canUserApprovePoll() && <Button size="xs" color="green" onClick={() => handlePollDisplayApproval(poll.id, true)} leftSection={<IconCircleCheck size={16} />}>Approve & Open</Button>}
                                         {canUserRejectPoll() && <Button size="xs" color="red" onClick={() => handlePollDisplayApproval(poll.id, false)} leftSection={<IconCircleX size={16} />}>Reject</Button>}
@@ -710,7 +710,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
                         <Paper key={opt.optionId} p="sm" shadow="xs" withBorder radius="sm" mb="xs">
                             <Text>Option: <Text span fw={500}>"{opt.text}"</Text></Text>
                             <Text size="xs" c="dimmed">For Poll: "{opt.pollQuestion}"</Text>
-                            <Text size="xs" c="dimmed">Suggested by: {usersDataMap[opt.createdByUserID] || 'Unknown'} on {formatDate(opt.submittedAt)}</Text>
+                            <Text size="xs" c="dimmed">Suggested by: {usersDataMap[opt.createdByUserID] || 'Unknown'} on {formatDate(opt.submittedAt as number)}</Text>
                             <Group mt="xs">
                                 <Button size="xs" color="green" onClick={() => handleSubmittedOptionApproval(opt.pollId, opt.optionId, true)} leftSection={<IconCircleCheck size={16} />}>Approve</Button>
                                 <Button size="xs" color="red" onClick={() => handleSubmittedOptionApproval(opt.pollId, opt.optionId, false)} leftSection={<IconCircleX size={16} />}>Reject</Button>
