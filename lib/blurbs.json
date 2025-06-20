@@ -1,0 +1,67 @@
+{
+  "joke0": {
+    "type": "dadJoke",
+    "content": {
+      "question": "Why did the tree get stumped?",
+      "answer": "Because it couldn't get to the root of the problem!"
+    },
+    "specialCondition": null
+  },
+  "joke1": {
+    "type": "dadJoke",
+    "content": {
+      "question": "How does a tent flirt in a planting camp?",
+      "answer": "It pitches itself hard."
+    },
+    "specialCondition": null
+  },
+  "joke2": {
+    "type": "dadJoke",
+    "content": {
+      "question": "Why do planters love weekends in town?",
+      "answer": "Because they get to *branch* out."
+    },
+    "specialCondition": null
+  },
+  "joke3": {
+    "type": "pun",
+    "content": {
+      "text": "Fir real, this rain needs to leaf us alone."
+    },
+    "specialCondition": "rain"
+  },
+  "joke4": {
+    "type": "wordplay",
+    "content": {
+      "text": "Don’t sweat the small stuff—unless it’s no-see-ums."
+    },
+    "specialCondition": "bugs"
+  },
+  "joke6": {
+    "type": "haiku",
+    "content": {
+      "line1": "Rain soaks the black soil—",
+      "line2": "mosquitoes hum lullabies,",
+      "line3": "I dig, slam, repeat."
+    },
+    "specialCondition": "rain"
+  },
+  "joke7": {
+    "type": "haiku",
+    "content": {
+      "line1": "Tent flaps in the wind,",
+      "line2": "the pine smoke clings to my socks—",
+      "line3": "town day on my mind."
+    },
+    "specialCondition": "wind"
+  },
+  "joke8": {
+    "type": "haiku",
+    "content": {
+      "line1": "Trees rise from my sweat,",
+      "line2": "a million futures rooted—",
+      "line3": "but damn my back hurts."
+    },
+    "specialCondition": "fatigue"
+  }
+}

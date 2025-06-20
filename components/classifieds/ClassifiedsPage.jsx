@@ -5,11 +5,12 @@ import { useAuth } from '../../hooks/useAuth';
 import useSWR, { useSWRConfig } from 'swr';
 import { database } from '../../firebase/firebase';
 import { ref, get, update, increment } from 'firebase/database';
-import { AppShell, Container, ActionIcon, Center, Loader, Text, Stack, Paper, Title } from '@mantine/core';
+import { AppShell, Container, ActionIcon, Center, Text, Stack, Paper, Title } from '@mantine/core';
 import { IconPlus, IconMusicOff } from '@tabler/icons-react';
 import FilterBar from './FilterBar';
 import PostListItem from './PostListItem';
 import AddPostModal from './AddPostModal';
+import CustomLoader from '../common/CustomLoader';
 
 const objectFetcher = (path) => get(ref(database, path)).then(snapshot => snapshot.exists() ? snapshot.val() : null);
 const listFetcher = (path) => get(ref(database, path)).then(snapshot => {
@@ -75,7 +76,7 @@ const ClassifiedsPage = () => {
         return filtered;
     }, [posts, filters]);
 
-    if (isLoadingPosts || isLoadingCamp) return <Center style={{ height: '80vh' }}><Loader /></Center>;
+    if (isLoadingPosts || isLoadingCamp) return <Center style={{ height: '80vh' }}><CustomLoader /></Center>;
     if (postsError || campError || companyError) return <Center><Text c="red">Error loading classifieds data.</Text></Center>;
 
     return (

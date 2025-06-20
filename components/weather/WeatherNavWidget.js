@@ -26,23 +26,35 @@ const WeatherNavWidget = () => {
 
         const displayMode = preferences?.navWidget?.displayMode || 'hourly';
         let forecastItems = [];
+        const now = new Date();
 
         if (displayMode === 'hourly' && data.hourly) {
-            forecastItems = data.hourly.time.slice(1, 5).map((time, index) => ({
-                label: new Date(time).toLocaleTimeString([], { hour: 'numeric' }).replace(' ', '').toLowerCase(),
-                temp: `${Math.round(data.hourly.temperature_2m[index + 1])}°`,
-                icon: getWeatherIcon(data.hourly.weather_code[index + 1]),
-                precip: `${Math.round(data.hourly.precipitation_probability[index + 1])}%`,
-                wind: `${Math.round(data.hourly.wind_speed_10m[index + 1])}km/h`
-            }));
+            const startIndex = data.hourly.time.findIndex(time => new Date(time) >= now);
+            if (startIndex !== -1) {
+                const forecastSlice = data.hourly.time.slice(startIndex, startIndex + 4);
+                forecastItems = forecastSlice.map((time, index) => {
+                    const dataIndex = startIndex + index;
+                    return {
+                        label: new Date(time).toLocaleTimeString([], { hour: 'numeric', hour12: true }).replace(' ', ''),
+                        temp: `${Math.round(data.hourly.temperature_2m[dataIndex])}°`,
+                        icon: getWeatherIcon(data.hourly.weather_code[dataIndex]),
+                        precip: `${Math.round(data.hourly.precipitation_probability[dataIndex])}%`,
+                        wind: `${Math.round(data.hourly.wind_speed_10m[dataIndex])}km/h`
+                    }
+                });
+            }
         } else if (displayMode === 'daily' && data.daily) {
-            forecastItems = data.daily.time.slice(0, 4).map((time, index) => ({
-                label: new Date(time).toLocaleDateString([], { weekday: 'short' }),
-                temp: `${Math.round(data.daily.temperature_2m_max[index])}°/${Math.round(data.daily.temperature_2m_min[index])}°`,
-                icon: getWeatherIcon(data.daily.weather_code[index]),
-                precip: `${data.daily.precipitation_sum[index]}mm`,
-                wind: `${Math.round(data.daily.wind_speed_10m_max[index])}km/h`
-            }));
+            forecastItems = data.daily.time.slice(0, 4).map((time, index) => {
+                // The 'T00:00:00' is added to ensure the date is parsed in the local timezone, not as UTC.
+                const date = new Date(`${time}T00:00:00`);
+                return {
+                    label: date.toLocaleDateString([], { weekday: 'short' }),
+                    temp: `${Math.round(data.daily.temperature_2m_max[index])}°/${Math.round(data.daily.temperature_2m_min[index])}°`,
+                    icon: getWeatherIcon(data.daily.weather_code[index]),
+                    precip: `${data.daily.precipitation_sum[index]}mm`,
+                    wind: `${Math.round(data.daily.wind_speed_10m_max[index])}km/h`
+                };
+            });
         } else if (displayMode === '6-hour' && data.sixHourForecast) {
             forecastItems = data.sixHourForecast.slice(0, 4).map(chunk => ({
                 label: chunk.name.substring(0, 4),

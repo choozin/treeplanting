@@ -12,7 +12,6 @@ import {
     Text,
     ActionIcon,
     Center,
-    Loader,
     Paper,
     Title,
     Stack
@@ -21,6 +20,7 @@ import { IconPlus, IconMusicOff } from '@tabler/icons-react';
 import FilterBar from './FilterBar';
 import SongCard from './SongCard';
 import AddSongModal from './AddSongModal';
+import CustomLoader from '../common/CustomLoader';
 
 const fetcher = (path) => get(ref(database, path)).then(snapshot => {
     if (snapshot.exists()) {
@@ -104,7 +104,7 @@ const MusicShare = () => {
     };
 
     if (isLoading) {
-        return <Center style={{ height: '80vh' }}><Loader /></Center>;
+        return <Center style={{ height: '80vh' }}><CustomLoader /></Center>;
     }
 
     if (error) {
