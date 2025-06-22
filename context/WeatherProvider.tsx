@@ -39,6 +39,16 @@ interface WeatherData {
         weather_code: number;
         wind_speed_10m: number;
         relative_humidity_2m: number;
+        // Added current data points (from previous requests)
+        pressure_msl: number;
+        cloudcover: number;
+        visibility: number;
+        dewpoint_2m: number;
+        wind_direction_10m: number;
+        wind_gusts_10m: number;
+        is_day: number; // 0 for night, 1 for day
+        uv_index: number;
+        snowfall: number;
     };
     hourly: {
         time: string[];
@@ -46,6 +56,16 @@ interface WeatherData {
         precipitation_probability: number[];
         weather_code: number[];
         wind_speed_10m: number[];
+        // Added hourly data points (from previous requests)
+        pressure_msl: number[];
+        cloudcover: number[];
+        visibility: number[];
+        dewpoint_2m: number[];
+        wind_direction_10m: number[];
+        wind_gusts_10m: number[];
+        is_day: number[];
+        uv_index: number[];
+        snowfall: number[];
     };
     daily: {
         time: string[];
@@ -57,6 +77,11 @@ interface WeatherData {
         precipitation_sum: number[];
         precipitation_probability_max: number[];
         wind_speed_10m_max: number[]; // Added daily wind speed
+        // Added daily data points (from previous requests)
+        uv_index_max: number[];
+        wind_direction_10m_dominant: number[];
+        wind_gusts_10m_max: number[];
+        shortwave_radiation_sum: number[];
     };
     sixHourForecast?: SixHourChunk[];
 }
@@ -70,7 +95,7 @@ interface WeatherState {
 }
 
 interface WeatherContextType {
-    primary: WeatherState & { location: WeatherLocation | null };
+    primary: WeatherState & { location: WeatherLocation | null; primaryLocationId?: string | null }; // Added primaryLocationId
     secondary: WeatherState & { location: WeatherLocation | null };
     temporary: WeatherState;
     preferences: any;
@@ -99,37 +124,50 @@ const processSixHourForecast = (hourly: WeatherData['hourly']): SixHourChunk[] =
         Overnight: { temps: [], codes: [], precip: [], winds: [] },
     };
 
-    hourly.time.forEach((t, i) => {
+    const safeHourly = {
+        time: hourly.time || [],
+        temperature_2m: hourly.temperature_2m || [],
+        weather_code: hourly.weather_code || [],
+        precipitation_probability: hourly.precipitation_probability || [],
+        wind_speed_10m: hourly.wind_speed_10m || [],
+    };
+
+    safeHourly.time.forEach((t, i) => {
         const hour = new Date(t).getHours();
         const period =
             hour >= 6 && hour < 12 ? 'Morning' :
                 hour >= 12 && hour < 18 ? 'Afternoon' :
                     hour >= 18 && hour < 24 ? 'Evening' : 'Overnight';
-        chunks[period].temps.push(hourly.temperature_2m[i]);
-        chunks[period].codes.push(hourly.weather_code[i]);
-        chunks[period].precip.push(hourly.precipitation_probability[i]);
-        chunks[period].winds.push(hourly.wind_speed_10m[i]);
+        // Only push if the data for that index exists
+        if (safeHourly.temperature_2m[i] !== undefined) chunks[period].temps.push(safeHourly.temperature_2m[i]);
+        if (safeHourly.weather_code[i] !== undefined) chunks[period].codes.push(safeHourly.weather_code[i]);
+        if (safeHourly.precipitation_probability[i] !== undefined) chunks[period].precip.push(safeHourly.precipitation_probability[i]);
+        if (safeHourly.wind_speed_10m[i] !== undefined) chunks[period].winds.push(safeHourly.wind_speed_10m[i]);
     });
 
     return Object.entries(chunks).map(([name, data]) => {
-        if (data.temps.length === 0) return null;
+        if (data.temps.length === 0) return null; // If no data for this chunk, return null
+
         const avgTemp = data.temps.reduce((a, b) => a + b, 0) / data.temps.length;
-        const maxPrecip = Math.max(...data.precip);
-        const avgWind = data.winds.reduce((a, b) => a + b, 0) / data.winds.length;
+        const maxPrecip = data.precip.length > 0 ? Math.max(...data.precip) : 0;
+        const avgWind = data.winds.length > 0 ? data.winds.reduce((a, b) => a + b, 0) / data.winds.length : 0;
+
         const codeCounts = data.codes.reduce((acc, code) => {
             acc[code] = (acc[code] || 0) + 1;
             return acc;
         }, {} as Record<number, number>);
-        const dominantCode = Object.keys(codeCounts).reduce((a, b) => codeCounts[Number(a)] > codeCounts[Number(b)] ? a : b, String(data.codes[0]));
+        const dominantCode = data.codes.length > 0
+            ? Object.keys(codeCounts).reduce((a, b) => codeCounts[Number(a)] > codeCounts[Number(b)] ? a : b, String(data.codes[0]))
+            : 0; // Default to 0 if no codes
 
         return {
             name: name as SixHourChunk['name'],
             temperature: Math.round(avgTemp),
             precipitation: maxPrecip,
-            weatherCode: parseInt(dominantCode, 10),
+            weatherCode: parseInt(dominantCode.toString(), 10), // Ensure it's a number
             windSpeed: Math.round(avgWind),
         };
-    }).filter((chunk): chunk is SixHourChunk => chunk !== null);
+    }).filter((chunk): chunk is SixHourChunk => chunk !== null); // Filter out null chunks
 };
 
 // --- Provider Component ---
@@ -138,6 +176,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [weatherPreferences, setWeatherPreferences] = useState<any>(null);
     const [locations, setLocations] = useState<{ primary: WeatherLocation | null, secondary: WeatherLocation | null }>({ primary: null, secondary: null });
     const [campID, setCampID] = useState<string | null>(null);
+    const [activePrimaryLocationId, setActivePrimaryLocationId] = useState<string | null>(null); // New state for primary location ID
 
     const initialWeatherState: WeatherState = { data: null, loading: true, error: null, lastFetched: null, status: 'loading' };
     const [primaryWeatherData, setPrimaryWeatherData] = useState<WeatherState>(initialWeatherState);
@@ -153,6 +192,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (!user) {
             setCampID(null);
             setLocations({ primary: null, secondary: null });
+            setActivePrimaryLocationId(null); // Clear active primary location ID
             setPrimaryWeatherData({ data: null, loading: false, error: null, lastFetched: null, status: 'no_user' });
             return;
         }
@@ -175,11 +215,13 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
             if (activeCampID) {
                 const camp = campsData[activeCampID];
-                const activeLocationId = camp.activeLocationId;
-                const year = new Date().getFullYear();
+                const currentYear = new Date().getFullYear();
+                const activeLocationId = camp.activeLocationId; // Get activeLocationId from camp
 
-                if (activeLocationId && camp.campLocations?.[year]?.[activeLocationId]) {
-                    const primaryLocData = camp.campLocations[year][activeLocationId];
+                setActivePrimaryLocationId(activeLocationId); // Set active primary location ID
+
+                if (activeLocationId && camp.campLocations?.[currentYear]?.[activeLocationId]) {
+                    const primaryLocData = camp.campLocations[currentYear][activeLocationId];
                     const secondaryLocKey = weatherPreferences?.secondaryLocationKey;
                     const secondaryLocData = secondaryLocKey ? primaryLocData.secondaryLocations?.[secondaryLocKey] : null;
 
@@ -189,11 +231,14 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     });
                     setPrimaryWeatherData(prev => ({ ...prev, status: 'ok' }));
                 } else {
+                    // No active location set for the camp, use default
                     setLocations({ primary: defaultLocation, secondary: null });
                     setPrimaryWeatherData(prev => ({ ...prev, status: 'using_default_location' }));
                 }
             } else {
+                // No camp selected or assigned to user
                 setLocations({ primary: null, secondary: null });
+                setActivePrimaryLocationId(null); // Clear active primary location ID
                 setPrimaryWeatherData({ data: null, loading: false, error: null, lastFetched: null, status: 'no_camp_selected' });
             }
         } catch (e) {
@@ -244,10 +289,12 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const params = new URLSearchParams({
             latitude: String(location.latitude),
             longitude: String(location.longitude),
-            current: "temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,relative_humidity_2m",
-            hourly: "temperature_2m,precipitation_probability,weather_code,wind_speed_10m",
-            daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max",
-            timezone: "auto"
+            current: "temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,relative_humidity_2m,pressure_msl,cloudcover,visibility,dewpoint_2m,wind_direction_10m,wind_gusts_10m,is_day,uv_index,snowfall",
+            hourly: "temperature_2m,precipitation_probability,weather_code,wind_speed_10m,pressure_msl,cloudcover,visibility,dewpoint_2m,wind_direction_10m,wind_gusts_10m,is_day,uv_index,snowfall",
+            daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max,wind_direction_10m_dominant,wind_gusts_10m_max,shortwave_radiation_sum",
+            timezone: "auto",
+            forecast_days: "7",
+            past_hours: "1",
         });
 
         try {
@@ -255,7 +302,10 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
             if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
             const data = await response.json();
 
-            const processedData: WeatherData = { ...data, sixHourForecast: processSixHourForecast(data.hourly) };
+            const processedData: WeatherData = {
+                ...data,
+                sixHourForecast: data.hourly ? processSixHourForecast(data.hourly) : []
+            };
 
             if (isTemporary) {
                 setTemporaryWeatherData({ data: processedData, loading: false, error: null, lastFetched: null });
@@ -292,7 +342,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }, [fetchWeatherData]);
 
     const value = useMemo(() => ({
-        primary: { ...primaryWeatherData, location: locations.primary },
+        primary: { ...primaryWeatherData, location: locations.primary, primaryLocationId: activePrimaryLocationId }, // Added primaryLocationId here
         secondary: { ...secondaryWeatherData, location: locations.secondary },
         temporary: temporaryWeatherData,
         preferences: weatherPreferences,
@@ -303,7 +353,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
         },
         fetchTemporaryWeather,
         clearTemporaryWeather: () => setTemporaryWeatherData({ data: null, loading: false, error: null, lastFetched: null }),
-    }), [primaryWeatherData, secondaryWeatherData, temporaryWeatherData, locations, weatherPreferences, campID, fetchWeatherData, fetchTemporaryWeather]);
+    }), [primaryWeatherData, secondaryWeatherData, temporaryWeatherData, locations, weatherPreferences, campID, fetchWeatherData, fetchTemporaryWeather, activePrimaryLocationId]); // Added activePrimaryLocationId to dependencies
 
     return (
         <WeatherContext.Provider value={value}>

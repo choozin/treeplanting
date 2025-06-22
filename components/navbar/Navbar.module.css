@@ -50,15 +50,34 @@
     -webkit-backdrop-filter: blur(8px);
 }
 
+/* Reverted: .fixedCloseButton style removed as it's no longer fixed outside content flow */
+
 .overlayContent {
     display: flex;
     flex-direction: column;
     height: 100vh;
     height: 100svh;
+    /* Reverted: Original padding-top with navbar height and spacing */
     padding: var(--mantine-spacing-sm);
+    /* Keep overall padding */
     padding-top: calc(var(--navbar-height) + var(--mantine-spacing-sm));
+    /* Reverted padding-top */
     overflow-y: auto;
 }
+
+/* Reverted: container for the close button, to match previous Nav.js structure */
+.closeButtonContainer {
+    /* This div was implicitly taking up space, so we re-add it to match prior layout */
+    /* Add any specific styling if this div had it previously, otherwise it just acts as a block container */
+    display: flex;
+    justify-content: flex-end;
+    /* To push the X to the right */
+    padding: var(--mantine-spacing-sm);
+    /* To give space around the X */
+    padding-top: 0;
+    /* As it's already accounted for by .overlayContent's padding-top */
+}
+
 
 .navSection {
     margin-bottom: var(--mantine-spacing-sm);

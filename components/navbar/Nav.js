@@ -1,312 +1,41 @@
 'use client';
-import { useState, useEffect, useRef, forwardRef } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { logoutUser, loginUser, registerUser, auth, database } from '../../firebase/firebase';
-import { ref, get, onValue, update, push, serverTimestamp } from 'firebase/database';
-import { ROLES, PAGE_TITLES, MAIN_LINKS, ALL_COLLECTIONS } from '../../lib/constants';
+import { logoutUser, database } from '../../firebase/firebase';
+import { ref, onValue, update, push, serverTimestamp } from 'firebase/database';
+import { PAGE_TITLES, MAIN_LINKS, ALL_COLLECTIONS } from '../../lib/constants';
 import { useAuth } from '../../hooks/useAuth';
-
 import Cookies from 'js-cookie';
 import { useWeather } from '../../hooks/useWeather';
 import { notifications } from '@mantine/notifications';
 
 import {
-    Badge,
     Box,
     Group,
     Text,
-    UnstyledButton,
     Button,
-    Paper,
-    Tooltip,
     Modal,
     Burger,
     ActionIcon,
     Title,
     Divider,
-    Tabs,
-    TextInput,
-    PasswordInput,
-    Stack,
-    Collapse,
 } from '@mantine/core';
 import {
     IconX,
     IconLogout,
     IconLayoutDashboard,
-    IconChevronDown,
-    IconChevronUp,
 } from '@tabler/icons-react';
 
 import classes from './Navbar.module.css';
-import WeatherNavWidget from '../weather/WeatherNavWidget';
 import ComposeMessage from '../messages/ComposeMessage';
+import AuthFlow from './AuthFlow';
+import CampSelector from './CampSelector';
+import NavItem from './NavItem';
+import WidgetWrapper from './WidgetWrapper';
 
-const AuthFlow = ({ setNavIsOpen }) => {
-    const router = useRouter();
-    const pathname = usePathname();
-    const [activeTab, setActiveTab] = useState('login');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const handleAuthSuccess = () => {
-        notifications.show({
-            title: activeTab === 'login' ? 'Login Successful' : 'Registration Successful',
-            message: "Welcome to your camp's hub!",
-            color: 'green',
-        });
-        setNavIsOpen(false);
-        if (pathname === '/') {
-            router.push('/dashboard');
-        }
-    };
-
-    const handleAuthError = (error) => {
-        notifications.show({
-            title: 'Authentication Failed',
-            message: error.message.replace('Firebase: ', ''),
-            color: 'red',
-        });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-
-        try {
-            let userCredential = null;
-            if (activeTab === 'login') {
-                userCredential = await loginUser(email, password);
-            } else {
-                if (!name) {
-                    throw new Error('Name is required for registration.');
-                }
-                userCredential = await registerUser(email, password, name);
-            }
-
-            if (userCredential) {
-                handleAuthSuccess();
-            } else {
-                throw new Error('Invalid credentials or user does not exist.');
-            }
-        } catch (error) {
-            handleAuthError(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className={classes.loginContainer}>
-            <Paper withBorder p="xl" radius="md" style={{ width: '400px', maxWidth: '95vw' }}>
-                <Title order={2} ta="center" mb="xl">
-                    Welcome
-                </Title>
-                <Tabs value={activeTab} onChange={setActiveTab}>
-                    <Tabs.List grow>
-                        <Tabs.Tab value="login">Login</Tabs.Tab>
-                        <Tabs.Tab value="register">Register</Tabs.Tab>
-                    </Tabs.List>
-
-                    <form onSubmit={handleSubmit}>
-                        <Tabs.Panel value="login" pt="lg">
-                            <Stack>
-                                <TextInput
-                                    label="Email"
-                                    type="email"
-                                    placeholder="your@email.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.currentTarget.value)}
-                                    required
-                                />
-                                <PasswordInput
-                                    label="Password"
-                                    placeholder="Your password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.currentTarget.value)}
-                                    required
-                                />
-                                <Button type="submit" mt="md" loading={loading}>
-                                    Login
-                                </Button>
-                            </Stack>
-                        </Tabs.Panel>
-
-                        <Tabs.Panel value="register" pt="lg">
-                            <Stack>
-                                <TextInput
-                                    label="Name"
-                                    placeholder="Your full name"
-                                    value={name}
-                                    onChange={(e) => setName(e.currentTarget.value)}
-                                    required
-                                />
-                                <TextInput
-                                    label="Email"
-                                    type="email"
-                                    placeholder="your@email.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.currentTarget.value)}
-                                    required
-                                />
-                                <PasswordInput
-                                    label="Password"
-                                    placeholder="Choose a password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.currentTarget.value)}
-                                    required
-                                />
-                                <Button type="submit" mt="md" loading={loading}>
-                                    Register
-                                </Button>
-                            </Stack>
-                        </Tabs.Panel>
-                    </form>
-                </Tabs>
-            </Paper>
-        </div>
-    );
-};
-
-const WeatherSectionWrapper = () => {
-    const { primary, preferences } = useWeather();
-    // This component renders the WeatherNavWidget or a placeholder message
-    // based on user preferences and available weather data.
-    if (!preferences?.navWidget?.visible || !primary.data) {
-        return (
-            <Text c="dimmed" size="sm" ta="center" mt="sm">
-                Widgets you enable for the menu will appear here.
-            </Text>
-        );
-    }
-    return (
-        <div className={classes.weatherWidgetContainer}>
-            <WeatherNavWidget />
-        </div>
-    );
-};
-
-const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, effectiveRole }, forwardedRef) => {
-    const [camps, setCamps] = useState({});
-    const [loadingCamps, setLoadingCamps] = useState(true);
-    const [errorCamps, setErrorCamps] = useState(null);
-
-    const handleCampChange = (value) => {
-        onCampSelect(value);
-        if (value && user) {
-            Cookies.set(`campID_${user.uid}`, value, { expires: 30 });
-        } else if (user) {
-            Cookies.remove(`campID_${user.uid}`);
-        }
-        window.dispatchEvent(new Event('campChange'));
-    };
-
-    useEffect(() => {
-        if (!user || !user.uid) {
-            setLoadingCamps(false);
-            return;
-        }
-
-        const fetchAssignedCamps = async () => {
-            setLoadingCamps(true);
-            setErrorCamps(null);
-            try {
-                const userAssignedCampsRef = ref(database, `users/${user.uid}/assignedCamps`);
-                const snapshot = await get(userAssignedCampsRef);
-                let fetchedCampsData = {};
-
-                if (snapshot.exists()) {
-                    fetchedCampsData = snapshot.val();
-                    setCamps(fetchedCampsData);
-                } else {
-                    setErrorCamps('You must be assigned to a camp to access camp-specific features.');
-                }
-            } catch (fetchError) {
-                setErrorCamps('Error fetching assigned camps: ' + fetchError.message);
-            }
-            setLoadingCamps(false);
-        };
-
-        fetchAssignedCamps();
-    }, [user]);
-
-    const campOptions = Object.entries(camps).map(([id, campData]) => ({
-        id,
-        label: campData.campName || `Unnamed Camp (${id})`,
-    }));
-
-    const roleTitle = effectiveRole > 0 ? ROLES[effectiveRole] || 'Member' : 'N/A';
-    const displayName = userData?.profile?.nickname || userData?.name;
-
-    return (
-        <div ref={forwardedRef} style={{ width: '100%' }}>
-            {loadingCamps ? (
-                <Text>Loading camps...</Text>
-            ) : campID ? (
-                <>
-                    <Title order={3} ta="center" className={classes.campTitle}>
-                        {camps[campID]?.campName || 'Selected Camp'}
-                    </Title>
-                    <Text size="sm" c="dimmed" ta="center">
-                        Welcome, {roleTitle} {displayName}
-                    </Text>
-                    {campOptions.length > 1 && (
-                        <>
-                            <Divider my="sm" label="Switch Camp" labelPosition="center" />
-                            <Group justify="center" gap="sm" className={classes.campBadgeContainer}>
-                                {campOptions.map((camp) => (
-                                    <Badge
-                                        key={camp.id}
-                                        size="xl"
-                                        radius="sm"
-                                        variant={camp.id === campID ? 'filled' : 'light'}
-                                        color={camp.id === campID ? 'blue' : 'gray'}
-                                        onClick={() => handleCampChange(camp.id)}
-                                        className={classes.campBadge}
-                                    >
-                                        {camp.label}
-                                    </Badge>
-                                ))}
-                            </Group>
-                        </>
-                    )}
-                </>
-            ) : (
-                <>
-                    <Text ta="center" fw={500} size="lg">
-                        Please select your active camp:
-                    </Text>
-                    <Group justify="center" gap="sm" className={classes.campBadgeContainer}>
-                        {campOptions.length > 0 ? (
-                            campOptions.map((camp) => (
-                                <Badge
-                                    key={camp.id}
-                                    size="xl"
-                                    radius="sm"
-                                    variant="light"
-                                    onClick={() => handleCampChange(camp.id)}
-                                    className={classes.campBadge}
-                                >
-                                    {camp.label}
-                                </Badge>
-                            ))
-                        ) : (
-                            <Text c="dimmed">
-                                {errorCamps || 'You must be assigned to a camp to access camp-specific features.'}
-                            </Text>
-                        )}
-                    </Group>
-                </>
-            )}
-        </div>
-    );
-});
-CampSelector.displayName = 'CampSelector';
 
 export default function Nav() {
     const {
@@ -319,7 +48,7 @@ export default function Nav() {
         closeComposeModal,
         composeInitialState,
     } = useAuth();
-    const { primary, preferences } = useWeather(); // Access weather data here
+    const { primary, preferences } = useWeather();
     const pathname = usePathname();
     const [navIsOpen, setNavIsOpen] = useState(false);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -409,55 +138,16 @@ export default function Nav() {
         }
     };
 
-    const renderNavItem = (item, isCollectionLink = false) => {
-        const { key, label, icon: Icon, isFunctional } = item;
-        const href = `/${key}`;
-
-        const itemOnClick = (event) => {
-            if (!isFunctional) {
-                event.preventDefault();
-                return;
-            }
-            setNavIsOpen(false);
-        };
-
-        const content = (
-            <Link
-                href={href}
-                onClick={itemOnClick}
-                className={isCollectionLink ? classes.collectionLink : classes.mainLink}
-                style={{ opacity: isFunctional ? 1 : 0.5, cursor: isFunctional ? 'pointer' : 'not-allowed' }}
-            >
-                <div className={classes.mainLinkInner}>
-                    {isCollectionLink ? (
-                        <Box component="span" mr={9} fz="1.75rem">
-                            {item.emoji}
-                        </Box>
-                    ) : (
-                        <Icon size={28} className={classes.mainLinkIcon} stroke={1.5} />
-                    )}
-                    <span>{label}</span>
-                </div>
-                {key === 'messages' && unreadCount > 0 && (
-                    <Badge size="lg" variant="filled" className={classes.mainLinkBadge}>
-                        {unreadCount}
-                    </Badge>
-                )}
-            </Link>
-        );
-
-        if (!isFunctional) {
-            return (
-                <Tooltip label="Coming soon!" key={key} position="right" withArrow openDelay={300} withinPortal>
-                    {content}
-                </Tooltip>
-            );
-        }
-        return <div key={key}>{content}</div>;
+    const handleNavigation = () => {
+        setNavIsOpen(false);
     };
 
-    const mainLinks = MAIN_LINKS.map((item) => renderNavItem(item));
-    const collectionLinks = ALL_COLLECTIONS.map((item) => renderNavItem(item, true));
+    const mainLinks = MAIN_LINKS.map((item) => (
+        <NavItem key={item.key} item={item} unreadCount={unreadCount} onNavigate={handleNavigation} />
+    ));
+    const collectionLinks = ALL_COLLECTIONS.map((item) => (
+        <NavItem key={item.key} item={item} isCollectionLink={true} onNavigate={handleNavigation} />
+    ));
 
     const overlayVariants = {
         hidden: { opacity: 0 },
@@ -482,7 +172,6 @@ export default function Nav() {
                     onClick={() => setNavIsOpen((o) => !o)}
                     color="white"
                     aria-label="Toggle navigation"
-                    className={classes.menuButton}
                 />
             </header>
 
@@ -506,22 +195,23 @@ export default function Nav() {
                         variants={overlayVariants}
                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                     >
-                        <div className={classes.overlayContent}>
-                            <div className={classes.closeButtonContainer}>
-                                <ActionIcon
-                                    onClick={() => setNavIsOpen(false)}
-                                    variant="transparent"
-                                    size="xl"
-                                    aria-label="Close menu"
-                                >
-                                    <IconX size={36} color="white" />
-                                </ActionIcon>
-                            </div>
+                        {/* Reverted: Close button back in its container */}
+                        <div className={classes.closeButtonContainer}>
+                            <ActionIcon
+                                onClick={() => setNavIsOpen(false)}
+                                variant="transparent"
+                                size="xl"
+                                aria-label="Close menu"
+                            >
+                                <IconX size={36} color="white" />
+                            </ActionIcon>
+                        </div>
 
+                        <div className={classes.overlayContent}>
                             {!user ? (
                                 <AuthFlow setNavIsOpen={setNavIsOpen} />
                             ) : (
-                                <Box mt={40} style={{ width: '100%', maxWidth: '800px', margin: 'auto' }}>
+                                <Box mt={40} style={{ width: '100%', maxWidth: '800px', margin: 'auto' }}> {/* Reverted mt to 40 */}
                                     <div className={classes.navSection}>
                                         <CampSelector
                                             user={user}
@@ -532,35 +222,15 @@ export default function Nav() {
                                         />
                                     </div>
 
-                                    <div
-                                        className={classes.navSection}
-                                        style={{
-                                            padding: widgetsOpen ? 'var(--mantine-spacing-md)' : 'var(--mantine-spacing-xs)',
-                                            backgroundColor: widgetsOpen ? 'rgba(255, 255, 255, 0.85)' : 'rgba(233, 236, 239, 0.85)',
-                                        }}
-                                    >
-                                        <Group justify="space-between" mb={widgetsOpen ? 'sm' : 0}>
-                                            <Text fw={500} c="dimmed">
-                                                Widgets
-                                            </Text>
-                                            <ActionIcon variant="transparent" onClick={() => setWidgetsOpen((o) => !o)}>
-                                                {widgetsOpen ? <IconChevronUp /> : <IconChevronDown />}
-                                            </ActionIcon>
-                                        </Group>
-                                        <Collapse in={widgetsOpen}>
-                                            {/* Conditional rendering for Weather Widget or placeholder message */}
-                                            {preferences?.navWidget?.visible && primary.data ? (
-                                                <WeatherNavWidget />
-                                            ) : (
-                                                <Text c="dimmed" size="sm" ta="center" mt="sm">
-                                                    Widgets you enable for the menu will appear here.
-                                                </Text>
-                                            )}
-                                        </Collapse>
-                                    </div>
+                                    <WidgetWrapper
+                                        widgetsOpen={widgetsOpen}
+                                        setWidgetsOpen={setWidgetsOpen}
+                                        primary={primary}
+                                        preferences={preferences}
+                                    />
 
                                     <div className={classes.navSection}>
-                                        <Link href="/dashboard" onClick={() => setNavIsOpen(false)} className={classes.dashboardLink}>
+                                        <Link href="/dashboard" onClick={handleNavigation} className={classes.dashboardLink}>
                                             <div className={classes.mainLinkInner}>
                                                 <IconLayoutDashboard size={28} className={classes.mainLinkIcon} stroke={1.5} />
                                                 <span>Dashboard</span>
