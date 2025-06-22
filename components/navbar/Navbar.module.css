@@ -63,6 +63,7 @@
 .navSection {
     margin-bottom: var(--mantine-spacing-sm);
     padding: var(--mantine-spacing-md);
+    /* Original padding for the section content */
     border-radius: var(--mantine-radius-md);
     background-color: rgba(255, 255, 255, 0.85);
     border: 1px solid var(--mantine-color-gray-2);
@@ -156,27 +157,64 @@
 }
 
 .dashboardLink {
+    /* Existing styles to make it appear as a link/button */
     display: flex;
     align-items: center;
-    width: 100%;
-    font-size: var(--mantine-font-size-lg);
-    padding: var(--mantine-spacing-md);
-    /* More padding */
-    border-radius: var(--mantine-radius-lg);
-    /* More rounded */
+    font-size: calc(var(--mantine-font-size-lg) * 1.25);
+    /* Made font bigger (1.25 times Mantine's lg) */
     font-weight: 700;
     color: white;
-    background-color: #86a389;
-    /* The requested green color */
+    /* Added gradient */
+    background-image: linear-gradient(to top, #86a389, #9ac79d);
+    /* Lighter on top, darker on bottom */
     transition: background-color 0.2s ease, transform 0.1s ease;
     text-decoration: none;
     margin-bottom: var(--mantine-spacing-xs);
+    /* Maintain spacing with the divider below */
+
+    /* New styles to expand background and control corners */
+    position: relative;
+    /* Allows negative positioning */
+    /* Pull left to fill parent's left padding AND adjust for extra padding */
+    left: calc(var(--mantine-spacing-md) * -1);
+    width: calc(100% + (2 * var(--mantine-spacing-md)));
+    /* Expand width to fill total parent width including padding */
+    margin-top: calc(var(--mantine-spacing-md) * -1);
+    /* Pull up to fill parent's top padding */
+
+    /* Re-apply internal padding for content, with increased extra left padding */
+    padding: calc(var(--mantine-spacing-md) * 1.2);
+    /* 20% increase for all sides padding */
+    padding-left: calc(var(--mantine-spacing-md) * 1.2 + 20px);
+    /* Base padding + 20px for content alignment */
+    padding-top: calc(var(--mantine-spacing-md) * 1.2 + 5px);
+    /* Base padding + 5px for top extension */
+    padding-bottom: calc(var(--mantine-spacing-md) * 1.2 + 10px);
+    /* Base padding + 10px for bottom extension */
+
+
+    border-top-left-radius: var(--mantine-radius-md);
+    border-top-right-radius: var(--mantine-radius-md);
+    border-bottom-left-radius: 0;
+    /* Flat bottom corners */
+    border-bottom-right-radius: 0;
+    /* Flat bottom corners */
+
+    /* Add a subtle shadow */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+    /* Initial scale applied, and transform origin for upward scaling */
+    transform: scale(1.015) translateZ(0);
+    /* Start more scaled */
+    transform-origin: bottom center;
+    /* Scale upwards from the bottom */
 }
 
 .dashboardLink:hover {
     background-color: #79947c;
-    /* A slightly darker green for hover */
-    transform: scale(1.02);
+    /* A slightly darker green for hover, will be on top of gradient */
+    transform: scale(1.02) translateZ(0);
+    /* More subtle scale on hover */
 }
 
 .dashboardLink .mainLinkInner {
@@ -185,6 +223,8 @@
 
 .dashboardLink .mainLinkIcon {
     color: white;
+    font-size: calc(28px * 1.50);
+    /* Total 50% bigger: 28px * 1.50 = 42px */
 }
 
 .weatherWidgetContainer {

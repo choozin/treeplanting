@@ -175,8 +175,14 @@ const AuthFlow = ({ setNavIsOpen }) => {
 
 const WeatherSectionWrapper = () => {
     const { primary, preferences } = useWeather();
+    // This component renders the WeatherNavWidget or a placeholder message
+    // based on user preferences and available weather data.
     if (!preferences?.navWidget?.visible || !primary.data) {
-        return null;
+        return (
+            <Text c="dimmed" size="sm" ta="center" mt="sm">
+                Widgets you enable for the menu will appear here.
+            </Text>
+        );
     }
     return (
         <div className={classes.weatherWidgetContainer}>
@@ -313,6 +319,7 @@ export default function Nav() {
         closeComposeModal,
         composeInitialState,
     } = useAuth();
+    const { primary, preferences } = useWeather(); // Access weather data here
     const pathname = usePathname();
     const [navIsOpen, setNavIsOpen] = useState(false);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -541,7 +548,14 @@ export default function Nav() {
                                             </ActionIcon>
                                         </Group>
                                         <Collapse in={widgetsOpen}>
-                                            <WeatherSectionWrapper />
+                                            {/* Conditional rendering for Weather Widget or placeholder message */}
+                                            {preferences?.navWidget?.visible && primary.data ? (
+                                                <WeatherNavWidget />
+                                            ) : (
+                                                <Text c="dimmed" size="sm" ta="center" mt="sm">
+                                                    Widgets you enable for the menu will appear here.
+                                                </Text>
+                                            )}
                                         </Collapse>
                                     </div>
 
