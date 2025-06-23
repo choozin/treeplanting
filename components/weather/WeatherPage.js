@@ -1,7 +1,7 @@
 // components/weather/WeatherPage.js
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'; // Import useRef
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useWeather } from '../../hooks/useWeather';
 import { database } from '../../firebase/firebase';
 import { ref, get } from 'firebase/database';
@@ -68,7 +68,7 @@ const WeatherLocationDisplay = ({ weatherData, locationInfo, backgroundColor, ef
 
     // Use useRef to store a stable 'now' for hydration consistency
     const stableNowRef = useRef(null);
-    if (!stableNowRef.current) {
+    if (stableNowRef.current === null) {
         const tempNow = new Date();
         tempNow.setMinutes(0, 0, 0); // Round down to the nearest hour for display consistency
         stableNowRef.current = tempNow;
@@ -380,7 +380,13 @@ const WeatherPage = ({ effectiveRole }) => {
 
     // Fetch all secondary locations for the current primary camp location
     useEffect(() => {
-        if (!campID || !primaryLocationId) {
+        console.log("WeatherPage: useEffect for secondary locations triggered.");
+        console.log("WeatherPage: campID:", campID);
+        console.log("WeatherPage: primaryLocationId:", primaryLocationId); // This is primary.primaryLocationId from context
+
+        // FIX: Explicitly check primary.primaryLocationId which comes from useWeather
+        if (!campID || !primary.primaryLocationId) { // Check primary.primaryLocationId directly from the object
+            console.log("WeatherPage: Skipping secondary fetch: campID or primary.primaryLocationId is missing.");
             setAllSecondaryLocations([]);
             setLoadingSecondaryLocations(false);
             return;
@@ -390,12 +396,17 @@ const WeatherPage = ({ effectiveRole }) => {
             setLoadingSecondaryLocations(true);
             setErrorSecondaryLocations(null);
             const currentYear = new Date().getFullYear();
-            const secondaryLocsRef = ref(database, `camps/${campID}/campLocations/${currentYear}/${primaryLocationId}/secondaryLocations`);
+            // Use primary.primaryLocationId directly here as well
+            const secondaryLocsRef = ref(database, `camps/${campID}/campLocations/${currentYear}/${primary.primaryLocationId}/secondaryLocations`);
+
+            console.log("WeatherPage: Fetching secondary locations from path:", `camps/${campID}/campLocations/${currentYear}/${primary.primaryLocationId}/secondaryLocations`);
 
             try {
                 const snapshot = await get(secondaryLocsRef);
+                console.log("WeatherPage: Secondary locations snapshot exists:", snapshot.exists());
                 if (snapshot.exists()) {
                     const data = snapshot.val();
+                    console.log("WeatherPage: Raw secondary locations data:", data);
                     const locsArray = Object.entries(data).map(([id, loc]) => ({
                         id,
                         name: loc.name,
@@ -404,30 +415,38 @@ const WeatherPage = ({ effectiveRole }) => {
                         type: 'secondary'
                     }));
                     setAllSecondaryLocations(locsArray);
+                    console.log("WeatherPage: Processed secondary locations array:", locsArray);
                 } else {
                     setAllSecondaryLocations([]);
                 }
             } catch (err) {
-                console.error("Error fetching secondary locations:", err);
+                console.error("WeatherPage: Error fetching secondary locations:", err);
                 setErrorSecondaryLocations("Failed to load secondary locations.");
             } finally {
                 setLoadingSecondaryLocations(false);
+                console.log("WeatherPage: Finished fetching secondary locations. Loading state:", false);
             }
         };
 
         fetchSecondaryLocs();
-    }, [campID, primaryLocationId]);
+    }, [campID, primary.primaryLocationId]); // Dependency array also uses primary.primaryLocationId
 
 
     // Determine all tabs and their content
     const tabsConfig = useMemo(() => {
+        console.log("WeatherPage: tabsConfig useMemo triggered.");
+        console.log("WeatherPage: Primary location status:", primary.status, "data:", primary.data, "location:", primary.location);
+        console.log("WeatherPage: All secondary locations state:", allSecondaryLocations);
+        console.log("WeatherPage: Temporary location data:", temporary.data);
+
         const tabs = [];
 
         // 1. Camp's Primary Location Tab
-        if (primary.location) {
+        // Only add if primary location data is available or loading (not an error state initially)
+        if (primary.location || primary.loading || primary.error) {
             tabs.push({
                 value: 'camp_primary',
-                label: primary.location.name || 'Camp Location',
+                label: primary.location?.name || 'Camp Location',
                 colorType: 'camp',
                 data: primary.data,
                 locationInfo: primary.location,
@@ -499,15 +518,27 @@ const WeatherPage = ({ effectiveRole }) => {
         });
 
         // Set default tab if no primary location is set or if current tab is no longer available
-        const defaultTabValue = primary.location ? 'camp_primary' : 'settings';
+        const defaultTabValue = primary.location ? 'camp_primary' : (tabs.length > 0 && tabs[0].value !== 'loading_secondary' ? tabs[0].value : 'settings'); // Fallback to first non-loading tab, then settings
+        console.log("WeatherPage: Current activeTab before adjustment:", activeTab);
         if (!tabs.some(tab => tab.value === activeTab)) { // If current activeTab is not in the new list
+            console.log("WeatherPage: Active tab not found in new tabsConfig. Setting to default:", defaultTabValue);
             setActiveTab(defaultTabValue);
-        } else if (activeTab === 'camp_primary' && !primary.location) { // If was primary, but primary is now gone
+        } else if (activeTab === 'camp_primary' && !primary.location && !primary.loading) { // If was primary, but primary is now gone/error after loading
+            console.log("WeatherPage: Primary tab active but primary.location gone. Setting to default:", defaultTabValue);
+            setActiveTab(defaultTabValue);
+        } else if (activeTab.startsWith('secondary_') && !allSecondaryLocations.some(loc => `secondary_${loc.id}` === activeTab) && !loadingSecondaryLocations) {
+            // If active tab was a secondary one, but it's no longer in the list
+            console.log("WeatherPage: Secondary tab active but secondary location gone. Setting to default:", defaultTabValue);
+            setActiveTab(defaultTabValue);
+        } else if (activeTab === 'custom_location' && !temporary.data && !temporary.loading && !temporary.error) {
+            // If active tab was custom, but custom data is no longer active
+            console.log("WeatherPage: Custom tab active but custom data gone. Setting to default:", defaultTabValue);
             setActiveTab(defaultTabValue);
         }
 
+        console.log("WeatherPage: Final tabsConfig:", tabs);
         return tabs;
-    }, [primary, secondary, temporary, campID, primaryLocationId, allSecondaryLocations, loadingSecondaryLocations, errorSecondaryLocations, activeTab]);
+    }, [primary, secondary, temporary, campID, primary.primaryLocationId, allSecondaryLocations, loadingSecondaryLocations, errorSecondaryLocations, activeTab]); // Added primary.primaryLocationId to dependencies
 
     // Determine current tab's background color
     const currentTabConfig = useMemo(() => tabsConfig.find(tab => tab.value === activeTab), [activeTab, tabsConfig]);
@@ -523,17 +554,21 @@ const WeatherPage = ({ effectiveRole }) => {
 
     // Adjust initial active tab if it's 'camp_primary' but primary.location is not yet loaded or valid
     useEffect(() => {
+        console.log("WeatherPage: useEffect for activeTab adjustment triggered. Primary loading:", primary.loading, "Primary location:", primary.location, "Active tab:", activeTab);
         if (!primary.loading && !primary.location && activeTab === 'camp_primary') {
+            console.log("WeatherPage: Primary not loaded/available, activeTab is primary. Setting to settings.");
             setActiveTab('settings');
         } else if (primary.location && activeTab === 'settings' && !temporary.data && !temporary.loading && !temporary.error) {
+            console.log("WeatherPage: Primary location available, activeTab is settings, no custom data. Setting to primary.");
             setActiveTab('camp_primary');
         }
     }, [primary.loading, primary.location, activeTab, temporary.data, temporary.loading, temporary.error]);
 
 
     // Show overall loading if primary data is loading or secondary locations list is loading
-    if (primary.loading && primary.status === 'loading' && !primary.data) {
-        return <Center style={{ height: '80vh' }}><Text>Loading camp and primary weather data...</Text></Center>;
+    if ((primary.loading && primary.status === 'loading' && !primary.data) || loadingSecondaryLocations) {
+        console.log("WeatherPage: Showing overall loading spinner.");
+        return <Center style={{ height: '80vh' }}><Text>Loading weather locations...</Text></Center>;
     }
 
 
@@ -554,9 +589,7 @@ const WeatherPage = ({ effectiveRole }) => {
             )}
 
 
-            <Tabs value={activeTab} onChange={setActiveTab} keepMounted={false} // Only render active tab content
-            // Removed styles prop from Tabs component
-            >
+            <Tabs value={activeTab} onChange={setActiveTab} keepMounted={false}>
                 <Tabs.List grow>
                     {tabsConfig.map(tab => (
                         <Tabs.Tab
@@ -583,13 +616,12 @@ const WeatherPage = ({ effectiveRole }) => {
                                 <Button onClick={() => setModalOpened(true)} color="blue">
                                     Set Location (Primary / Custom)
                                 </Button>
-                                {/* Added placeholder content */}
                                 <Divider my="md" />
                                 <Text size="sm" c="dimmed">
                                     More settings coming soon! This area will allow you to configure weather widget display, notification preferences, and more.
                                 </Text>
                             </Paper>
-                        ) : tab.loading || !tab.data ? ( // Simplified check for loading or no data
+                        ) : tab.loading || !tab.data ? (
                             <Paper p="xl" shadow="md" radius="lg" style={{ background: backgroundColors[tab.colorType], border: '1px solid var(--mantine-color-gray-3)', minHeight: '300px' }}>
                                 <Center style={{ height: '100%' }}>
                                     {tab.loading ? (

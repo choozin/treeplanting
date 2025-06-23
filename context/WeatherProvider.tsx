@@ -39,7 +39,7 @@ interface WeatherData {
         weather_code: number;
         wind_speed_10m: number;
         relative_humidity_2m: number;
-        // Added current data points (from previous requests)
+        // Added current data points
         pressure_msl: number;
         cloudcover: number;
         visibility: number;
@@ -56,7 +56,7 @@ interface WeatherData {
         precipitation_probability: number[];
         weather_code: number[];
         wind_speed_10m: number[];
-        // Added hourly data points (from previous requests)
+        // Added hourly data points
         pressure_msl: number[];
         cloudcover: number[];
         visibility: number[];
@@ -77,7 +77,7 @@ interface WeatherData {
         precipitation_sum: number[];
         precipitation_probability_max: number[];
         wind_speed_10m_max: number[]; // Added daily wind speed
-        // Added daily data points (from previous requests)
+        // Added daily data points
         uv_index_max: number[];
         wind_direction_10m_dominant: number[];
         wind_gusts_10m_max: number[];
@@ -95,7 +95,7 @@ interface WeatherState {
 }
 
 interface WeatherContextType {
-    primary: WeatherState & { location: WeatherLocation | null; primaryLocationId?: string | null }; // Added primaryLocationId
+    primary: WeatherState & { location: WeatherLocation | null; primaryLocationId?: string | null }; // Primary Location ID exposed
     secondary: WeatherState & { location: WeatherLocation | null };
     temporary: WeatherState;
     preferences: any;
@@ -231,12 +231,10 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     });
                     setPrimaryWeatherData(prev => ({ ...prev, status: 'ok' }));
                 } else {
-                    // No active location set for the camp, use default
                     setLocations({ primary: defaultLocation, secondary: null });
                     setPrimaryWeatherData(prev => ({ ...prev, status: 'using_default_location' }));
                 }
             } else {
-                // No camp selected or assigned to user
                 setLocations({ primary: null, secondary: null });
                 setActivePrimaryLocationId(null); // Clear active primary location ID
                 setPrimaryWeatherData({ data: null, loading: false, error: null, lastFetched: null, status: 'no_camp_selected' });
@@ -289,12 +287,12 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const params = new URLSearchParams({
             latitude: String(location.latitude),
             longitude: String(location.longitude),
-            current: "temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,relative_humidity_2m,pressure_msl,cloudcover,visibility,dewpoint_2m,wind_direction_10m,wind_gusts_10m,is_day,uv_index,snowfall",
-            hourly: "temperature_2m,precipitation_probability,weather_code,wind_speed_10m,pressure_msl,cloudcover,visibility,dewpoint_2m,wind_direction_10m,wind_gusts_10m,is_day,uv_index,snowfall",
-            daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max,wind_direction_10m_dominant,wind_gusts_10m_max,shortwave_radiation_sum",
+            current: "temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,relative_humidity_2m,pressure_msl,cloudcover,visibility,dewpoint_2m,wind_direction_10m,wind_gusts_10m,is_day,uv_index,snowfall", // Added more parameters for full info
+            hourly: "temperature_2m,precipitation_probability,weather_code,wind_speed_10m,pressure_msl,cloudcover,visibility,dewpoint_2m,wind_direction_10m,wind_gusts_10m,is_day,uv_index,snowfall", // Added more parameters for full info
+            daily: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max,wind_direction_10m_dominant,wind_gusts_10m_max,shortwave_radiation_sum", // Added more parameters for full info
             timezone: "auto",
-            forecast_days: "7",
-            past_hours: "1",
+            forecast_days: "7", // Ensure 7 days of daily forecast
+            past_hours: "1", // Get a bit of past data for current if needed
         });
 
         try {
@@ -302,10 +300,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
             if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
             const data = await response.json();
 
-            const processedData: WeatherData = {
-                ...data,
-                sixHourForecast: data.hourly ? processSixHourForecast(data.hourly) : []
-            };
+            const processedData: WeatherData = { ...data, sixHourForecast: processSixHourForecast(data.hourly) };
 
             if (isTemporary) {
                 setTemporaryWeatherData({ data: processedData, loading: false, error: null, lastFetched: null });
@@ -321,7 +316,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 setter(errorState);
             }
         }
-    }, []);
+    }, []); // Empty dependency array, assuming it's stable and does not cause re-renders. Removed initialWeatherState.
 
     useEffect(() => {
         if (locations.primary && (isDataStale(primaryWeatherData.lastFetched) || (primaryWeatherData.status === 'using_default_location' && !primaryWeatherData.data))) {
@@ -342,7 +337,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }, [fetchWeatherData]);
 
     const value = useMemo(() => ({
-        primary: { ...primaryWeatherData, location: locations.primary, primaryLocationId: activePrimaryLocationId }, // Added primaryLocationId here
+        primary: { ...primaryWeatherData, location: locations.primary, primaryLocationId: activePrimaryLocationId },
         secondary: { ...secondaryWeatherData, location: locations.secondary },
         temporary: temporaryWeatherData,
         preferences: weatherPreferences,
@@ -353,7 +348,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
         },
         fetchTemporaryWeather,
         clearTemporaryWeather: () => setTemporaryWeatherData({ data: null, loading: false, error: null, lastFetched: null }),
-    }), [primaryWeatherData, secondaryWeatherData, temporaryWeatherData, locations, weatherPreferences, campID, fetchWeatherData, fetchTemporaryWeather, activePrimaryLocationId]); // Added activePrimaryLocationId to dependencies
+    }), [primaryWeatherData, secondaryWeatherData, temporaryWeatherData, locations, weatherPreferences, campID, fetchWeatherData, fetchTemporaryWeather, activePrimaryLocationId]);
 
     return (
         <WeatherContext.Provider value={value}>
