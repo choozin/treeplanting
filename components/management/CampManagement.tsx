@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, FC } from 'react';
 import { database } from '../../firebase/firebase';
 import { ref, onValue, get, set, update, push as firebasePush, remove } from 'firebase/database';
 import { useDisclosure } from '@mantine/hooks';
@@ -26,10 +26,15 @@ import {
 import { useModals } from '@mantine/modals';
 import { IconHome, IconMapPin, IconPlus, IconPencil, IconTrash, IconChevronDown, IconCheck, IconAlertCircle } from '@tabler/icons-react';
 
-const CampManagement = ({ campID, effectiveRole }) => {
-    const [campData, setCampData] = useState(null);
+interface CampManagementProps {
+    campID: string | null;
+    effectiveRole: number;
+}
+
+const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
+    const [campData, setCampData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
 
     const currentYear = new Date().getFullYear();
     const [selectedYear, setSelectedYear] = useState(String(currentYear));
@@ -38,12 +43,12 @@ const CampManagement = ({ campID, effectiveRole }) => {
     const [primaryModalOpened, { open: openPrimaryModal, close: closePrimaryModal }] = useDisclosure(false);
     const [blockModalOpened, { open: openBlockModal, close: closeBlockModal }] = useDisclosure(false);
     const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
-    const [editingLocation, setEditingLocation] = useState(null); // For both primary and secondary
+    const [editingLocation, setEditingLocation] = useState<any>(null); // For both primary and secondary
 
     // Form state
     const [locationName, setLocationName] = useState('');
-    const [latitude, setLatitude] = useState('');
-    const [longitude, setLongitude] = useState('');
+    const [latitude, setLatitude] = useState<string | number>('');
+    const [longitude, setLongitude] = useState<string | number>('');
 
     const modals = useModals();
 
@@ -62,7 +67,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
                 setError("Could not find data for the selected camp.");
             }
             setLoading(false);
-        }, (err) => {
+        }, (err: any) => {
             setError("Error fetching camp data.");
             setLoading(false);
             console.error(err);
@@ -78,7 +83,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
     }, [campData, currentYear]);
 
     // --- Handlers for Primary Locations ---
-    const handleOpenPrimaryModal = (mode, location = null) => {
+    const handleOpenPrimaryModal = (mode: string, location: any = null) => {
         setModalMode(mode);
         setEditingLocation(location);
         if (mode === 'edit' && location) {
@@ -101,8 +106,8 @@ const CampManagement = ({ campID, effectiveRole }) => {
         const locationData = {
             campLocationName: locationName,
             latLong: {
-                latitude: parseFloat(latitude),
-                longitude: parseFloat(longitude),
+                latitude: parseFloat(latitude as string),
+                longitude: parseFloat(longitude as string),
             },
         };
 
@@ -118,7 +123,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
         }
     };
 
-    const handleSetAsPrimary = async (locationId) => {
+    const handleSetAsPrimary = async (locationId: string) => {
         try {
             await update(ref(database, `camps/${campID}`), { activeLocationId: locationId });
             alert("Active location updated successfully.");
@@ -128,7 +133,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
         }
     };
 
-    const openDeleteConfirmModal = (type, id, name, primaryLocationId = null) => {
+    const openDeleteConfirmModal = (type: string, id: string, name: string, primaryLocationId: string | null = null) => {
         modals.openConfirmModal({
             title: `Delete ${name}`,
             centered: true,
@@ -153,7 +158,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
     };
 
     // --- Handlers for Block (Secondary) Locations ---
-    const handleOpenBlockModal = (primaryLocationId, mode, block = null) => {
+    const handleOpenBlockModal = (primaryLocationId: string, mode: string, block: any = null) => {
         setModalMode(mode);
         setEditingLocation({ primaryId: primaryLocationId, ...(block || {}) });
         if (mode === 'edit' && block) {
@@ -176,8 +181,8 @@ const CampManagement = ({ campID, effectiveRole }) => {
         const blockData = {
             name: locationName,
             latLong: {
-                latitude: parseFloat(latitude),
-                longitude: parseFloat(longitude),
+                latitude: parseFloat(latitude as string),
+                longitude: parseFloat(longitude as string),
             }
         };
         const path = `camps/${campID}/campLocations/${selectedYear}/${editingLocation.primaryId}/secondaryLocations/${modalMode === 'add' ? firebasePush(ref(database, `camps/${campID}/campLocations/${selectedYear}/${editingLocation.primaryId}/secondaryLocations`)).key : editingLocation.id}`;
@@ -208,7 +213,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
                         label="View Locations For Year"
                         data={availableYears}
                         value={selectedYear}
-                        onChange={setSelectedYear}
+                        onChange={(value) => setSelectedYear(value || String(currentYear))}
                     />
                     {effectiveRole >= 5 && (
                         <Button onClick={() => handleOpenPrimaryModal('add')} leftSection={<IconPlus size={16} />}>
@@ -219,7 +224,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
             </Paper>
 
             <Accordion chevron={<IconChevronDown />} mt="lg">
-                {Object.entries(locationsForYear).map(([id, loc]) => (
+                {Object.entries(locationsForYear).map(([id, loc]: [string, any]) => (
                     <Accordion.Item key={id} value={id}>
                         <Accordion.Control>
                             <Group justify="space-between">
@@ -244,7 +249,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
                                 )}
                                 <Paper p="sm" withBorder>
                                     <Title order={5} mb="sm">Block Locations</Title>
-                                    {Object.entries(loc.secondaryLocations || {}).map(([blockId, block]) => (
+                                    {Object.entries(loc.secondaryLocations || {}).map(([blockId, block]: [string, any]) => (
                                         <Paper key={blockId} p="xs" withBorder mb="xs">
                                             <Group justify="space-between">
                                                 <Text>{block.name} ({block.latLong.latitude}, {block.latLong.longitude})</Text>
