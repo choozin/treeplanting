@@ -26,7 +26,7 @@ const AuthFlow = ({ setNavIsOpen }) => {
     const [name, setName] = useState('Name'); 
     const [loading, setLoading] = useState(false);
 
-    const handleTabChange = (value: string | null) => {
+    const handleTabChange = (value) => {
         const newTab = value || 'login';
         setActiveTab(newTab);
         if (newTab === 'login') {
@@ -48,7 +48,7 @@ const AuthFlow = ({ setNavIsOpen }) => {
         }
     };
 
-    const handleAuthError = (error: Error) => {
+    const handleAuthError = (error) => {
         notifications.show({
             title: 'Authentication Failed',
             message: error.message.replace('Firebase: ', ''),
@@ -56,7 +56,7 @@ const AuthFlow = ({ setNavIsOpen }) => {
         });
     };
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
@@ -79,7 +79,7 @@ const AuthFlow = ({ setNavIsOpen }) => {
                 }
             }
         } catch (error) {
-            handleAuthError(error as Error);
+            handleAuthError(error);
         } finally {
             setLoading(false);
         }
