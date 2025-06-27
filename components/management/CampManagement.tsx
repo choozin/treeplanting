@@ -27,8 +27,8 @@ import { useModals } from '@mantine/modals';
 import { IconHome, IconMapPin, IconPlus, IconPencil, IconTrash, IconChevronDown, IconCheck, IconAlertCircle } from '@tabler/icons-react';
 
 interface CampManagementProps {
-    campID: string | null;
-    effectiveRole: number;
+  campID: string | null;
+  effectiveRole: number;
 }
 
 const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
@@ -281,8 +281,8 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
             <Modal opened={primaryModalOpened} onClose={closePrimaryModal} title={`${modalMode === 'add' ? 'Add' : 'Edit'} Primary Location`}>
                 <Stack>
                     <TextInput label="Location Name" placeholder="e.g., Main Camp 2025" value={locationName} onChange={(e) => setLocationName(e.target.value)} required />
-                    <NumberInput label="Latitude" placeholder="e.g., 53.916943" value={latitude} onChange={setLatitude} precision={6} required />
-                    <NumberInput label="Longitude" placeholder="e.g., -122.749443" value={longitude} onChange={setLongitude} precision={6} required />
+                    <NumberInput label="Latitude" placeholder="e.g., 53.916943" value={latitude} onChange={setLatitude} decimalScale={6} required />
+                    <NumberInput label="Longitude" placeholder="e.g., -122.749443" value={longitude} onChange={setLongitude} decimalScale={6} required />
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" onClick={closePrimaryModal}>Cancel</Button>
                         <Button onClick={handlePrimaryLocationSubmit}>Save</Button>
@@ -293,8 +293,8 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
             <Modal opened={blockModalOpened} onClose={closeBlockModal} title={`${modalMode === 'add' ? 'Add' : 'Edit'} Block Location`}>
                 <Stack>
                     <TextInput label="Block Name" placeholder="e.g., Block 101" value={locationName} onChange={(e) => setLocationName(e.target.value)} required />
-                    <NumberInput label="Latitude" placeholder="e.g., 53.916943" value={latitude} onChange={setLatitude} precision={6} required />
-                    <NumberInput label="Longitude" placeholder="e.g., -122.749443" value={longitude} onChange={setLongitude} precision={6} required />
+                    <NumberInput label="Latitude" placeholder="e.g., 53.916943" value={latitude} onChange={setLatitude} decimalScale={6} required />
+                    <NumberInput label="Longitude" placeholder="e.g., -122.749443" value={longitude} onChange={setLongitude} decimalScale={6} required />
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" onClick={closeBlockModal}>Cancel</Button>
                         <Button onClick={handleBlockLocationSubmit}>Save</Button>
