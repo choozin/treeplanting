@@ -1,194 +1,194 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-    Modal,
-    Button,
-    TextInput,
-    Textarea,
-    MultiSelect,
-    Select,
-    Switch,
-    Group,
-    Stack,
-    Text
-} from '@mantine/core';
-import { getDatabase, ref, get } from 'firebase/database';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../firebase/firebase';
+import { ref, onValue, set, push as firebasePush, serverTimestamp, get } from 'firebase/database';
+import { Modal, Button, TextInput, Textarea, MultiSelect, Checkbox, Group, Alert, Center, Loader } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 
-const ComposeMessage = ({
-    opened,
-    onClose,
-    onSubmit,
-    currentUser,
-    effectiveRole,
-    campID,
-    initialState = null,
-}) => {
-    const [recipients, setRecipients] = useState([]);
+const ComposeMessage = () => {
+    const { user: currentUser, campID, effectiveRole, isComposeModalOpen, closeComposeModal, composeInitialState } = useAuth();
+
+    const [campUsers, setCampUsers] = useState([]);
+    const [selectedUsers, setSelectedUsers] = useState([]);
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
-    const [messageType, setMessageType] = useState('Social');
-    const [areRecipientsVisible, setAreRecipientsVisible] = useState(true);
+    const [isFormal, setIsFormal] = useState(false);
+
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
 
-    const [userList, setUserList] = useState([]);
-    const [isSearchingCompany, setIsSearchingCompany] = useState(false);
-    
-    const isLocked = initialState?.isClassifiedsMessage || false;
-
-    useEffect(() => {
-        if (!opened || !currentUser || !campID) return;
-
-        const fetchUsers = async () => {
-            const companyId = (await get(ref(database, `camps/${campID}/companyId`))).val();
-            const allUsersSnapshot = await get(ref(database, 'users'));
-            const allUsers = allUsersSnapshot.val() || {};
-
-            const users = Object.entries(allUsers)
-                .filter(([uid, userData]) => {
-                    if (uid === currentUser.uid) return false;
-                    if (isSearchingCompany) {
-                        return Object.values(userData.assignedCamps || {}).some(c => c.companyId === companyId);
-                    } else {
-                        return userData.assignedCamps?.[campID];
-                    }
-                })
-                .map(([uid, userData]) => ({
-                    value: uid,
-                    label: userData.name || userData.email,
-                }));
-            setUserList(users);
-        };
-
-        if (!isLocked) {
-            fetchUsers();
-        }
-
-    }, [opened, currentUser, campID, isSearchingCompany, isLocked]);
-
-    const resetForm = () => {
+    const resetState = () => {
         setRecipients([]);
         setSubject('');
         setBody('');
-        setMessageType('Social');
-        setAreRecipientsVisible(true);
-        setIsSearchingCompany(false);
+        setIsFormal(false);
+        setError('');
+        setCampUsers([]);
     };
-    
-    useEffect(() => {
-        if (opened && initialState) {
-            if (initialState.recipientId) {
-                setRecipients([initialState.recipientId]);
-            }
-            if (initialState.subject) {
-                setSubject(initialState.subject);
-            }
-            if(initialState.isClassifiedsMessage) {
-                setMessageType('Social');
-                setAreRecipientsVisible(true);
-            }
-        } else if (!opened) {
-            resetForm();
-        }
-    }, [opened, initialState]);
 
+    useEffect(() => {
+        if (!isComposeModalOpen || !campID) return;
+
+        const loadData = async () => {
+            setIsLoadingData(true);
+            try {
+                const usersRef = ref(database, 'users');
+                const usersSnapshot = await get(usersRef);
+                const allUsersData = usersSnapshot.val() || {};
+
+                const usersInCamp = Object.keys(allUsersData)
+                    .map(uid => ({ id: uid, ...allUsersData[uid] }))
+                    .filter(u => u.assignedCamps && u.assignedCamps[campID]);
+
+                setCampUsers(usersInCamp);
+
+                if (composeInitialState) {
+                    setSelectedUsers(composeInitialState.recipientId ? [composeInitialState.recipientId] : []);
+                    setSubject(composeInitialState.subject || '');
+                }
+
+            } catch (err) {
+                console.error("Error fetching initial data for composer:", err);
+                setError("Could not load recipient data.");
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+
+        loadData();
+
+    }, [isComposeModalOpen, campID, composeInitialState]);
 
     const handleClose = () => {
-        onClose();
+        closeComposeModal();
+        resetState();
     };
 
-    const handleSubmit = async () => {
-        if (recipients.length === 0 || !subject.trim() || !body.trim()) {
-            alert('Recipients, subject, and body are required.');
+    const handleSend = async () => {
+        if (selectedUsers.length === 0) {
+            setError("Please select at least one recipient.");
             return;
         }
+        if (!subject.trim()) {
+            setError("Subject cannot be empty.");
+            return;
+        }
+        if (!body.trim()) {
+            setError("Message body cannot be empty.");
+            return;
+        }
+
         setIsSubmitting(true);
-        await onSubmit({
-            recipients,
-            subject,
-            body,
-            messageType,
-            areRecipientsVisible,
-        });
-        setIsSubmitting(false);
-        handleClose();
+        setError('');
+
+        const messageData = {
+            senderId: currentUser.uid,
+            senderName: currentUser.displayName,
+            subject: subject.trim(),
+            body: body.trim(),
+            timestamp: serverTimestamp(),
+            recipients: selectedUsers.reduce((acc, userId) => {
+                acc[userId] = { read: false };
+                return acc;
+            }, {}),
+            isFormal: isFormal,
+            campId: campID,
+        };
+
+        try {
+            const newMessageRef = firebasePush(ref(database, `camps/${campID}/messages`));
+            await set(newMessageRef, messageData);
+            notifications.show({
+                title: 'Message Sent!',
+                message: 'Your message has been successfully sent.',
+                color: 'green',
+            });
+            handleClose();
+        } catch (e) {
+            console.error("Error sending message:", e);
+            setError("Failed to send message. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    const messageTypeOptions = [
-        { value: 'Social', label: 'Social' },
-        { value: 'Operational', label: 'Operational Logistics' },
-    ];
+    const userOptions = useMemo(() => {
+        if (isLoadingData) return [];
 
-    if (effectiveRole >= 5) {
-        messageTypeOptions.push({ value: 'Formal', label: 'Formal Announcement' });
-    }
+        const options = (campUsers || [])
+            .filter(user => user.id !== currentUser?.uid)
+            .map(user => ({
+                value: user.id,
+                label: user.profile?.nickname || user.name || user.email
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+
+        if (composeInitialState?.recipientId && !options.some(opt => opt.value === composeInitialState.recipientId)) {
+            options.unshift({
+                value: composeInitialState.recipientId,
+                label: composeInitialState.recipientName,
+            });
+        }
+
+        return options;
+    }, [isLoadingData, campUsers, currentUser, composeInitialState]);
 
     return (
-        <Modal opened={opened} onClose={handleClose} title="Compose New Message" size="lg">
-            <Stack>
-                {isLocked ? (
-                    <TextInput
-                        label="To:"
-                        value={initialState.recipientName}
-                        readOnly
-                    />
-                ) : (
-                    <>
-                        <MultiSelect
-                            label="To:"
-                            placeholder="Select recipients"
-                            data={userList}
-                            value={recipients}
-                            onChange={setRecipients}
-                            searchable
-                            required
-                        />
-                        <Switch
-                            label="Search all company users"
-                            checked={isSearchingCompany}
-                            onChange={(event) => setIsSearchingCompany(event.currentTarget.checked)}
-                        />
-                    </>
-                )}
-                
-                <TextInput
-                    label="Subject"
-                    placeholder="Message subject"
-                    value={subject}
-                    onChange={(e) => setSubject(e.currentTarget.value)}
-                    required
-                />
-                <Textarea
-                    label="Message"
-                    placeholder="Your message..."
-                    value={body}
-                    onChange={(e) => setBody(e.currentTarget.value)}
-                    required
-                    minRows={5}
-                />
-                
-                {!isLocked && (
-                    <>
-                        <Select
-                            label="Message Type"
-                            data={messageTypeOptions}
-                            value={messageType}
-                            onChange={setMessageType}
-                        />
-                        <Switch
-                            label="Allow recipients to see each other"
-                            checked={areRecipientsVisible}
-                            onChange={(event) => setAreRecipientsVisible(event.currentTarget.checked)}
-                        />
-                    </>
-                )}
+        <Modal opened={isComposeModalOpen} onClose={handleClose} title="Compose Message" size="lg">
+            {error && <Alert color="red" title="Error" withCloseButton onClose={() => setError('')} mb="md">{error}</Alert>}
 
-                <Group justify="flex-end" mt="md">
-                    <Button variant="default" onClick={handleClose}>Cancel</Button>
-                    <Button onClick={handleSubmit} loading={isSubmitting}>Send</Button>
-                </Group>
-            </Stack>
+            {isLoadingData ? (
+                <Center style={{ height: 280 }}>
+                    <Loader />
+                </Center>
+            ) : (
+                <>
+                    <MultiSelect
+                        label="To:"
+                        placeholder="Select recipients"
+                        data={userOptions}
+                        value={selectedUsers}
+                        onChange={setSelectedUsers}
+                        searchable
+                        required
+                        mb="sm"
+                    />
+                    <TextInput
+                        label="Subject:"
+                        placeholder="Enter message subject"
+                        value={subject}
+                        onChange={(e) => setSubject(e.currentTarget.value)}
+                        required
+                        mb="sm"
+                    />
+                    <Textarea
+                        label="Message:"
+                        placeholder="Your message here..."
+                        value={body}
+                        onChange={(e) => setBody(e.currentTarget.value)}
+                        required
+                        minRows={6}
+                        mb="sm"
+                    />
+
+                    {effectiveRole >= 5 && (
+                        <Checkbox
+                            label="Send as Formal Announcement"
+                            checked={isFormal}
+                            onChange={(e) => setIsFormal(e.currentTarget.checked)}
+                            mb="md"
+                        />
+                    )}
+                </>
+            )}
+
+            <Group justify="flex-end" mt="md">
+                <Button variant="default" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
+                <Button onClick={handleSend} loading={isSubmitting} disabled={isLoadingData}>Send</Button>
+            </Group>
         </Modal>
     );
 };

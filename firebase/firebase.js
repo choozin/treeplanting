@@ -11,12 +11,14 @@ import {
     onAuthStateChanged
 } from "firebase/auth";
 import { getDatabase, ref, set, update } from "firebase/database";
+import { getStorage } from "firebase/storage";
 
 // Firebase config
 const firebaseConfig = {
     apiKey: "AIzaSyCuREPU2wVAoKNCJisvKlaz6xGCpHNCagQ",
     authDomain: "treeplanting-fefa5.firebaseapp.com",
     projectId: "treeplanting-fefa5",
+    // This is the corrected line, using the bucket name you found.
     storageBucket: "treeplanting-fefa5.firebasestorage.app",
     messagingSenderId: "391625607665",
     appId: "1:391625607665:web:9f2e194c1224a18ec61c50"
@@ -26,6 +28,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
+const storage = getStorage(app);
 
 // Function to register a user (self-registration) with role initialized as 1
 const registerUser = async (email, password, name) => {
@@ -42,13 +45,13 @@ const registerUser = async (email, password, name) => {
             assignedCamps: {
                 scooter: {
                     campName: "Scooter's Camp",
-                    role: 3
+                    role: 2
                 }
             }
         };
         updates[`/users/${user.uid}`] = userData;
         updates[`/camps/scooter/users/${user.uid}`] = {
-            role: 3
+            role: 2
         };
 
         await update(ref(database), updates);
@@ -115,4 +118,4 @@ const logoutUser = async () => {
 };
 
 // Export everything
-export { app, auth, database, registerUser, registerOtherUser, loginUser, logoutUser, onAuthStateChanged };
+export { app, auth, database, storage, registerUser, registerOtherUser, loginUser, logoutUser, onAuthStateChanged };

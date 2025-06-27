@@ -209,9 +209,8 @@ const CampManagement = ({ campID, effectiveRole }) => {
                         data={availableYears}
                         value={selectedYear}
                         onChange={setSelectedYear}
-                        disabled={effectiveRole < 6}
                     />
-                    {effectiveRole >= 6 && (
+                    {effectiveRole >= 5 && (
                         <Button onClick={() => handleOpenPrimaryModal('add')} leftSection={<IconPlus size={16} />}>
                             Add New Primary Location
                         </Button>
@@ -233,7 +232,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
                         </Accordion.Control>
                         <Accordion.Panel>
                             <Stack>
-                                {effectiveRole >= 6 && (
+                                {effectiveRole >= 5 && (
                                     <Paper p="sm" withBorder bg="gray.0">
                                         <Title order={5} mb="sm">Manage Primary Location</Title>
                                         <Group>
@@ -250,10 +249,12 @@ const CampManagement = ({ campID, effectiveRole }) => {
                                             <Group justify="space-between">
                                                 <Text>{block.name} ({block.latLong.latitude}, {block.latLong.longitude})</Text>
                                                 <Group gap="xs">
-                                                    <ActionIcon variant="subtle" onClick={() => handleOpenBlockModal(id, 'edit', { id: blockId, ...block })}>
-                                                        <IconPencil size={16} />
-                                                    </ActionIcon>
-                                                    {effectiveRole >= 6 && (
+                                                    {effectiveRole >= 4 && (
+                                                        <ActionIcon variant="subtle" onClick={() => handleOpenBlockModal(id, 'edit', { id: blockId, ...block })}>
+                                                            <IconPencil size={16} />
+                                                        </ActionIcon>
+                                                    )}
+                                                    {effectiveRole >= 5 && (
                                                         <ActionIcon variant="subtle" color="red" onClick={() => openDeleteConfirmModal('block location', blockId, block.name, id)}>
                                                             <IconTrash size={16} />
                                                         </ActionIcon>
@@ -262,7 +263,9 @@ const CampManagement = ({ campID, effectiveRole }) => {
                                             </Group>
                                         </Paper>
                                     ))}
-                                    <Button size="xs" mt="sm" onClick={() => handleOpenBlockModal(id, 'add')} leftSection={<IconPlus size={14} />}>Add New Block</Button>
+                                    {effectiveRole >= 3 && (
+                                        <Button size="xs" mt="sm" onClick={() => handleOpenBlockModal(id, 'add')} leftSection={<IconPlus size={14} />}>Add New Block</Button>
+                                    )}
                                 </Paper>
                             </Stack>
                         </Accordion.Panel>

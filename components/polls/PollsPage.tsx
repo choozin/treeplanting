@@ -349,10 +349,10 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     });
 
     // --- Permission Helpers ---
-    const canUserCreatePoll = useCallback(() => effectiveRole >= 4, [effectiveRole]);
-    const canUserApprovePoll = useCallback(() => effectiveRole >= 4, [effectiveRole]);
-    const canUserRejectPoll = useCallback(() => effectiveRole >= 6, [effectiveRole]);
-    const canUserManageOption = useCallback(() => effectiveRole >= 4, [effectiveRole]);
+    const canUserCreatePoll = useCallback(() => effectiveRole >= 2, [effectiveRole]);
+    const canUserApprovePoll = useCallback(() => effectiveRole >= 3, [effectiveRole]);
+    const canUserRejectPoll = useCallback(() => effectiveRole >= 4, [effectiveRole]);
+    const canUserManageOption = useCallback(() => effectiveRole >= 3, [effectiveRole]);
 
 
     // Fetch all users once to map creator IDs to names
@@ -476,7 +476,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
             combinedClosesAt = new Date(`${newPollData.closesAtDate}T${timePart}`).toISOString();
         }
 
-        const isCreatorAdmin = effectiveRole >= 4;
+        const isCreatorAdmin = effectiveRole >= 3;
         const pollObject: Omit<Poll, 'id'> = {
             questionText: newPollData.questionText.trim(),
             description: newPollData.description.trim() || undefined,
@@ -508,7 +508,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         try {
             const newPollRef = push(firebaseDatabaseRef(database, `camps/${campID}/polls`));
             await set(newPollRef, pollObject);
-            alert(isCreatorAdmin ? "Poll created and automatically approved!" : "Poll created! It needs approval from a Sr. Planter or higher to be displayed.");
+            alert(isCreatorAdmin ? "Poll created and automatically approved!" : "Poll created! It needs approval from a Moderator or higher to be displayed.");
             handleCloseCreatePoll();
         } catch (e) {
             console.error("Error creating poll:", e);

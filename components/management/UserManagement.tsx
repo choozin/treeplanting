@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, FC } from 'react';
-import { getDatabase, ref, onValue, update, remove, set, push as firebasePush } from 'firebase/database';
+import React, { useState, useEffect, useMemo, FC } from 'react';
+import { getDatabase, ref, onValue, update } from 'firebase/database';
 import { database } from '../../firebase/firebase';
 import { ROLES } from '../../lib/constants';
 import {
@@ -24,11 +24,11 @@ import {
     Stack,
     MultiSelect,
     Badge,
-    Accordion
+    Center,
+    Loader
 } from '@mantine/core';
 import {
-    IconUsers, IconBuilding, IconCampfire, IconUsersGroup, IconSearch, IconEdit,
-    IconTrash, IconUserOff, IconAlertCircle, IconPencil, IconChevronUp, IconChevronDown, IconPlus
+    IconUsers, IconUsersGroup, IconSearch, IconPencil, IconAlertCircle
 } from '@tabler/icons-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import CrewManagement from './CrewManagement';
@@ -44,29 +44,10 @@ interface AppUser {
     effectiveRoleInContext?: number;
 }
 
-interface Crew {
-    crewName: string;
-    crewBosses?: Record<string, boolean>;
-    drivers?: Record<string, boolean>;
-    members?: Record<string, boolean>;
-}
-
 interface Camp {
     campName: string;
     companyId: string;
     users?: Record<string, { name: string; role: number }>;
-    crews?: Record<string, Crew>;
-    campBosses?: Record<string, boolean>;
-}
-
-interface Company {
-    companyName: string;
-}
-
-interface UserManagementProps {
-    currentUser: FirebaseUser;
-    campID: string | null;
-    effectiveRole: number;
 }
 
 interface EditedUserData {
@@ -79,91 +60,68 @@ interface EditedUserData {
 // --- Helper Functions ---
 const getRoleName = (level: number) => ROLES[level as keyof typeof ROLES] || 'Unknown Role';
 
-const SortableHeader: FC<{ children: React.ReactNode, sorted: boolean, reversed: boolean, onSort: () => void }> = ({ children, sorted, reversed, onSort }) => (
-    <Table.Th onClick={onSort} style={{ cursor: 'pointer' }}>
-        <Group justify="space-between">
-            <Text fw={500} fz="sm">{children}</Text>
-            {sorted && (reversed ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />)}
-        </Group>
-    </Table.Th>
-);
-
 // --- Main Component ---
-const UserManagement: FC<UserManagementProps> = ({ currentUser, campID, effectiveRole }) => {
-    // --- State Declarations ---
+const UserManagement: FC<{ currentUser: FirebaseUser, campID: string | null, effectiveRole: number }> = ({ currentUser, campID, effectiveRole }) => {
     const [allUsers, setAllUsers] = useState<AppUser[]>([]);
     const [allCamps, setAllCamps] = useState<Record<string, Camp>>({});
-    const [allCompanies, setAllCompanies] = useState<Record<string, Company>>({});
-    const [crews, setCrews] = useState<Record<string, Crew>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    const [activeTab, setActiveTab] = useState('employees');
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-    const [searchTerm, setSearchTerm] = useState('');
-    const [campFilter, setCampFilter] = useState<string[]>([]);
-    const [roleFilter, setRoleFilter] = useState<string[]>([]);
-    const [sortBy, setSortBy] = useState('name');
-    const [reverseSortDirection, setReverseSortDirection] = useState(false);
-
     const [editedUserData, setEditedUserData] = useState<Partial<EditedUserData>>({});
     const [isSaving, setIsSaving] = useState(false);
-    const [deleteModal, setDeleteModal] = useState({ open: false, type: '', id: '', name: '' });
-
-    const [newCrewName, setNewCrewName] = useState('');
-    const [newCrewBosses, setNewCrewBosses] = useState<string[]>([]);
-    const [newCampName, setNewCampName] = useState('');
-    const [newCampCompany, setNewCampCompany] = useState<string | null>('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState<string[]>([]);
+    const [activeTab, setActiveTab] = useState('employees');
 
     const viewer = useMemo(() => allUsers.find(u => u.id === currentUser.uid), [allUsers, currentUser.uid]);
 
     useEffect(() => {
         setIsLoading(true);
-        const refs = [
-            { path: 'users', setter: (data: Record<string, Omit<AppUser, 'id'>>) => setAllUsers(Object.entries(data || {}).map(([id, d]) => ({ id, ...d }))) },
-            { path: 'camps', setter: setAllCamps },
-            { path: 'companies', setter: setAllCompanies }
-        ];
-        const unsubscribes = refs.map(({ path, setter }) =>
-            onValue(ref(database, path), (snapshot) => {
-                const data = snapshot.val() || {};
-                setter(data);
-            }, (err: Error) => setError(`Failed to load ${path}: ${err.message}`))
-        );
-        setIsLoading(false);
-        return () => unsubscribes.forEach(unsub => unsub());
+        const usersRef = ref(database, 'users');
+        const campsRef = ref(database, 'camps');
+        
+        const unsubUsers = onValue(usersRef, (snapshot) => {
+            setAllUsers(Object.entries(snapshot.val() || {}).map(([id, d]) => ({ id, ...d as any })));
+            setIsLoading(false);
+        }, (err: Error) => setError(`Failed to load users: ${err.message}`));
+
+        const unsubCamps = onValue(campsRef, (snapshot) => {
+            setAllCamps(snapshot.val() || {});
+        });
+
+        return () => {
+            unsubUsers();
+            unsubCamps();
+        };
     }, []);
 
-    useEffect(() => {
-        if (campID) {
-            const crewsRef = ref(database, `camps/${campID}/crews`);
-            const unsubscribe = onValue(crewsRef, (snapshot) => {
-                setCrews(snapshot.val() || {});
-            });
-            return () => unsubscribe();
-        }
-    }, [campID]);
+    const calculateUserEffectiveRole = (user: AppUser, contextCampID: string | null) => {
+        if (!contextCampID) return user.role || 0;
+        const campRole = user.assignedCamps?.[contextCampID]?.role || 0;
+        return Math.max(user.role || 0, campRole);
+    };
 
-    const viewerPermissions = useMemo(() => {
-        if (!viewer) return { role: 0, scope: 'none' };
-        const role = effectiveRole;
-        if (role >= 9) return { role, scope: 'app' };
-        if (role >= 7 && viewer.managesCompany) return { role, scope: 'company', managesCompany: viewer.managesCompany };
-        if (!campID) return { role, scope: 'none' };
-        if (role >= 6) return { role, scope: 'camp', managesCamp: campID };
-        if (role >= 5) {
-            const currentCampAssignment = viewer.assignedCamps?.[campID];
-            return { role, scope: 'crew', managesCrew: currentCampAssignment?.crewId, managesCamp: campID };
-        }
-        return { role, scope: 'none' };
-    }, [viewer, effectiveRole, campID]);
+    const sortedAndFilteredUsers = useMemo(() => {
+        if (!campID && effectiveRole < 9) return [];
+        
+        const usersInScope = campID 
+            ? allUsers.filter(u => u.assignedCamps?.[campID])
+            : allUsers;
 
+        return usersInScope
+            .map(u => ({ ...u, effectiveRoleInContext: calculateUserEffectiveRole(u, campID) }))
+            .filter(user =>
+                (user.name.toLowerCase().includes(searchTerm.toLowerCase()) || user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                (roleFilter.length === 0 || roleFilter.includes(String(user.effectiveRoleInContext)))
+            )
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [allUsers, campID, searchTerm, roleFilter, effectiveRole]);
+    
     const handleOpenEditModal = (user: AppUser) => {
         setSelectedUser(user);
         const campRoles = user.assignedCamps ? Object.keys(user.assignedCamps).reduce((acc, cId) => {
-            acc[cId] = (allCamps[cId]?.users?.[user.id]?.role) || 0;
+            acc[cId] = (allCamps[cId]?.users?.[user.id]?.role) || user.assignedCamps![cId].role || 0;
             return acc;
         }, {} as Record<string, number>) : {};
 
@@ -176,51 +134,46 @@ const UserManagement: FC<UserManagementProps> = ({ currentUser, campID, effectiv
         setIsEditModalOpen(true);
     };
 
-    const sortedAndFilteredUsers = useMemo(() => {
-        let visibleUsers: AppUser[] = [];
-        if (viewerPermissions.scope === 'app') {
-            visibleUsers = allUsers;
-        } else if (viewerPermissions.scope === 'company' && viewerPermissions.managesCompany) {
-            const companyCampIds = Object.keys(allCamps).filter(cid => allCamps[cid].companyId === viewerPermissions.managesCompany);
-            visibleUsers = allUsers.filter(u => u.assignedCamps && Object.keys(u.assignedCamps).some(cid => companyCampIds.includes(cid)));
-        } else if (viewerPermissions.scope === 'camp' && viewerPermissions.managesCamp) {
-            visibleUsers = allUsers.filter(u => u.assignedCamps?.[viewerPermissions.managesCamp ?? '']);
-        } else if (viewerPermissions.scope === 'crew' && viewerPermissions.managesCamp && viewerPermissions.managesCrew) {
-            visibleUsers = allUsers.filter(u => u.assignedCamps?.[viewerPermissions.managesCamp ?? '']?.crewId === viewerPermissions.managesCrew);
+    const handleSaveChanges = async () => {
+        if (!selectedUser) return;
+        setIsSaving(true);
+        
+        const updates: Record<string, any> = {};
+        updates[`/users/${selectedUser.id}/name`] = editedUserData.name;
+        
+        if (effectiveRole >= 9) {
+            updates[`/users/${selectedUser.id}/role`] = editedUserData.globalRole;
         }
 
-        const filtered = visibleUsers.map(user => {
-            const campSpecificRole = (campID && allCamps[campID]?.users?.[user.id]?.role) || 0;
-            const userEffectiveRole = Math.max(user.role || 0, campSpecificRole);
-            return { ...user, effectiveRoleInContext: userEffectiveRole };
-        }).filter(user =>
-            (user.name.toLowerCase().includes(searchTerm.toLowerCase()) || user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
-            (roleFilter.length === 0 || roleFilter.includes(String(user.role))) &&
-            (campFilter.length === 0 || (user.assignedCamps && Object.keys(user.assignedCamps).some(cId => campFilter.includes(cId))))
-        );
-
-        return filtered.sort((a, b) => {
-            const aVal = (a as any)[sortBy] || '';
-            const bVal = (b as any)[sortBy] || '';
-            if (aVal < bVal) return reverseSortDirection ? 1 : -1;
-            if (aVal > bVal) return reverseSortDirection ? -1 : 1;
-            return 0;
-        });
-    }, [allUsers, allCamps, viewerPermissions, searchTerm, campFilter, roleFilter, sortBy, reverseSortDirection, campID]);
-
-
-    const setSorting = (field: string) => {
-        const reversed = field === sortBy && !reverseSortDirection;
-        setReverseSortDirection(reversed);
-        setSortBy(field);
+        if (editedUserData.campRoles) {
+            for (const cId in editedUserData.campRoles) {
+                updates[`/camps/${cId}/users/${selectedUser.id}/role`] = editedUserData.campRoles[cId];
+                updates[`/users/${selectedUser.id}/assignedCamps/${cId}/role`] = editedUserData.campRoles[cId];
+            }
+        }
+        
+        try {
+            await update(ref(database), updates);
+            setIsEditModalOpen(false);
+        } catch (e) {
+            console.error("Failed to save changes:", e);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    if (isLoading) return <Text>Loading User Data...</Text>;
+
+    if (isLoading) return <Center><Loader /></Center>;
     if (error) return <Alert color="red" title="Error">{error}</Alert>;
-    if (!viewer) return <Alert color="yellow" title="Initializing">Please wait, initializing user permissions...</Alert>;
-    if (effectiveRole < 5) return <Alert color="red" title="Access Denied">You do not have permission to view this page.</Alert>;
-    if ((viewer.role < 9) && !campID) {
-        return <Container size="xs" mt="xl"><Alert color="blue" title="Select a Camp" icon={<IconAlertCircle />}>Please select a camp from the main navigation menu to manage users.</Alert></Container>
+    if (effectiveRole < 4) return <Alert color="red" title="Access Denied">You do not have permission to view this page.</Alert>;
+    if (effectiveRole < 9 && !campID) {
+        return (
+            <Container size="xs" mt="xl">
+                <Alert color="blue" title="Select a Camp" icon={<IconAlertCircle />}>
+                    Please select a camp from the main navigation menu to manage users.
+                </Alert>
+            </Container>
+        );
     }
 
     return (
@@ -236,14 +189,14 @@ const UserManagement: FC<UserManagementProps> = ({ currentUser, campID, effectiv
                     <Paper withBorder shadow="md" p="md">
                         <Group grow mb="md">
                             <TextInput placeholder="Search by name or email..." value={searchTerm} onChange={(event) => setSearchTerm(event.currentTarget.value)} leftSection={<IconSearch size={14} />} />
-                            <MultiSelect data={Object.entries(ROLES).map(([level, name]) => ({ value: level, label: name }))} value={roleFilter} onChange={setRoleFilter} placeholder="Filter by global role" clearable />
+                            <MultiSelect data={Object.entries(ROLES).map(([level, name]) => ({ value: level, label: name }))} value={roleFilter} onChange={setRoleFilter} placeholder="Filter by effective role" clearable />
                         </Group>
                         <ScrollArea>
                             <Table striped highlightOnHover verticalSpacing="sm">
                                 <Table.Thead>
                                     <Table.Tr>
-                                        <SortableHeader sorted={sortBy === 'name'} reversed={reverseSortDirection} onSort={() => setSorting('name')}>Name</SortableHeader>
-                                        <SortableHeader sorted={sortBy === 'email'} reversed={reverseSortDirection} onSort={() => setSorting('email')}>Email</SortableHeader>
+                                        <Table.Th>Name</Table.Th>
+                                        <Table.Th>Email</Table.Th>
                                         <Table.Th>Effective Role</Table.Th>
                                         <Table.Th>Camps</Table.Th>
                                         <Table.Th>Actions</Table.Th>
@@ -254,9 +207,19 @@ const UserManagement: FC<UserManagementProps> = ({ currentUser, campID, effectiv
                                         <Table.Tr key={user.id}>
                                             <Table.Td>{user.name}</Table.Td>
                                             <Table.Td>{user.email}</Table.Td>
-                                            <Table.Td>{getRoleName(user.effectiveRoleInContext || 0)} ({user.effectiveRoleInContext})</Table.Td>
-                                            <Table.Td><Group gap="xs">{user.assignedCamps && Object.entries(user.assignedCamps).map(([cId]) => (<Badge key={cId} variant="light">{allCamps[cId]?.campName || cId}</Badge>))}</Group></Table.Td>
-                                            <Table.Td><ActionIcon onClick={() => handleOpenEditModal(user)} variant="subtle" title="Edit User" disabled={effectiveRole <= (user.effectiveRoleInContext || 0)}><IconPencil size={16} /></ActionIcon></Table.Td>
+                                            <Table.Td>{getRoleName(user.effectiveRoleInContext!)} ({user.effectiveRoleInContext})</Table.Td>
+                                            <Table.Td>
+                                                <Group gap="xs">
+                                                    {user.assignedCamps && Object.keys(user.assignedCamps).map(cId => (
+                                                        <Badge key={cId} variant="light">{allCamps[cId]?.campName || cId}</Badge>
+                                                    ))}
+                                                </Group>
+                                            </Table.Td>
+                                            <Table.Td>
+                                                <ActionIcon onClick={() => handleOpenEditModal(user)} variant="subtle" title="Edit User" disabled={effectiveRole <= user.effectiveRoleInContext!}>
+                                                    <IconPencil size={16} />
+                                                </ActionIcon>
+                                            </Table.Td>
                                         </Table.Tr>
                                     ))}
                                 </Table.Tbody>
@@ -269,6 +232,41 @@ const UserManagement: FC<UserManagementProps> = ({ currentUser, campID, effectiv
                     <CrewManagement />
                 </Tabs.Panel>
             </Tabs>
+            
+            <Modal opened={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title={`Edit ${selectedUser?.name}`}>
+                <Stack>
+                    <TextInput label="Name" value={editedUserData.name || ''} onChange={(e) => setEditedUserData(prev => ({...prev, name: e.target.value}))} />
+                    <TextInput label="Email" value={editedUserData.email || ''} disabled />
+                    {effectiveRole >= 9 && (
+                        <Select
+                            label="Global Role"
+                            data={Object.entries(ROLES).map(([level, name]) => ({ value: level, label: name }))}
+                            value={String(editedUserData.globalRole || 0)}
+                            onChange={(value) => setEditedUserData(prev => ({...prev, globalRole: Number(value)}))}
+                        />
+                    )}
+                    <Divider my="sm" label="Camp-Specific Roles" />
+                    {selectedUser?.assignedCamps && Object.keys(selectedUser.assignedCamps).map(cId => (
+                        <Select
+                            key={cId}
+                            label={allCamps[cId]?.campName || 'Unknown Camp'}
+                            data={Object.entries(ROLES).map(([level, name]) => ({ value: level, label: name }))}
+                            value={String(editedUserData.campRoles?.[cId] || 0)}
+                            onChange={(value) => setEditedUserData(prev => ({
+                                ...prev,
+                                campRoles: {
+                                    ...prev.campRoles,
+                                    [cId]: Number(value)
+                                }
+                            }))}
+                        />
+                    ))}
+                    <Group justify="flex-end" mt="md">
+                        <Button variant="default" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+                        <Button loading={isSaving} onClick={handleSaveChanges}>Save Changes</Button>
+                    </Group>
+                </Stack>
+            </Modal>
         </Container>
     );
 };

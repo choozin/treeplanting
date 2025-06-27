@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Patrick+Hand&family=Rock+Salt&display=swap');
+
+.pageBackground {
+    background-color: #000;
+    background-image: url('/tileable-wood-colored.png');
+    background-repeat: repeat;
+    background-attachment: fixed;
+    background-size: auto;
+    min-height: calc(100vh - var(--app-shell-header-height, 60px));
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: var(--mantine-spacing-xl);
+    overflow-y: auto;
+}
+
+.cardWrapper {
+    position: relative;
+}
+
+.staffCard {
+    position: relative;
+    overflow: hidden;
+    padding: 15px;
+    padding-bottom: 50px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background-color: #f0f2f5;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+    margin: -20px;
+    border-radius: 0;
+}
+
+.staffCard:hover {
+    box-shadow: 5px 5px 20px rgba(0, 0, 0, 0.3);
+    z-index: 100 !important;
+}
+
+.imageContainer {
+    position: relative;
+    width: 100%;
+    padding-top: 100%;
+    background-color: #111;
+}
+
+.avatar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.polaroidText {
+    font-size: 1.5rem;
+    position: absolute;
+    bottom: 15px;
+    left: 0;
+    right: 0;
+}
+
+.fontCaveat {
+    font-family: 'Caveat', cursive;
+}
+
+.fontPatrickHand {
+    font-family: 'Patrick Hand', cursive;
+}
+
+.fontRockSalt {
+    font-family: 'Rock Salt', cursive;
+    font-size: 1.2rem;
+}
+
+
+.cardShine {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        to bottom right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0) 45%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0) 55%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: rotate(45deg);
+    pointer-events: none;
+    z-index: 1; 
+}
+
+.defaultShine {
+    opacity: 0.5;
+    animation: shine 8s ease-in-out infinite;
+}
+
+.hoverShine {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.staffCard:hover .defaultShine {
+    opacity: 0;
+}
+
+.staffCard:hover .hoverShine {
+    opacity: 1;
+    animation: shine 2s ease-out infinite;
+}
+
+.profileModalContent {
+    padding: var(--mantine-spacing-xl);
+}
+
+.profileAvatar {
+    border: 5px solid var(--mantine-color-white);
+    box-shadow: var(--mantine-shadow-lg);
+    cursor: pointer;
+}
+
+@keyframes shine {
+    0% {
+        transform: rotate(45deg) translateX(-200%) translateY(-200%);
+    }
+    100% {
+        transform: rotate(45deg) translateX(200%) translateY(200%);
+    }
+}
+
+.viewSwitch {
+    cursor: pointer;
+}
+
+.socialIcon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
