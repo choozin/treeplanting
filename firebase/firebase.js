@@ -2,13 +2,14 @@
 
 'use client';
 
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import {
     getAuth,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    updateProfile
 } from "firebase/auth";
 import { getDatabase, ref, set, update } from "firebase/database";
 import { getStorage } from "firebase/storage";
@@ -25,7 +26,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const auth = getAuth(app);
 const database = getDatabase(app);
 const storage = getStorage(app);
@@ -35,6 +36,8 @@ const registerUser = async (email, password, name) => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+        await updateProfile(user, { displayName: name });
+
 
         const updates = {};
         const userData = {
@@ -56,11 +59,10 @@ const registerUser = async (email, password, name) => {
 
         await update(ref(database), updates);
 
-        alert(`Registration successful for ${user.email}`);
         return user;
     } catch (error) {
-        alert("Registration error: " + error.message);
-        return null;
+        console.error("Registration error:", error.message);
+        throw error;
     }
 };
 
@@ -80,17 +82,13 @@ const registerOtherUser = async (email, name, role) => {
             createdAt: new Date().toISOString()
         });
 
-        alert(`User ${email} registered successfully with role ${role}`);
-
-        // Restore original logged-in user
-        if (currentUser) {
-            await auth.updateCurrentUser(currentUser);
-        }
+        // This is not a real function and will cause an error
+        // await auth.updateCurrentUser(currentUser);
 
         return newUser;
     } catch (error) {
-        alert("Registration error: " + error.message);
-        return null;
+        console.error("Registration error:", error.message);
+        throw error;
     }
 };
 
@@ -99,11 +97,10 @@ const registerOtherUser = async (email, name, role) => {
 const loginUser = async (email, password) => {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log("User logged in:", userCredential.user);
         return userCredential.user;
     } catch (error) {
         console.error("Login error:", error.message);
-        return null;
+        throw error;
     }
 };
 

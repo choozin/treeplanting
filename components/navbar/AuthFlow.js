@@ -22,7 +22,7 @@ const AuthFlow = ({ setNavIsOpen }) => {
     const [activeTab, setActiveTab] = useState('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
+    const [name, setName] = useState('Name'); // Initialized with a value as requested
     const [loading, setLoading] = useState(false);
 
     const handleAuthSuccess = () => {
@@ -63,7 +63,11 @@ const AuthFlow = ({ setNavIsOpen }) => {
             if (userCredential) {
                 handleAuthSuccess();
             } else {
-                throw new Error('Invalid credentials or user does not exist.');
+                // This case might be hit if loginUser returns null on error.
+                // The specific error is handled in the catch block.
+                if (activeTab === 'login') {
+                    throw new Error('Login failed. Please check your credentials.');
+                }
             }
         } catch (error) {
             handleAuthError(error);
@@ -78,7 +82,7 @@ const AuthFlow = ({ setNavIsOpen }) => {
                 <Title order={2} ta="center" mb="xl">
                     Welcome
                 </Title>
-                <Tabs value={activeTab} onChange={setActiveTab}>
+                <Tabs value={activeTab} onChange={(value) => setActiveTab(value || 'login')}>
                     <Tabs.List grow>
                         <Tabs.Tab value="login">Login</Tabs.Tab>
                         <Tabs.Tab value="register">Register</Tabs.Tab>
