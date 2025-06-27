@@ -29,6 +29,7 @@ import {
 } from '@mantine/core';
 import { IconUsers, IconPlus, IconPencil, IconTrash } from '@tabler/icons-react';
 import { ROLES } from '../../lib/constants';
+import { User as FirebaseUser } from 'firebase/auth';
 
 // --- TypeScript Interfaces ---
 interface Crew {
@@ -108,7 +109,9 @@ const CrewManagement = () => {
             setCrewName(crew.crewName);
             setCrewType(crew.crewType || '');
             setSelectedBosses(crew.crewBosses ? Object.keys(crew.crewBosses) : []);
-            setSelectedMembers(usersInCamp.filter(u => u.assignedCamps?.[campID]?.crewId === crew.id).map(u => u.id));
+            if (campID) {
+                setSelectedMembers(usersInCamp.filter(u => u.assignedCamps?.[campID]?.crewId === crew.id).map(u => u.id));
+            }
         } else {
             setEditingCrew(null);
             setCrewName('');
@@ -120,6 +123,10 @@ const CrewManagement = () => {
     };
 
     const handleSaveCrew = async () => {
+        if (!campID) {
+            alert("No camp selected.");
+            return;
+        }
         if (!crewName) {
             alert("Crew name is required.");
             return;
@@ -131,17 +138,19 @@ const CrewManagement = () => {
             crewBosses: selectedBosses.reduce((acc, bossId) => ({ ...acc, [bossId]: true }), {})
         };
         
-        const crewId = modalMode === 'add' ? firebasePush(ref(database, `camps/${campID}/crews`)).key : editingCrew!.id;
+        const crewId = modalMode === 'add' && firebasePush(ref(database, `camps/${campID}/crews`)).key || editingCrew!.id;
         const crewRef = ref(database, `camps/${campID}/crews/${crewId}`);
 
         const memberUpdates: Record<string, any> = {};
         usersInCamp.forEach(u => {
-            const isCurrentlyInCrew = u.assignedCamps?.[campID]?.crewId === crewId;
-            const shouldBeInCrew = selectedMembers.includes(u.id);
-            if (isCurrentlyInCrew && !shouldBeInCrew) {
-                memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = null;
-            } else if (!isCurrentlyInCrew && shouldBeInCrew) {
-                memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = crewId;
+            if (campID) {
+                const isCurrentlyInCrew = u.assignedCamps?.[campID]?.crewId === crewId;
+                const shouldBeInCrew = selectedMembers.includes(u.id);
+                if (isCurrentlyInCrew && !shouldBeInCrew) {
+                    memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = null;
+                } else if (!isCurrentlyInCrew && shouldBeInCrew) {
+                    memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = crewId;
+                }
             }
         });
 
@@ -170,6 +179,7 @@ const CrewManagement = () => {
             labels: { confirm: 'Delete Crew', cancel: "Cancel" },
             confirmProps: { color: 'red' },
             onConfirm: async () => {
+                 if (!campID) return;
                  try {
                     await remove(ref(database, `camps/${campID}/crews/${crew.id}`));
                     const memberUpdates: Record<string, any> = {};
@@ -212,7 +222,7 @@ const CrewManagement = () => {
             <Accordion>
                 {crews.map((crew) => {
                     const crewBosses = crew.crewBosses ? Object.keys(crew.crewBosses) : [];
-                    const crewMembers = usersInCamp.filter(u => u.assignedCamps?.[campID]?.crewId === crew.id);
+                    const crewMembers = usersInCamp.filter(u => campID && u.assignedCamps?.[campID]?.crewId === crew.id);
                     const isUserCrewBoss = crewBosses.includes(user?.uid || '');
 
                     return (
