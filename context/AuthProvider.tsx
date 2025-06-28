@@ -8,14 +8,23 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { ROLES } from '../lib/constants';
 
 interface UserData {
-  name: string;
-  email: string;
-  role: number;
-  assignedCamps?: Record<string, { campName: string; role: number }>;
-  profile?: any;
-  dashboardPreferences?: {
-      layout: string[];
-  };
+    name: string;
+    email: string;
+    role: number;
+    assignedCamps?: Record<string, { campName: string; role: number; crewId?: string }>;
+    profile?: any;
+    dashboardPreferences?: {
+        layout: string[];
+    };
+    notificationPreferences?: {
+        classifieds: {
+            enabled: boolean;
+            types: string[];
+            categories: string[];
+            scope: string;
+            keyword: string;
+        }
+    };
 }
 
 interface ComposeModalState {
@@ -26,17 +35,17 @@ interface ComposeModalState {
 }
 
 interface AuthContextType {
-  user: User | null | undefined;
-  userData: UserData | null;
-  campID: string | null;
-  setCampID: (campID: string | null) => void;
-  refreshUserData: () => void; // Added this function
-  effectiveRole: number;
-  loading: boolean;
-  isComposeModalOpen: boolean;
-  openComposeModal: (initialState?: ComposeModalState) => void;
-  closeComposeModal: () => void;
-  composeInitialState: ComposeModalState | null;
+    user: User | null | undefined;
+    userData: UserData | null;
+    campID: string | null;
+    setCampID: (campID: string | null) => void;
+    refreshUserData: () => void;
+    effectiveRole: number;
+    loading: boolean;
+    isComposeModalOpen: boolean;
+    openComposeModal: (initialState?: ComposeModalState) => void;
+    closeComposeModal: () => void;
+    composeInitialState: ComposeModalState | null;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -47,7 +56,7 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [campID, setCampIDState] = useState<string | null>(null);
     const [effectiveRole, setEffectiveRole] = useState<number>(0);
     const [loading, setLoading] = useState(true);
-    
+
     const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
     const [composeInitialState, setComposeInitialState] = useState<ComposeModalState | null>(null);
 
@@ -87,7 +96,7 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setCampIDState(newCampID);
         window.dispatchEvent(new Event('campChange'));
     }, [user]);
-    
+
     const openComposeModal = useCallback((initialState: ComposeModalState = {}) => {
         setComposeInitialState(initialState);
         setIsComposeModalOpen(true);
