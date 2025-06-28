@@ -25,7 +25,6 @@ const WidgetSettings = () => {
     useEffect(() => {
         if (userData?.dashboardPreferences?.layout) {
             const userLayout = userData.dashboardPreferences.layout;
-            // Ensure all widgets are present, adding any new ones to the end
             const allWidgetIds = ALL_WIDGETS.map(w => w.id);
             const newLayout = [...userLayout];
             allWidgetIds.forEach(id => {
@@ -63,7 +62,8 @@ const WidgetSettings = () => {
         }
         setIsSaving(true);
         try {
-            const updates = {};
+            // **FIX:** Explicitly define the type for the 'updates' object.
+            const updates: { [key: string]: any } = {};
             updates[`users/${user.uid}/dashboardPreferences/layout`] = layout;
             await update(ref(database), updates);
             await refreshUserData();
