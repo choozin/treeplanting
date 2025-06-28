@@ -13,6 +13,9 @@ interface UserData {
   role: number;
   assignedCamps?: Record<string, { campName: string; role: number }>;
   profile?: any;
+  dashboardPreferences?: {
+      layout: string[];
+  };
 }
 
 interface ComposeModalState {

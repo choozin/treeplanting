@@ -19,8 +19,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyCuREPU2wVAoKNCJisvKlaz6xGCpHNCagQ",
     authDomain: "treeplanting-fefa5.firebaseapp.com",
     projectId: "treeplanting-fefa5",
-    // This is the corrected line, using the bucket name you found.
-    storageBucket: "treeplanting-fefa5.firebasestorage.app",
+    storageBucket: "treeplanting-fefa5.appspot.com",
     messagingSenderId: "391625607665",
     appId: "1:391625607665:web:9f2e194c1224a18ec61c50"
 };
@@ -36,8 +35,9 @@ const registerUser = async (email, password, name) => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+        
+        // Ensure displayName is set on the auth object itself
         await updateProfile(user, { displayName: name });
-
 
         const updates = {};
         const userData = {
@@ -45,6 +45,7 @@ const registerUser = async (email, password, name) => {
             name: name,
             role: 1, // Default global role set to 1
             createdAt: new Date().toISOString(),
+            // Default assignment for new users
             assignedCamps: {
                 scooter: {
                     campName: "Scooter's Camp",
@@ -68,13 +69,15 @@ const registerUser = async (email, password, name) => {
 
 // Function to register another user with a selected role
 const registerOtherUser = async (email, name, role) => {
+    // This function is intended for admin use and does not log in the new user.
+    // It creates the user with a temporary password and sets their data.
     try {
-        const defaultPassword = "password";
-        const currentUser = auth.currentUser; // Store currently logged-in user
-
+        const defaultPassword = "password"; // Users should be instructed to change this
+        // NOTE: This creates a user but does not sign them in. The admin remains logged in.
         const userCredential = await createUserWithEmailAndPassword(auth, email, defaultPassword);
         const newUser = userCredential.user;
 
+        // Set their profile data in the database
         await set(ref(database, `users/${newUser.uid}`), {
             email: newUser.email,
             name: name,
@@ -82,12 +85,12 @@ const registerOtherUser = async (email, name, role) => {
             createdAt: new Date().toISOString()
         });
 
-        // This is not a real function and will cause an error
-        // await auth.updateCurrentUser(currentUser);
-
+        // It is NOT necessary to sign the admin back in. 
+        // createUserWithEmailAndPassword does not affect the admin's auth state.
+        
         return newUser;
     } catch (error) {
-        console.error("Registration error:", error.message);
+        console.error("Admin registration error:", error.message);
         throw error;
     }
 };

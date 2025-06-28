@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Cookies from "js-cookie";
 import { database, storage } from '../../firebase/firebase';
-import { ref as dbRef, get, update, onValue } from 'firebase/database';
+import { ref as dbRef, get, update } from 'firebase/database';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -31,17 +30,10 @@ const MyAccount = () => {
     };
 
     const [profile, setProfile] = useState(initialProfileState);
-    const [weatherPrefs, setWeatherPrefs] = useState({
-        secondaryLocationKey: '',
-        navWidget: { visible: true, displayMode: 'hourly' },
-        homescreenWidget: { visible: true, showSecondaryLocation: true, hourlyForecastHours: 6, dailyForecastDays: 3 }
-    });
-
     const [profileImageFile, setProfileImageFile] = useState(null);
     const [profileImageURL, setProfileImageURL] = useState('');
     const [imagePreview, setImagePreview] = useState('');
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-    const [availableSecondaryLocations, setAvailableSecondaryLocations] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -54,50 +46,9 @@ const MyAccount = () => {
                     ...(userData.profile?.socials || {})
                 }
             });
-            if (userData.weatherPreferences) {
-                setWeatherPrefs(p => ({
-                    ...p,
-                    ...userData.weatherPreferences,
-                    navWidget: { ...p.navWidget, ...(userData.weatherPreferences.navWidget || {}) },
-                    homescreenWidget: { ...p.homescreenWidget, ...(userData.weatherPreferences.homescreenWidget || {}) },
-                }));
-            }
             setProfileImageURL(userData.profileImageURL || '');
         }
     }, [userData]);
-
-    useEffect(() => {
-        if (!user) return;
-        const campId = Cookies.get(`campID_${user.uid}`);
-        if (!campId) {
-            setAvailableSecondaryLocations([]);
-            return;
-        }
-
-        const activeLocIdRef = dbRef(database, `camps/${campId}/activeLocationId`);
-        const unsub = onValue(activeLocIdRef, async (activeLocIdSnap) => {
-            if (activeLocIdSnap.exists()) {
-                const activeLocationId = activeLocIdSnap.val();
-                const year = new Date().getFullYear();
-                const secondaryLocsRef = dbRef(database, `camps/${campId}/campLocations/${year}/${activeLocationId}/secondaryLocations`);
-
-                const secondaryLocsSnap = await get(secondaryLocsRef);
-                if (secondaryLocsSnap.exists()) {
-                    const data = secondaryLocsSnap.val();
-                    const options = Object.entries(data)
-                        .filter(([, value]) => value && typeof value === 'object' && value.name)
-                        .map(([key, value]) => ({
-                            value: key,
-                            label: value.name
-                        }));
-                    setAvailableSecondaryLocations(options);
-                } else {
-                    setAvailableSecondaryLocations([]);
-                }
-            }
-        });
-        return () => unsub();
-    }, [user]);
 
     const handleProfileChange = (field, value) => {
         setProfile(prev => ({ ...prev, [field]: value }));
@@ -111,20 +62,6 @@ const MyAccount = () => {
                 [platform]: value
             }
         }));
-    };
-
-    const handleWeatherPrefChange = (path, value) => {
-        setWeatherPrefs(prev => {
-            const newPrefs = { ...prev };
-            let current = newPrefs;
-            const keys = path.split('.');
-            for (let i = 0; i < keys.length - 1; i++) {
-                if (!current[keys[i]]) current[keys[i]] = {};
-                current = current[keys[i]];
-            }
-            current[keys[keys.length - 1]] = value;
-            return newPrefs;
-        });
     };
 
     const handleFileChange = (file) => {
@@ -156,7 +93,6 @@ const MyAccount = () => {
             }
 
             updates[`users/${user.uid}/profile`] = profile;
-            updates[`users/${user.uid}/weatherPreferences`] = weatherPrefs;
 
             await update(dbRef(database), updates);
 
@@ -168,7 +104,7 @@ const MyAccount = () => {
 
             notifications.show({
                 title: 'Success!',
-                message: 'Your settings have been saved.',
+                message: 'Your account settings have been saved.',
                 color: 'green',
             });
 
@@ -317,32 +253,6 @@ const MyAccount = () => {
                         value={profile.socials?.tiktok || ''}
                         onChange={(e) => handleSocialChange('tiktok', e.currentTarget.value)}
                     />
-
-                    <Paper p="md" mt="xl" withBorder>
-                        <Title order={4} mb="md">Weather Preferences</Title>
-                        <Select
-                            label="Secondary Weather Location"
-                            placeholder="Choose a location"
-                            data={availableSecondaryLocations}
-                            value={weatherPrefs.secondaryLocationKey}
-                            onChange={(value) => handleWeatherPrefChange('secondaryLocationKey', value)}
-                            clearable
-                        />
-                        <Switch
-                            mt="md"
-                            label="Show Nav Widget"
-                            checked={weatherPrefs.navWidget?.visible}
-                            onChange={(e) => handleWeatherPrefChange('navWidget.visible', e.currentTarget.checked)}
-                        />
-                        <Select
-                            label="Nav Widget Forecast Type"
-                            data={['hourly', '6-hour', 'daily']}
-                            value={weatherPrefs.navWidget?.displayMode}
-                            onChange={(value) => handleWeatherPrefChange('navWidget.displayMode', value)}
-                            mt="sm"
-                            disabled={!weatherPrefs.navWidget?.visible}
-                        />
-                    </Paper>
 
                     <Group justify="space-between" mt="lg">
                         <Button color="red" variant="outline" onClick={handleDeleteAccount}>Delete Account</Button>

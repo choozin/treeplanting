@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../firebase/firebase';
-import { ref, onValue, set, push as firebasePush, serverTimestamp, get } from 'firebase/database';
+import { ref, onValue, set, push as firebasePush, serverTimestamp, get, update } from 'firebase/database';
 import { Modal, Button, TextInput, Textarea, MultiSelect, Checkbox, Group, Alert, Center, Loader } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 
 const ComposeMessage = () => {
-    const { user: currentUser, campID, effectiveRole, isComposeModalOpen, closeComposeModal, composeInitialState } = useAuth();
+    const { user: currentUser, userData, campID, effectiveRole, isComposeModalOpen, closeComposeModal, composeInitialState } = useAuth();
 
     const [campUsers, setCampUsers] = useState([]);
     const [selectedUsers, setSelectedUsers] = useState([]);
@@ -21,7 +21,7 @@ const ComposeMessage = () => {
     const [error, setError] = useState('');
 
     const resetState = () => {
-        setRecipients([]);
+        setSelectedUsers([]);
         setSubject('');
         setBody('');
         setIsFormal(false);
@@ -84,23 +84,53 @@ const ComposeMessage = () => {
         setIsSubmitting(true);
         setError('');
 
+        const senderName = userData?.name || currentUser.displayName;
+
+        if (!senderName) {
+            setError("Could not determine your sender name. Please try again.");
+            setIsSubmitting(false);
+            return;
+        }
+
+        // **FIX:** Use the imported alias `firebasePush` instead of `push`
+        const newMessageRef = firebasePush(ref(database, 'messages'));
+        const messageId = newMessageRef.key;
+
         const messageData = {
             senderId: currentUser.uid,
-            senderName: currentUser.displayName,
             subject: subject.trim(),
             body: body.trim(),
-            timestamp: serverTimestamp(),
+            sentAt: serverTimestamp(),
             recipients: selectedUsers.reduce((acc, userId) => {
-                acc[userId] = { read: false };
+                acc[userId] = true;
                 return acc;
             }, {}),
             isFormal: isFormal,
             campId: campID,
+            threadId: messageId,
+            liveCopies: selectedUsers.length,
+            messageType: isFormal ? 'Formal' : 'Social',
+            areRecipientsVisible: true,
         };
 
+        const fanOutUpdates = {};
+        fanOutUpdates[`/messages/${messageId}`] = messageData;
+
+        selectedUsers.forEach(uid => {
+            const inboxItem = {
+                isRead: false,
+                senderName: senderName,
+                subject: messageData.subject,
+                sentAt: serverTimestamp(),
+                messageType: messageData.messageType,
+                recipientCount: selectedUsers.length,
+                areRecipientsVisible: messageData.areRecipientsVisible,
+            };
+            fanOutUpdates[`/user-inboxes/${uid}/${messageId}`] = inboxItem;
+        });
+
         try {
-            const newMessageRef = firebasePush(ref(database, `camps/${campID}/messages`));
-            await set(newMessageRef, messageData);
+            await update(ref(database), fanOutUpdates);
             notifications.show({
                 title: 'Message Sent!',
                 message: 'Your message has been successfully sent.',

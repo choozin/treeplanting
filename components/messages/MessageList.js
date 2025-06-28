@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { ScrollArea, Box, Text, Group, Tooltip, Center } from '@mantine/core';
+import { ScrollArea, Box, Text, Group, Tooltip, Center, ActionIcon } from '@mantine/core';
+import { IconTrash } from '@tabler/icons-react';
 import classes from './Messages.module.css';
 
-const MessageList = ({ messages, onSelectMessage, selectedMessageId, currentUser }) => {
+const MessageList = ({ messages, onSelectMessage, selectedMessageId, currentUser, onDeleteMessage }) => {
 
     const getRelativeTime = (timestamp) => {
         if (!timestamp) return '';
@@ -48,31 +49,40 @@ const MessageList = ({ messages, onSelectMessage, selectedMessageId, currentUser
             {messages.map((message) => {
                 const isSelected = selectedMessageId === message.id;
                 const isUnread = !message.isRead;
-                const recipientText = message.recipientCount > 1
-                    ? `To: You + ${message.recipientCount - 1} others`
-                    : 'To: You';
+
+                // **FIX:** Logic to display recipient count
+                const senderDisplay = message.recipientCount > 1 
+                    ? `${message.senderName || 'Unknown Sender'} (to ${message.recipientCount} people)`
+                    : message.senderName || 'Unknown Sender';
 
                 return (
                     <Box
                         key={message.id}
                         className={`${classes.messageListItem} ${isSelected ? classes.messageListItemSelected : ''}`}
-                        onClick={() => onSelectMessage(message)}
                     >
                         <div className={classes.typeIndicator} style={{ backgroundColor: `var(--mantine-color-${getTypeColor(message.messageType)}-6)` }} />
-                        <div className={classes.messageContent}>
+                        <div className={classes.messageContent} onClick={() => onSelectMessage(message)}>
                             <div className={classes.messageHeader}>
-                                <Text truncate className={isUnread ? classes.senderNameUnread : classes.senderName}>
-                                    {message.senderName || 'Unknown Sender'}
+                                <Text truncate className={isUnread ? classes.subjectUnread : classes.subject}>
+                                    {message.subject || '(No Subject)'}
                                 </Text>
                                 <Text className={classes.messageDate}>{getRelativeTime(message.sentAt)}</Text>
                             </div>
-                            <Text truncate className={isUnread ? classes.subjectUnread : classes.subject}>
-                                {message.subject || '(No Subject)'}
-                            </Text>
-                            <Text className={message.areRecipientsVisible ? classes.recipientCount : classes.recipientCountHidden}>
-                                {recipientText}
+                            <Text truncate className={isUnread ? classes.senderNameUnread : classes.senderName}>
+                                {senderDisplay}
                             </Text>
                         </div>
+                        <ActionIcon 
+                            variant="subtle" 
+                            color="gray" 
+                            className={classes.deleteButton}
+                            onClick={(e) => {
+                                e.stopPropagation(); // Prevent selecting the message
+                                onDeleteMessage(message.id);
+                            }}
+                        >
+                            <IconTrash size={16} />
+                        </ActionIcon>
                         <div className={classes.bottomIndicator} style={{ backgroundColor: `var(--mantine-color-${getTypeColor(message.messageType)}-2)` }} />
                     </Box>
                 )
