@@ -1,6 +1,6 @@
 'use client';
 
-import React, 'useState', useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../firebase/firebase';
 import { ref, update, get } from 'firebase/database';
@@ -29,10 +29,8 @@ const NotificationSettings = () => {
             }
         }
 
-        // **FIX:** Assign the potentially undefined property to a variable first.
         const classifiedsPrefs = userData?.notificationPreferences?.classifieds;
 
-        // Then check if that variable exists. This makes TypeScript happy.
         if (classifiedsPrefs) {
             setPrefs(p => ({ ...p, ...classifiedsPrefs }));
         }
@@ -149,4 +147,3 @@ const NotificationSettings = () => {
 };
 
 export default NotificationSettings;
-
