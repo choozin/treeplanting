@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, 'useState', useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../firebase/firebase';
 import { ref, update, get } from 'firebase/database';
@@ -21,18 +21,20 @@ const NotificationSettings = () => {
     });
 
     useEffect(() => {
-        // Check if Notification API is supported
         if (!('Notification' in window)) {
             console.log("This browser does not support desktop notification");
         } else {
-            // Check current permission status
             if (Notification.permission === 'granted') {
                 setIsSubscribed(true);
             }
         }
 
-        if (userData?.notificationPreferences?.classifieds) {
-            setPrefs(p => ({ ...p, ...userData.notificationPreferences.classifieds }));
+        // **FIX:** Assign the potentially undefined property to a variable first.
+        const classifiedsPrefs = userData?.notificationPreferences?.classifieds;
+
+        // Then check if that variable exists. This makes TypeScript happy.
+        if (classifiedsPrefs) {
+            setPrefs(p => ({ ...p, ...classifiedsPrefs }));
         }
     }, [userData]);
 
@@ -44,13 +46,13 @@ const NotificationSettings = () => {
 
         if (Notification.permission === 'granted') {
             setIsSubscribed(true);
-             notifications.show({ color: 'blue', title: 'Already Enabled', message: 'Notifications are already enabled for this site.' });
+            notifications.show({ color: 'blue', title: 'Already Enabled', message: 'Notifications are already enabled for this site.' });
             // TODO: Here we would proceed to get the subscription object
             return;
         }
 
         if (Notification.permission === 'denied') {
-             notifications.show({ color: 'red', title: 'Permission Denied', message: 'You have blocked notifications. Please enable them in your browser settings.' });
+            notifications.show({ color: 'red', title: 'Permission Denied', message: 'You have blocked notifications. Please enable them in your browser settings.' });
             return;
         }
 
@@ -61,9 +63,9 @@ const NotificationSettings = () => {
             // TODO: Get subscription object and save to DB
         }
     };
-    
+
     const handlePrefChange = (field: string, value: any) => {
-        setPrefs(prev => ({...prev, [field]: value}));
+        setPrefs(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSavePrefs = async () => {
@@ -79,7 +81,7 @@ const NotificationSettings = () => {
             });
         } catch (err) {
             console.error(err);
-             notifications.show({
+            notifications.show({
                 title: 'Error',
                 message: 'Could not save your preferences.',
                 color: 'red'
@@ -94,37 +96,37 @@ const NotificationSettings = () => {
         <Paper p="md" mt="xl" withBorder>
             <Title order={4} mb="md">Push Notifications</Title>
             {!isSubscribed ? (
-                 <Alert
+                <Alert
                     icon={<IconAlertCircle size="1.2rem" />}
                     title="Enable Notifications"
                     color="blue"
-                 >
+                >
                     <Text>To receive alerts for new classifieds, you first need to enable push notifications for this site in your browser.</Text>
                     <Button onClick={handleSubscribe} mt="md" variant="light">Enable Notifications</Button>
                 </Alert>
             ) : (
                 <Stack>
-                     <Switch
+                    <Switch
                         label="Receive notifications for new classifieds"
                         checked={prefs.enabled}
                         onChange={(e) => handlePrefChange('enabled', e.currentTarget.checked)}
-                      />
-                     <Checkbox.Group
+                    />
+                    <Checkbox.Group
                         label="Notify for these listing types"
                         value={prefs.types}
                         onChange={(value) => handlePrefChange('types', value)}
-                     >
+                    >
                         <Group mt="xs">
                             <Checkbox value="For Sale" label="For Sale" />
                             <Checkbox value="For Free" label="For Free" />
                             <Checkbox value="Wanted" label="Wanted" />
                         </Group>
                     </Checkbox.Group>
-                     <Checkbox.Group
+                    <Checkbox.Group
                         label="Notify for these categories"
                         value={prefs.categories}
                         onChange={(value) => handlePrefChange('categories', value)}
-                     >
+                    >
                         <Group mt="xs">
                             <Checkbox value="Planting Gear" label="Planting Gear" />
                             <Checkbox value="Other" label="Other" />
@@ -147,3 +149,4 @@ const NotificationSettings = () => {
 };
 
 export default NotificationSettings;
+
