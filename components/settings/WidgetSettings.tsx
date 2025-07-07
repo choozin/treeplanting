@@ -136,7 +136,10 @@ const WidgetSettings = () => {
                 )}
 
                 <Group justify="flex-end" mt="xl">
+
                     <Button onClick={handleSave} loading={isSaving}>Save Layout</Button>
+
+                    
                 </Group>
             </Stack>
         </Paper>
