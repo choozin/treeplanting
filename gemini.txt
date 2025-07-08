@@ -1,0 +1,63 @@
+[Intervention] Images loaded lazily and replaced with placeholders. Load events are deferred. See https://go.microsoft.com/fwlink/?linkid=2048113
+hook.js:608  A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload assetPrefix="" globalError={[...]}>
+      <AppDevOverlay state={{nextId:1, ...}} globalError={[...]}>
+        <AppDevOverlayErrorBoundary globalError={[...]} onError={function bound dispatchSetState}>
+          <ReplaySsrOnlyErrors>
+          <DevRootHTTPAccessFallbackBoundary>
+            <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+              <HTTPAccessFallbackErrorBoundary pathname="/dayOffRides" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+                <RedirectBoundary>
+                  <RedirectErrorBoundary router={{...}}>
+                    <Head>
+                    <link>
+                    <RootLayout>
+                      <html
+                        lang="en"
+                        className="__variable_0bb10f"
+-                       data-mantine-color-scheme="light"
+                      >
+                        <head>
+                        <body
+-                         data-new-gr-c-s-check-loaded="14.1110.0"
+-                         data-gr-ext-installed=""
+                        >
+                    ...
+        ...
+
+overrideMethod @ hook.js:608
+hook.js:608  Error saving edited ride: Error: update failed: values argument contains undefined in property 'camps.scooter.dayOffRides.-OUcii2bhpZUqFvli77W.expectedReturnTime'
+    at validateFirebaseData (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:10486:1)
+    at eval (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:10601:1)
+    at each (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:494:1)
+    at validateFirebaseMergeDataArg (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:10599:1)
+    at update (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:12807:1)
+    at handleSaveEditedRide (C:\Users\ctayl\projects\treeplanting\components\dayOffRides\DayOffRidesPage.tsx:359:19)
+    at executeDispatch (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:16501:1)
+    at runWithFiberInDEV (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:844:1)
+    at processDispatchQueue (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:16551:1)
+    at eval (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:17149:1)
+    at batchedUpdates$1 (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:3262:1)
+    at dispatchEventForPluginEventSystem (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:16705:1)
+    at dispatchEvent (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:20815:1)
+    at dispatchDiscreteEvent (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:20783:1)
+overrideMethod @ hook.js:608
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+C:\src\client\components\react-dev-overlay\app\hot-reloader-client.tsx:306 [Fast Refresh] rebuilding
+C:\src\client\components\react-dev-overlay\utils\report-hmr-latency.ts:26 [Fast Refresh] done in 229ms

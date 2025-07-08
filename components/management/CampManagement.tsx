@@ -21,10 +21,12 @@ import {
     SimpleGrid,
     Stack,
     Divider,
-    Alert
+    Alert,
+    Tabs
 } from '@mantine/core';
+import { DatePickerInput } from '@mantine/dates';
 import { useModals } from '@mantine/modals';
-import { IconHome, IconMapPin, IconPlus, IconPencil, IconTrash, IconChevronDown, IconCheck, IconAlertCircle } from '@tabler/icons-react';
+import { IconHome, IconMapPin, IconPlus, IconPencil, IconTrash, IconChevronDown, IconCheck, IconAlertCircle, IconCalendar, IconTruck } from '@tabler/icons-react';
 
 interface CampManagementProps {
   campID: string | null;
@@ -42,13 +44,25 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     // Modal state
     const [primaryModalOpened, { open: openPrimaryModal, close: closePrimaryModal }] = useDisclosure(false);
     const [blockModalOpened, { open: openBlockModal, close: closeBlockModal }] = useDisclosure(false);
+    const [truckModalOpened, { open: openTruckModal, close: closeTruckModal }] = useDisclosure(false);
     const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
     const [editingLocation, setEditingLocation] = useState<any>(null); // For both primary and secondary
+    const [editingTruck, setEditingTruck] = useState<any>(null);
 
     // Form state
     const [locationName, setLocationName] = useState('');
     const [latitude, setLatitude] = useState<string | number>('');
     const [longitude, setLongitude] = useState<string | number>('');
+    const [truckName, setTruckName] = useState('');
+    const [truckCapacity, setTruckCapacity] = useState<number | string>(1);
+
+    // Calendar state
+    const [seasonStartDate, setSeasonStartDate] = useState<Date | null>(null);
+    const [seasonEndDate, setSeasonEndDate] = useState<Date | null>(null);
+    const [locationStartDate, setLocationStartDate] = useState<Date | null>(null);
+    const [locationEndDate, setLocationEndDate] = useState<Date | null>(null);
+    const [shiftLength, setShiftLength] = useState<number | string>(3);
+
 
     const modals = useModals();
 
@@ -62,7 +76,12 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         const campRef = ref(database, `camps/${campID}`);
         const unsubscribe = onValue(campRef, (snapshot) => {
             if (snapshot.exists()) {
-                setCampData(snapshot.val());
+                const data = snapshot.val();
+                setCampData(data);
+                if (data.seasonInfo) {
+                    setSeasonStartDate(data.seasonInfo.startDate ? new Date(data.seasonInfo.startDate) : null);
+                    setSeasonEndDate(data.seasonInfo.endDate ? new Date(data.seasonInfo.endDate) : null);
+                }
             } else {
                 setError("Could not find data for the selected camp.");
             }
@@ -152,6 +171,8 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
                     }
                 } else if (type === 'block location' && primaryLocationId) {
                     remove(ref(database, `camps/${campID}/campLocations/${selectedYear}/${primaryLocationId}/secondaryLocations/${id}`));
+                } else if (type === 'truck') {
+                    remove(ref(database, `camps/${campID}/trucks/${id}`));
                 }
             },
         });
@@ -196,87 +217,303 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         }
     };
 
+    // --- Calendar Handlers ---
+    const handleSaveSeasonDates = async () => {
+        if (!campID || !seasonStartDate || !seasonEndDate) {
+            alert("Please select both a start and end date for the season.");
+            return;
+        }
+
+        const seasonData = {
+            startDate: seasonStartDate.toISOString().split('T')[0],
+            endDate: seasonEndDate.toISOString().split('T')[0],
+        };
+
+        try {
+            await update(ref(database, `camps/${campID}/seasonInfo`), seasonData);
+            alert("Season dates saved successfully.");
+        } catch (e) {
+            console.error(e);
+            alert("Failed to save season dates.");
+        }
+    };
+
+    const handleGenerateCalendar = async (locationId: string) => {
+        if (!campID || !locationStartDate || !locationEndDate || !shiftLength) {
+            alert("Please set the camp start date, end date, and shift length first.");
+            return;
+        }
+
+        const calendarConfig = {
+            startDate: locationStartDate.toISOString().split('T')[0],
+            endDate: locationEndDate.toISOString().split('T')[0],
+            shiftLength: typeof shiftLength === 'string' ? parseInt(shiftLength) : shiftLength,
+        };
+
+        const calendarData: { [key: string]: any } = {};
+        let currentDate = new Date(locationStartDate);
+        let currentShiftDay = 1;
+
+        while (currentDate <= locationEndDate) {
+            const dateString = currentDate.toISOString().split('T')[0];
+            calendarData[dateString] = { shiftDay: currentShiftDay };
+
+            if (currentShiftDay === 0) {
+                currentShiftDay = 1;
+            } else if (currentShiftDay >= calendarConfig.shiftLength) {
+                currentShiftDay = 0;
+            } else {
+                currentShiftDay++;
+            }
+
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        try {
+            await update(ref(database, `camps/${campID}/calendar`), calendarData);
+            await update(ref(database, `camps/${campID}/campLocations/${selectedYear}/${locationId}/calendarConfig`), calendarConfig);
+            alert("Calendar generated successfully!");
+        } catch (e) {
+            console.error(e);
+            alert("Failed to generate calendar.");
+        }
+    };
+
+    const handleAccordionChange = (value: string | null) => {
+        if (value && campData?.campLocations?.[selectedYear]?.[value]?.calendarConfig) {
+            const config = campData.campLocations[selectedYear][value].calendarConfig;
+            setLocationStartDate(config.startDate ? new Date(config.startDate) : null);
+            setLocationEndDate(config.endDate ? new Date(config.endDate) : null);
+            setShiftLength(config.shiftLength || 3);
+        } else {
+            setLocationStartDate(null);
+            setLocationEndDate(null);
+            setShiftLength(3);
+        }
+    };
+
+    // --- Truck Handlers ---
+    const handleOpenTruckModal = (mode: string, truck: any = null) => {
+        setModalMode(mode);
+        setEditingTruck(truck);
+        if (mode === 'edit' && truck) {
+            setTruckName(truck.name);
+            setTruckCapacity(truck.capacity);
+        } else {
+            setTruckName('');
+            setTruckCapacity(1);
+        }
+        openTruckModal();
+    };
+
+    const handleSaveTruck = async () => {
+        if (!campID || !truckName || !truckCapacity) {
+            alert("All truck fields are required.");
+            return;
+        }
+
+        const truckData = {
+            name: truckName,
+            capacity: typeof truckCapacity === 'string' ? parseInt(truckCapacity) : truckCapacity,
+        };
+
+        const path = `camps/${campID}/trucks/${modalMode === 'add' ? firebasePush(ref(database, `camps/${campID}/trucks`)).key : editingTruck.id}`;
+
+        try {
+            await set(ref(database, path), truckData);
+            alert(`Truck ${modalMode === 'add' ? 'added' : 'updated'} successfully.`);
+            closeTruckModal();
+        } catch (e) {
+            console.error(e);
+            alert("Failed to save truck.");
+        }
+    };
+
 
     if (loading) return <Text>Loading Camp Data...</Text>;
     if (error) return <Alert color="red" title="Error">{error}</Alert>;
     if (effectiveRole < 5) return <Alert color="red" title="Access Denied">You do not have permission to view this page.</Alert>;
 
     const locationsForYear = campData?.campLocations?.[selectedYear] || {};
+    const trucks = campData?.trucks ? Object.entries(campData.trucks).map(([id, data]) => ({ id, ...data })) : [];
 
     return (
         <Container size="md">
             <Title order={2} mb="xl">Camp Management</Title>
 
-            <Paper withBorder p="md" shadow="sm">
-                <Group justify="space-between" align="center">
-                    <Select
-                        label="View Locations For Year"
-                        data={availableYears}
-                        value={selectedYear}
-                        onChange={(value) => setSelectedYear(value || String(currentYear))}
-                    />
-                    {effectiveRole >= 5 && (
-                        <Button onClick={() => handleOpenPrimaryModal('add')} leftSection={<IconPlus size={16} />}>
-                            Add New Primary Location
-                        </Button>
-                    )}
-                </Group>
-            </Paper>
+            <Tabs defaultValue="locations">
+                <Tabs.List>
+                    <Tabs.Tab value="locations">Camp Locations</Tabs.Tab>
+                    <Tabs.Tab value="season">Season</Tabs.Tab>
+                    <Tabs.Tab value="vehicles">Vehicles</Tabs.Tab>
+                </Tabs.List>
 
-            <Accordion chevron={<IconChevronDown />} mt="lg">
-                {Object.entries(locationsForYear).map(([id, loc]: [string, any]) => (
-                    <Accordion.Item key={id} value={id}>
-                        <Accordion.Control>
-                            <Group justify="space-between">
-                                <Group>
-                                    <IconHome />
-                                    <Text fw={500}>{loc.campLocationName}</Text>
-                                    {campData.activeLocationId === id && <Badge color="green">Active</Badge>}
-                                </Group>
-                            </Group>
-                        </Accordion.Control>
-                        <Accordion.Panel>
-                            <Stack>
-                                {effectiveRole >= 5 && (
-                                    <Paper p="sm" withBorder bg="gray.0">
-                                        <Title order={5} mb="sm">Manage Primary Location</Title>
+                <Tabs.Panel value="locations" pt="xs">
+                    <Paper withBorder p="md" shadow="sm" mb="lg">
+                        <Group justify="space-between" align="center">
+                            <Select
+                                label="View Locations For Year"
+                                data={availableYears}
+                                value={selectedYear}
+                                onChange={(value) => setSelectedYear(value || String(currentYear))}
+                            />
+                            {effectiveRole >= 5 && (
+                                <Button onClick={() => handleOpenPrimaryModal('add')} leftSection={<IconPlus size={16} />}>
+                                    Add New Primary Location
+                                </Button>
+                            )}
+                        </Group>
+                    </Paper>
+
+                    <Accordion chevron={<IconChevronDown />} mt="lg" onChange={handleAccordionChange}>
+                        {Object.entries(locationsForYear).map(([id, loc]: [string, any]) => (
+                            <Accordion.Item key={id} value={id}>
+                                <Accordion.Control>
+                                    <Group justify="space-between">
                                         <Group>
-                                            <Button size="xs" onClick={() => handleSetAsPrimary(id)} disabled={campData.activeLocationId === id}>Set as Active</Button>
-                                            <Button size="xs" variant='outline' onClick={() => handleOpenPrimaryModal('edit', { id, ...loc })}>Edit</Button>
-                                            <Button size="xs" color="red" onClick={() => openDeleteConfirmModal('primary location', id, loc.campLocationName)}>Delete</Button>
+                                            <IconHome />
+                                            <Text fw={500}>{loc.campLocationName}</Text>
+                                            {campData.activeLocationId === id && <Badge color="green">Active</Badge>}
                                         </Group>
-                                    </Paper>
-                                )}
-                                <Paper p="sm" withBorder>
-                                    <Title order={5} mb="sm">Block Locations</Title>
-                                    {Object.entries(loc.secondaryLocations || {}).map(([blockId, block]: [string, any]) => (
-                                        <Paper key={blockId} p="xs" withBorder mb="xs">
-                                            <Group justify="space-between">
-                                                <Text>{block.name} ({block.latLong.latitude}, {block.latLong.longitude})</Text>
-                                                <Group gap="xs">
-                                                    {effectiveRole >= 4 && (
-                                                        <ActionIcon variant="subtle" onClick={() => handleOpenBlockModal(id, 'edit', { id: blockId, ...block })}>
-                                                            <IconPencil size={16} />
-                                                        </ActionIcon>
-                                                    )}
-                                                    {effectiveRole >= 5 && (
-                                                        <ActionIcon variant="subtle" color="red" onClick={() => openDeleteConfirmModal('block location', blockId, block.name, id)}>
-                                                            <IconTrash size={16} />
-                                                        </ActionIcon>
-                                                    )}
+                                    </Group>
+                                </Accordion.Control>
+                                <Accordion.Panel>
+                                    <Stack>
+                                        {effectiveRole >= 5 && (
+                                            <Paper p="sm" withBorder bg="gray.0" mb="md">
+                                                <Title order={5} mb="sm">Manage Primary Location</Title>
+                                                <Group>
+                                                    <Button size="xs" onClick={() => handleSetAsPrimary(id)} disabled={campData.activeLocationId === id}>Set as Active</Button>
+                                                    <Button size="xs" variant='outline' onClick={() => handleOpenPrimaryModal('edit', { id, ...loc })}>Edit</Button>
+                                                    <Button size="xs" color="red" onClick={() => openDeleteConfirmModal('primary location', id, loc.campLocationName)}>Delete</Button>
                                                 </Group>
+                                            </Paper>
+                                        )}
+
+                                        <Paper p="sm" withBorder mb="md">
+                                            <Title order={5} mb="sm">Calendar Configuration</Title>
+                                            <Group grow>
+                                                <DatePickerInput
+                                                    label="Camp Start Date"
+                                                    placeholder="Select start date"
+                                                    value={locationStartDate}
+                                                    onChange={setLocationStartDate}
+                                                />
+                                                <DatePickerInput
+                                                    label="Camp End Date"
+                                                    placeholder="Select end date"
+                                                    value={locationEndDate}
+                                                    onChange={setLocationEndDate}
+                                                />
+                                            </Group>
+                                            <NumberInput
+                                                label="Standard Shift Length"
+                                                placeholder="e.g., 3"
+                                                value={shiftLength}
+                                                onChange={setShiftLength}
+                                                min={1}
+                                                mt="sm"
+                                            />
+                                            <Group justify="flex-end" mt="md">
+                                                <Button onClick={() => handleGenerateCalendar(id)} leftSection={<IconCalendar size={16} />}>
+                                                    Generate Calendar
+                                                </Button>
                                             </Group>
                                         </Paper>
-                                    ))}
-                                    {effectiveRole >= 3 && (
-                                        <Button size="xs" mt="sm" onClick={() => handleOpenBlockModal(id, 'add')} leftSection={<IconPlus size={14} />}>Add New Block</Button>
-                                    )}
-                                </Paper>
-                            </Stack>
-                        </Accordion.Panel>
-                    </Accordion.Item>
-                ))}
-            </Accordion>
+
+                                        <Paper p="sm" withBorder>
+                                            <Title order={5} mb="sm">Block Locations</Title>
+                                            {Object.entries(loc.secondaryLocations || {}).map(([blockId, block]: [string, any]) => (
+                                                <Paper key={blockId} p="xs" withBorder mb="xs">
+                                                    <Group justify="space-between">
+                                                        <Text>{block.name} ({block.latLong.latitude}, {block.latLong.longitude})</Text>
+                                                        <Group gap="xs">
+                                                            {effectiveRole >= 4 && (
+                                                                <ActionIcon variant="subtle" onClick={() => handleOpenBlockModal(id, 'edit', { id: blockId, ...block })}>
+                                                                    <IconPencil size={16} />
+                                                                </ActionIcon>
+                                                            )}
+                                                            {effectiveRole >= 5 && (
+                                                                <ActionIcon variant="subtle" color="red" onClick={() => openDeleteConfirmModal('block location', blockId, block.name, id)}>
+                                                                    <IconTrash size={16} />
+                                                                </ActionIcon>
+                                                            )}
+                                                        </Group>
+                                                    </Group>
+                                                </Paper>
+                                            ))}
+                                            {effectiveRole >= 3 && (
+                                                <Button size="xs" mt="sm" onClick={() => handleOpenBlockModal(id, 'add')} leftSection={<IconPlus size={14} />}>Add New Block</Button>
+                                            )}
+                                        </Paper>
+                                    </Stack>
+                                </Accordion.Panel>
+                            </Accordion.Item>
+                        ))}
+                    </Accordion>
+                </Tabs.Panel>
+
+                <Tabs.Panel value="season" pt="xs">
+                    <Paper withBorder p="md" shadow="sm" mb="lg">
+                        <Title order={4} mb="md">Season Configuration</Title>
+                        <Group grow>
+                            <DatePickerInput
+                                label="Season Start Date"
+                                placeholder="Select start date"
+                                value={seasonStartDate}
+                                onChange={setSeasonStartDate}
+                            />
+                            <DatePickerInput
+                                label="Season End Date"
+                                placeholder="Select end date"
+                                value={seasonEndDate}
+                                onChange={setSeasonEndDate}
+                            />
+                        </Group>
+                        <Group justify="flex-end" mt="md">
+                            <Button onClick={handleSaveSeasonDates}>Save Season Dates</Button>
+                        </Group>
+                    </Paper>
+                </Tabs.Panel>
+
+                <Tabs.Panel value="vehicles" pt="xs">
+                    <Paper withBorder p="md" shadow="sm" mb="lg">
+                        <Group justify="space-between" align="center">
+                            <Title order={4}>Truck Management</Title>
+                            {effectiveRole >= 5 && (
+                                <Button onClick={() => handleOpenTruckModal('add')} leftSection={<IconPlus size={16} />}>
+                                    Add New Truck
+                                </Button>
+                            )}
+                        </Group>
+                        <Stack mt="md">
+                            {trucks.length === 0 ? (
+                                <Text c="dimmed">No trucks added yet.</Text>
+                            ) : (
+                                trucks.map((truck: any) => (
+                                    <Paper key={truck.id} p="xs" withBorder>
+                                        <Group justify="space-between">
+                                            <Text>{truck.name} (Capacity: {truck.capacity})</Text>
+                                            <Group gap="xs">
+                                                {effectiveRole >= 5 && (
+                                                    <ActionIcon variant="subtle" onClick={() => handleOpenTruckModal('edit', truck)}>
+                                                        <IconPencil size={16} />
+                                                    </ActionIcon>
+                                                )}
+                                                {effectiveRole >= 5 && (
+                                                    <ActionIcon variant="subtle" color="red" onClick={() => openDeleteConfirmModal('truck', truck.id, truck.name)}>
+                                                        <IconTrash size={16} />
+                                                    </ActionIcon>
+                                                )}
+                                            </Group>
+                                        </Group>
+                                    </Paper>
+                                ))
+                            )}
+                        </Stack>
+                    </Paper>
+                </Tabs.Panel>
+            </Tabs>
 
             <Modal opened={primaryModalOpened} onClose={closePrimaryModal} title={`${modalMode === 'add' ? 'Add' : 'Edit'} Primary Location`}>
                 <Stack>
@@ -292,12 +529,23 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
 
             <Modal opened={blockModalOpened} onClose={closeBlockModal} title={`${modalMode === 'add' ? 'Add' : 'Edit'} Block Location`}>
                 <Stack>
-                    <TextInput label="Block Name" placeholder="e.g., Block 101" value={locationName} onChange={(e) => setLocationName(e.target.value)} required />
+                    <TextInput label="Block Name" placeholder="e.g., Block 101" value={locationName} onChange={(e) => setLocationName(e.currentTarget.value)} required />
                     <NumberInput label="Latitude" placeholder="e.g., 53.916943" value={latitude} onChange={setLatitude} decimalScale={6} required />
                     <NumberInput label="Longitude" placeholder="e.g., -122.749443" value={longitude} onChange={setLongitude} decimalScale={6} required />
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" onClick={closeBlockModal}>Cancel</Button>
                         <Button onClick={handleBlockLocationSubmit}>Save</Button>
+                    </Group>
+                </Stack>
+            </Modal>
+
+            <Modal opened={truckModalOpened} onClose={closeTruckModal} title={`${modalMode === 'add' ? 'Add' : 'Edit'} Truck`}>
+                <Stack>
+                    <TextInput label="Truck Name" placeholder="e.g., Ford F-150" value={truckName} onChange={(e) => setTruckName(e.currentTarget.value)} required />
+                    <NumberInput label="Capacity" placeholder="e.g., 6" value={truckCapacity} onChange={setTruckCapacity} min={1} required />
+                    <Group justify="flex-end" mt="md">
+                        <Button variant="default" onClick={closeTruckModal}>Cancel</Button>
+                        <Button onClick={handleSaveTruck}>Save</Button>
                     </Group>
                 </Stack>
             </Modal>

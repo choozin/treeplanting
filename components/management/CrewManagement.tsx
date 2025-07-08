@@ -141,11 +141,14 @@ const CrewManagement = () => {
         const crewId = modalMode === 'add' && firebasePush(ref(database, `camps/${campID}/crews`)).key || editingCrew!.id;
         const crewRef = ref(database, `camps/${campID}/crews/${crewId}`);
 
+        // Ensure crew bosses are also considered members for assignment purposes
+        const allSelectedMembers = Array.from(new Set([...selectedMembers, ...selectedBosses]));
+
         const memberUpdates: Record<string, any> = {};
         usersInCamp.forEach(u => {
             if (campID) {
                 const isCurrentlyInCrew = u.assignedCamps?.[campID]?.crewId === crewId;
-                const shouldBeInCrew = selectedMembers.includes(u.id);
+                const shouldBeInCrew = allSelectedMembers.includes(u.id); // Use allSelectedMembers here
                 if (isCurrentlyInCrew && !shouldBeInCrew) {
                     memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = null;
                 } else if (!isCurrentlyInCrew && shouldBeInCrew) {
@@ -287,7 +290,7 @@ const CrewManagement = () => {
                     <Select
                         label="Crew Type"
                         placeholder="Select a crew type"
-                        data={['Planting', 'Kitchen', 'Health & Safety', 'Party Planning']}
+                        data={['Planting', 'Kitchen', 'Health & Safety', 'Party Planning', 'Drivers']}
                         value={crewType || ''}
                         onChange={(value) => setCrewType(value || '')}
                         clearable
