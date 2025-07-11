@@ -47,6 +47,7 @@ export default function Nav() {
         isComposeModalOpen,
         closeComposeModal,
         composeInitialState,
+        openFeedbackModal,
     } = useAuth();
     const { primary, preferences } = useWeather();
     const pathname = usePathname();
@@ -145,9 +146,24 @@ export default function Nav() {
     const mainLinks = MAIN_LINKS.map((item) => (
         <NavItem key={item.key} item={item} unreadCount={unreadCount} onNavigate={handleNavigation} />
     ));
-    const collectionLinks = ALL_COLLECTIONS.map((item) => (
-        <NavItem key={item.key} item={item} isCollectionLink={true} onNavigate={handleNavigation} />
-    ));
+    const collectionLinks = ALL_COLLECTIONS.map((item) => {
+        if (item.key === 'appFeedback') {
+            return (
+                <NavItem
+                    key={item.key}
+                    item={item}
+                    isCollectionLink={true}
+                    onNavigate={() => {
+                        openFeedbackModal();
+                        handleNavigation(); // Close the nav after opening modal
+                    }}
+                />
+            );
+        }
+        return (
+            <NavItem key={item.key} item={item} isCollectionLink={true} onNavigate={handleNavigation} />
+        );
+    });
 
     const overlayVariants = {
         hidden: { opacity: 0 },
@@ -211,7 +227,7 @@ export default function Nav() {
                             {!user ? (
                                 <AuthFlow setNavIsOpen={setNavIsOpen} />
                             ) : (
-                                <Box mt={40} style={{ width: '100%', maxWidth: '800px', margin: 'auto' }}> {/* Reverted mt to 40 */}
+                                <Box mt={0} style={{ width: '100%', maxWidth: '800px', margin: 'auto' }}>
                                     <div className={classes.navSection}>
                                         <CampSelector
                                             user={user}

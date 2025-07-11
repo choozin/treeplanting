@@ -10,6 +10,7 @@ import { theme } from '../theme';
 import WeatherProvider from '../context/WeatherProvider';
 import AuthProvider from '../context/AuthProvider';
 import Nav from '../components/navbar/Nav';
+import FeedbackModalWrapper from '../components/feedback/FeedbackModalWrapper';
 
 const nunito = Nunito({
   weight: ['400', '600', '700'],
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: any }) {
               <AuthProvider>
                 <Nav />
                 <main className="mainContent">{children}</main>
+                <FeedbackModalWrapper />
               </AuthProvider>
             </WeatherProvider>
           </ModalsProvider>

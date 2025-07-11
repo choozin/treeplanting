@@ -60,8 +60,7 @@
     /* Reverted: Original padding-top with navbar height and spacing */
     padding: var(--mantine-spacing-sm);
     /* Keep overall padding */
-    padding-top: calc(var(--navbar-height) + var(--mantine-spacing-sm));
-    /* Reverted padding-top */
+    
     overflow-y: auto;
 }
 

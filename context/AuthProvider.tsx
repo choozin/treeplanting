@@ -46,6 +46,9 @@ interface AuthContextType {
     openComposeModal: (initialState?: ComposeModalState) => void;
     closeComposeModal: () => void;
     composeInitialState: ComposeModalState | null;
+    isFeedbackModalOpen: boolean;
+    openFeedbackModal: () => void;
+    closeFeedbackModal: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -59,6 +62,8 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
     const [composeInitialState, setComposeInitialState] = useState<ComposeModalState | null>(null);
+
+    const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
     const fetchCurrentUserData = useCallback(async (currentUser: User | null) => {
         if (currentUser) {
@@ -105,6 +110,14 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const closeComposeModal = useCallback(() => {
         setIsComposeModalOpen(false);
         setComposeInitialState(null);
+    }, []);
+
+    const openFeedbackModal = useCallback(() => {
+        setIsFeedbackModalOpen(true);
+    }, []);
+
+    const closeFeedbackModal = useCallback(() => {
+        setIsFeedbackModalOpen(false);
     }, []);
 
     useEffect(() => {
@@ -155,7 +168,10 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         openComposeModal,
         closeComposeModal,
         composeInitialState,
-    }), [user, userData, campID, setCampID, refreshUserData, effectiveRole, loading, isComposeModalOpen, openComposeModal, closeComposeModal, composeInitialState]);
+        isFeedbackModalOpen,
+        openFeedbackModal,
+        closeFeedbackModal,
+    }), [user, userData, campID, setCampID, refreshUserData, effectiveRole, loading, isComposeModalOpen, openComposeModal, closeComposeModal, composeInitialState, isFeedbackModalOpen, openFeedbackModal, closeFeedbackModal]);
 
     return (
         <AuthContext.Provider value={value}>

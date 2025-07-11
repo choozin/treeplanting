@@ -14,7 +14,11 @@ const NavItem = ({ item, isCollectionLink = false, unreadCount, onNavigate }) =>
             event.preventDefault();
             return;
         }
-        onNavigate(); // Callback to close the navigation menu
+        // For appFeedback, we prevent default navigation and just trigger the modal
+        if (key === 'appFeedback') {
+            event.preventDefault();
+        }
+        onNavigate(); // Callback to close the navigation menu and/or open modal
     };
 
     const content = (

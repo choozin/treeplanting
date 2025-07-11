@@ -32,6 +32,7 @@ import {
 } from '@tabler/icons-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import CrewManagement from './CrewManagement';
+import AdminUserList from './AdminUserList';
 
 // --- TypeScript Interfaces ---
 interface AppUser {
@@ -61,7 +62,7 @@ interface EditedUserData {
 const getRoleName = (level: number) => ROLES[level as keyof typeof ROLES] || 'Unknown Role';
 
 // --- Main Component ---
-const UserManagement: FC<{ currentUser: FirebaseUser, campID: string | null, effectiveRole: number }> = ({ currentUser, campID, effectiveRole }) => {
+const UserManagement: FC<{ currentUser: FirebaseUser, campID: string | null, effectiveRole: number, globalRole: number }> = ({ currentUser, campID, effectiveRole, globalRole }) => {
     const [allUsers, setAllUsers] = useState<AppUser[]>([]);
     const [allCamps, setAllCamps] = useState<Record<string, Camp>>({});
     const [isLoading, setIsLoading] = useState(true);
@@ -183,6 +184,9 @@ const UserManagement: FC<{ currentUser: FirebaseUser, campID: string | null, eff
                 <Tabs.List>
                     <Tabs.Tab value="employees" leftSection={<IconUsers />}>Employees</Tabs.Tab>
                     <Tabs.Tab value="crew" leftSection={<IconUsersGroup />}>Crew</Tabs.Tab>
+                    {globalRole >= 9 && (
+                        <Tabs.Tab value="adminTools" leftSection={<IconUsers />}>Admin Tools</Tabs.Tab>
+                    )}
                 </Tabs.List>
 
                 <Tabs.Panel value="employees" pt="lg">
@@ -231,6 +235,12 @@ const UserManagement: FC<{ currentUser: FirebaseUser, campID: string | null, eff
                 <Tabs.Panel value="crew" pt="lg">
                     <CrewManagement />
                 </Tabs.Panel>
+
+                {globalRole >= 9 && (
+                    <Tabs.Panel value="adminTools" pt="lg">
+                        <AdminUserList allUsers={allUsers} allCamps={allCamps} />
+                    </Tabs.Panel>
+                )}
             </Tabs>
             
             <Modal opened={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title={`Edit ${selectedUser?.name}`}>

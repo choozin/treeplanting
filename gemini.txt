@@ -18,7 +18,7 @@ https://react.dev/link/hydration-mismatch
           <ReplaySsrOnlyErrors>
           <DevRootHTTPAccessFallbackBoundary>
             <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
-              <HTTPAccessFallbackErrorBoundary pathname="/dayOffRides" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <HTTPAccessFallbackErrorBoundary pathname="/campManag..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
                 <RedirectBoundary>
                   <RedirectErrorBoundary router={{...}}>
                     <Head>
@@ -31,33 +31,52 @@ https://react.dev/link/hydration-mismatch
                       >
                         <head>
                         <body
--                         data-new-gr-c-s-check-loaded="14.1110.0"
+-                         data-new-gr-c-s-check-loaded="14.1111.0"
 -                         data-gr-ext-installed=""
                         >
                     ...
         ...
 
 overrideMethod @ hook.js:608
-hook.js:608  Error saving edited ride: Error: update failed: values argument contains undefined in property 'camps.scooter.dayOffRides.-OUcii2bhpZUqFvli77W.expectedReturnTime'
-    at validateFirebaseData (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:10486:1)
-    at eval (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:10601:1)
-    at each (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:494:1)
-    at validateFirebaseMergeDataArg (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:10599:1)
-    at update (C:\Users\ctayl\projects\treeplanting\node_modules\@firebase\database\dist\index.esm2017.js:12807:1)
-    at handleSaveEditedRide (C:\Users\ctayl\projects\treeplanting\components\dayOffRides\DayOffRidesPage.tsx:359:19)
-    at executeDispatch (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:16501:1)
-    at runWithFiberInDEV (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:844:1)
-    at processDispatchQueue (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:16551:1)
-    at eval (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:17149:1)
-    at batchedUpdates$1 (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:3262:1)
-    at dispatchEventForPluginEventSystem (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:16705:1)
-    at dispatchEvent (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:20815:1)
-    at dispatchDiscreteEvent (C:\Users\ctayl\projects\treeplanting\node_modules\next\dist\compiled\react-dom\cjs\react-dom-client.development.js:20783:1)
-overrideMethod @ hook.js:608
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:127 Filtering camp users...
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:128 Current campID: scooter
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:129 All users for filtering: Array(0)
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:130 Current campData: null
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:135 Filtered camp users: Array(0)
+hook.js:377 Filtering camp users...
+hook.js:377 Current campID: scooter
+hook.js:377 All users for filtering: Array(0)
+hook.js:377 Current campData: null
+hook.js:377 Filtered camp users: Array(0)
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:127 Filtering camp users...
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:128 Current campID: scooter
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:129 All users for filtering: Array(0)
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:130 Current campData: Object
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:135 Filtered camp users: Array(0)
+hook.js:377 Filtering camp users...
+hook.js:377 Current campID: scooter
+hook.js:377 All users for filtering: Array(0)
+hook.js:377 Current campData: Object
+hook.js:377 Filtered camp users: Array(0)
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:108 Fetched all users: Array(16)
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:127 Filtering camp users...
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:128 Current campID: scooter
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:129 All users for filtering: Array(16)
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:130 Current campData: Object
+16C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:132 Comparing user.campName: 'undefined' with campData.campName: 'Scooter's Camp'
+C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:135 Filtered camp users: Array(0)
+hook.js:377 Filtering camp users...
+hook.js:377 Current campID: scooter
+hook.js:377 All users for filtering: Array(16)
+hook.js:377 Current campData: Object
+16hook.js:377 Comparing user.campName: 'undefined' with campData.campName: 'Scooter's Camp'
+hook.js:377 Filtered camp users: Array(0)
+campManagement:1  The resource http://localhost:3000/icons/icon-192x192.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
 [NEW] Explain Console errors by using Copilot in Edge: click
          
          to explain an error. 
         Learn more
         Don't show again
 C:\src\client\components\react-dev-overlay\app\hot-reloader-client.tsx:306 [Fast Refresh] rebuilding
-C:\src\client\components\react-dev-overlay\utils\report-hmr-latency.ts:26 [Fast Refresh] done in 229ms
+C:\src\client\components\react-dev-overlay\utils\report-hmr-latency.ts:26 [Fast Refresh] done in 845ms
+campManagement:1  The resource http://localhost:3000/icons/icon-192x192.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.

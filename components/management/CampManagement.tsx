@@ -26,7 +26,8 @@ import {
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useModals } from '@mantine/modals';
-import { IconHome, IconMapPin, IconPlus, IconPencil, IconTrash, IconChevronDown, IconCheck, IconAlertCircle, IconCalendar, IconTruck } from '@tabler/icons-react';
+import { IconHome, IconMapPin, IconPlus, IconPencil, IconTrash, IconChevronDown, IconCheck, IconAlertCircle, IconCalendar, IconTruck, IconUserMinus } from '@tabler/icons-react';
+import { ROLES } from '../../lib/constants'; // Import ROLES
 
 interface CampManagementProps {
   campID: string | null;
@@ -37,6 +38,8 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     const [campData, setCampData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [allUsers, setAllUsers] = useState<any[]>([]); // State to store all users
+    const [campUserUids, setCampUserUids] = useState<Set<string>>(new Set()); // State to store UIDs of users in the current camp
 
     const currentYear = new Date().getFullYear();
     const [selectedYear, setSelectedYear] = useState(String(currentYear));
@@ -74,7 +77,9 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         }
 
         const campRef = ref(database, `camps/${campID}`);
-        const unsubscribe = onValue(campRef, (snapshot) => {
+        const usersInCampRef = ref(database, `camps/${campID}/users`);
+
+        const unsubscribeCamp = onValue(campRef, (snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.val();
                 setCampData(data);
@@ -92,14 +97,79 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
             console.error(err);
         });
 
-        return () => unsubscribe();
+        const unsubscribeUsersInCamp = onValue(usersInCampRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const uids = Object.keys(snapshot.val());
+                setCampUserUids(new Set(uids));
+            } else {
+                setCampUserUids(new Set());
+            }
+        }, (err: any) => {
+            console.error("Error fetching users in camp:", err);
+        });
+
+        return () => {
+            unsubscribeCamp();
+            unsubscribeUsersInCamp();
+        };
     }, [campID]);
+
+    // Fetch all users
+    useEffect(() => {
+        const usersRef = ref(database, 'users');
+        const unsubscribe = onValue(usersRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const usersData = snapshot.val();
+                const usersList = Object.entries(usersData).map(([uid, data]) => ({ uid, ...data }));
+                setAllUsers(usersList);
+                console.log("Fetched all users:", usersList); // Debug log
+            } else {
+                setAllUsers([]);
+                console.log("No users found in database."); // Debug log
+            }
+        }, (err: any) => {
+            console.error("Error fetching users:", err);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const availableYears = useMemo(() => {
         const years = new Set(campData?.campLocations ? Object.keys(campData.campLocations) : []);
         years.add(String(currentYear));
         return Array.from(years).sort((a, b) => b.localeCompare(a));
     }, [campData, currentYear]);
+
+    const campUsers = useMemo(() => {
+        const filteredUsers = allUsers.filter(user => campUserUids.has(user.uid));
+        return filteredUsers;
+    }, [allUsers, campUserUids]);
+
+    const handleRemoveUserFromCamp = (userUid: string, userName: string) => {
+        modals.openConfirmModal({
+            title: `Remove ${userName} from Camp`,
+            centered: true,
+            children: (
+                <Text size="sm">
+                    Are you sure you want to remove {userName} from this camp? This will remove this camp from their assigned camps.
+                </Text>
+            ),
+            labels: { confirm: 'Remove', cancel: "Cancel" },
+            confirmProps: { color: 'red' },
+            onConfirm: async () => {
+                try {
+                    // Remove the specific camp from the user's assignedCamps
+                    await remove(ref(database, `users/${userUid}/assignedCamps/${campID}`));
+                    // Remove the user from the camp's list of users
+                    await remove(ref(database, `camps/${campID}/users/${userUid}`));
+                    alert(`${userName} has been removed from this camp's assigned camps.`);
+                } catch (e) {
+                    console.error("Failed to remove user from camp:", e);
+                    alert(`Failed to remove ${userName} from camp.`);
+                }
+            },
+        });
+    };
 
     // --- Handlers for Primary Locations ---
     const handleOpenPrimaryModal = (mode: string, location: any = null) => {
@@ -346,6 +416,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
                     <Tabs.Tab value="locations">Camp Locations</Tabs.Tab>
                     <Tabs.Tab value="season">Season</Tabs.Tab>
                     <Tabs.Tab value="vehicles">Vehicles</Tabs.Tab>
+                    <Tabs.Tab value="users">Camp Members</Tabs.Tab>
                 </Tabs.List>
 
                 <Tabs.Panel value="locations" pt="xs">
@@ -506,6 +577,35 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
                                                     </ActionIcon>
                                                 )}
                                             </Group>
+                                        </Group>
+                                    </Paper>
+                                ))
+                            )}
+                        </Stack>
+                    </Paper>
+                </Tabs.Panel>
+
+                <Tabs.Panel value="users" pt="xs">
+                    <Paper withBorder p="md" shadow="sm" mb="lg">
+                        <Title order={4} mb="md">Users in this Camp</Title>
+                        <Stack mt="md">
+                            {campUsers.length === 0 ? (
+                                <Text c="dimmed">No users assigned to this camp.</Text>
+                            ) : (
+                                campUsers.map((user: any) => (
+                                    <Paper key={user.uid} p="xs" withBorder>
+                                        <Group justify="space-between">
+                                            <Text>{user.name || user.email} ({ROLES[user.assignedCamps?.[campID]?.role]})</Text>
+                                            {effectiveRole >= 5 && (
+                                                <Button
+                                                    size="xs"
+                                                    color="red"
+                                                    leftSection={<IconUserMinus size={14} />}
+                                                    onClick={() => handleRemoveUserFromCamp(user.uid, user.name || user.email)}
+                                                >
+                                                    Remove from Camp
+                                                </Button>
+                                            )}
                                         </Group>
                                     </Paper>
                                 ))
