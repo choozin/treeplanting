@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Stepper, Button, Group, Textarea, Radio, Text, TextInput, Select } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -32,8 +32,8 @@ const AppFeedbackModal: React.FC<AppFeedbackModalProps> = ({ opened, onClose }) 
             newFeatureIdea: '',
             helpNeeded: '',
             pageUrl: pathname,
-            browserInfo: navigator.userAgent,
-            screenResolution: `${window.screen.width}x${window.screen.height}`,
+            browserInfo: '',
+            screenResolution: '',
         },
         validate: (values) => {
             if (active === 0) {
@@ -42,12 +42,19 @@ const AppFeedbackModal: React.FC<AppFeedbackModalProps> = ({ opened, onClose }) 
             }
             if (active === 1) {
                 if (feedbackType === 'bug' && !values.description) return { description: 'Please describe the bug' };
-                if (feedbackType === 'newIdea' && !values.newFeatureIdea) return { newFeatureIdea: 'Please describe your idea' };
+                if (feedbackType !== 'newIdea' && !values.newFeatureIdea) return { newFeatureIdea: 'Please describe your idea' };
                 if (feedbackType === 'help' && !values.helpNeeded) return { helpNeeded: 'Please describe what help you need' };
             }
             return {};
         },
     });
+
+    useEffect(() => {
+        form.setValues({
+            browserInfo: navigator.userAgent,
+            screenResolution: `${window.screen.width}x${window.screen.height}`,
+        });
+    }, []);
 
     const nextStep = () => setActive((current) => {
         if (form.validate().hasErrors) {

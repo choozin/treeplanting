@@ -14,7 +14,8 @@ import {
     Center,
     Paper,
     Title,
-    Stack
+    Stack,
+    Alert
 } from '@mantine/core';
 import { IconPlus, IconMusicOff } from '@tabler/icons-react';
 import FilterBar from './FilterBar';
@@ -112,7 +113,18 @@ const MusicShare = () => {
     }
 
     return (
-        <Container size="lg" pt="md">
+        <>
+            <Alert
+                variant="light"
+                color="blue"
+                title="Important Note"
+                icon={<IconMusicOff size="1rem" />}
+                mb="md"
+                style={{ margin: '20px' }}
+            >
+                This feature isn't working properly right now, I'll try to have it up and running next shift. If you have any ideas for music-related functions in this app please click "App Feedback" from the navigation menu and let me know!
+            </Alert>
+            <Container size="lg" pt="md">
             <AppShell
                 header={{ height: 'auto' }}
                 padding="md"
@@ -174,7 +186,8 @@ const MusicShare = () => {
                 crewId={userCrewId}
             />
         </Container>
-    );
+    </>
+);
 };
 
 export default MusicShare;

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Container, Title, Paper } from '@mantine/core';
+import { Container, Title, Paper, Alert } from '@mantine/core';
 import WidgetSettings from './WidgetSettings';
 import NotificationSettings from './NotificationSettings';
 
@@ -12,6 +12,14 @@ const SettingsPage = () => {
         <Title order={2} ta="center" mb="xl">
           App Settings
         </Title>
+        <Alert
+          variant="light"
+          color="blue"
+          title="Work in Progress"
+          mb="xl"
+        >
+          These features aren't fully working yet, but they're coming soon.
+        </Alert>
         <WidgetSettings />
         <NotificationSettings />
       </Paper>
