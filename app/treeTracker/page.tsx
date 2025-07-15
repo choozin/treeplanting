@@ -9,14 +9,14 @@ import { ref, onValue, push, update, remove, query, orderByChild, startAt, endAt
 import { notifications } from '@mantine/notifications';
 
 interface PartialTreeEntry {
-  id: string;
-  date: string;
+  id?: string; // Made optional
+  date?: string; // Made optional
   species: string;
   stickerCode: string;
   payRate: number;
   numTrees: number;
-  note?: string; // Optional property, used when claiming partials
-  timestamp?: string; // Optional property, used when creating partials
+  note?: string;
+  timestamp?: string;
 }
 
 const TreeTrackerPage = () => {
@@ -135,7 +135,7 @@ const TreeTrackerPage = () => {
       species,
       stickerCode,
       payRate,
-      numTrees: Number(numTrees), // Ensure numTrees is a number
+      numTrees: Number(numTrees),
       timestamp: new Date().toISOString(),
     };
 
@@ -219,7 +219,7 @@ const TreeTrackerPage = () => {
         <DatePickerInput
           label="Date"
           value={date}
-          onChange={(d) => setDate(d || new Date())} // Handle null case for DatePickerInput
+          onChange={(d) => setDate(d || new Date())}
         />
         <TextInput
           label="Species"
@@ -236,7 +236,7 @@ const TreeTrackerPage = () => {
         <NumberInput
           label="Pay Rate"
           value={payRate}
-          onChange={(val) => setPayRate(val as number)} // Cast to number for NumberInput onChange
+          onChange={(val) => setPayRate(val as number)}
           precision={2}
           step={0.01}
         />
@@ -244,7 +244,7 @@ const TreeTrackerPage = () => {
           label="Number of Trees Planted"
           placeholder="e.g. 2500"
           value={numTrees}
-          onChange={(val) => setNumTrees(val as number)} // Cast to number for NumberInput onChange
+          onChange={(val) => setNumTrees(val as number)}
         />
         <Group mt="md">
           <Button onClick={() => handleSubmit(false)}>Submit Planted Tree Numbers</Button>
