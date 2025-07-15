@@ -8,6 +8,17 @@ import { database } from '../../firebase/firebase';
 import { ref, onValue, push, update, remove, query, orderByChild, startAt, endAt } from 'firebase/database';
 import { notifications } from '@mantine/notifications';
 
+interface PartialTreeEntry {
+  id: string;
+  date: string;
+  species: string;
+  stickerCode: string;
+  payRate: number;
+  numTrees: number;
+  note?: string; // Optional property, used when claiming partials
+  timestamp?: string; // Optional property, used when creating partials
+}
+
 const TreeTrackerPage = () => {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -15,17 +26,17 @@ const TreeTrackerPage = () => {
   const [species, setSpecies] = useState('');
   const [stickerCode, setStickerCode] = useState('');
   const [payRate, setPayRate] = useState(0.15);
-  const [numTrees, setNumTrees] = useState('');
-  const [unclaimedPartials, setUnclaimedPartials] = useState([]);
-  const [claimingPartial, setClaimingPartial] = useState(null);
-  const [dailyEntries, setDailyEntries] = useState([]);
+  const [numTrees, setNumTrees] = useState<string | number>('');
+  const [unclaimedPartials, setUnclaimedPartials] = useState<PartialTreeEntry[]>([]);
+  const [claimingPartial, setClaimingPartial] = useState<PartialTreeEntry | null>(null);
+  const [dailyEntries, setDailyEntries] = useState<any[]>([]);
   const [summaryDateRange, setSummaryDateRange] = useState<[Date | null, Date | null]>([
     new Date(new Date().getFullYear(), 0, 1),
     new Date(),
   ]);
-  const [summaryData, setSummaryData] = useState([]);
-  const [sortKey, setSortKey] = useState(null);
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [summaryData, setSummaryData] = useState<any[]>([]);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     if (user) {
@@ -35,7 +46,7 @@ const TreeTrackerPage = () => {
       const userCalendarRef = ref(database, `Users/${user.uid}/calendar`);
       onValue(userCalendarRef, (snapshot) => {
         const calendarData = snapshot.val();
-        const partials = [];
+        const partials: PartialTreeEntry[] = [];
         if (calendarData) {
           Object.keys(calendarData).forEach(dateStr => {
             const entryDate = new Date(dateStr);
@@ -59,7 +70,7 @@ const TreeTrackerPage = () => {
       const dateString = date.toISOString().split('T')[0];
       const dailyEntriesRef = ref(database, `Users/${user.uid}/calendar/${dateString}/treeTracking/entries`);
       onValue(dailyEntriesRef, (snapshot) => {
-        const entries = [];
+        const entries: any[] = [];
         if (snapshot.exists()) {
           snapshot.forEach(childSnapshot => {
             entries.push({ id: childSnapshot.key, ...childSnapshot.val() });
@@ -79,7 +90,7 @@ const TreeTrackerPage = () => {
       const userCalendarRef = ref(database, `Users/${user.uid}/calendar`);
 
       onValue(userCalendarRef, (snapshot) => {
-        const data = [];
+        const data: any[] = [];
         if (snapshot.exists()) {
           snapshot.forEach(dateSnapshot => {
             const dateStr = dateSnapshot.key;
@@ -101,7 +112,7 @@ const TreeTrackerPage = () => {
     }
   }, [user, summaryDateRange]);
 
-  const handleClaimPartial = (partial) => {
+  const handleClaimPartial = (partial: PartialTreeEntry) => {
     setClaimingPartial(partial);
     setDate(new Date()); // Default to today for the new entry
     setSpecies(partial.species || '');
@@ -110,7 +121,7 @@ const TreeTrackerPage = () => {
     setNumTrees(partial.numTrees || '');
   };
 
-  const handleSubmit = (isPartial) => {
+  const handleSubmit = (isPartial: boolean) => {
     if (!user) {
       notifications.show({ title: 'Error', message: 'You must be logged in to submit data.', color: 'red' });
       return;
@@ -120,11 +131,11 @@ const TreeTrackerPage = () => {
     const path = isPartial ? `Users/${user.uid}/calendar/${dateString}/treeTracking/partials` : `Users/${user.uid}/calendar/${dateString}/treeTracking/entries`;
     const entryRef = ref(database, path);
 
-    const entryData = {
+    const entryData: PartialTreeEntry = {
       species,
       stickerCode,
       payRate,
-      numTrees,
+      numTrees: Number(numTrees), // Ensure numTrees is a number
       timestamp: new Date().toISOString(),
     };
 
@@ -149,7 +160,7 @@ const TreeTrackerPage = () => {
     });
 
     if (isPartial) {
-        setIsModalOpen(false);
+      setIsModalOpen(false);
     }
   };
 
@@ -165,7 +176,7 @@ const TreeTrackerPage = () => {
     return 0;
   });
 
-  const handleSort = (key) => {
+  const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -174,8 +185,8 @@ const TreeTrackerPage = () => {
     }
   };
 
-  const Th = ({ children, sorted, reversed, onSort }) => (
-    <th >
+  const Th = ({ children, sorted, reversed, onSort }: { children: React.ReactNode, sorted: boolean, reversed: boolean, onSort: () => void }) => (
+    <th>
       <UnstyledButton onClick={onSort} >
         <Group justify="space-between">
           <Text fw={500} fz="sm">{children}</Text>
@@ -208,7 +219,7 @@ const TreeTrackerPage = () => {
         <DatePickerInput
           label="Date"
           value={date}
-          onChange={setDate}
+          onChange={(d) => setDate(d || new Date())} // Handle null case for DatePickerInput
         />
         <TextInput
           label="Species"
@@ -225,7 +236,7 @@ const TreeTrackerPage = () => {
         <NumberInput
           label="Pay Rate"
           value={payRate}
-          onChange={setPayRate}
+          onChange={(val) => setPayRate(val as number)} // Cast to number for NumberInput onChange
           precision={2}
           step={0.01}
         />
@@ -233,7 +244,7 @@ const TreeTrackerPage = () => {
           label="Number of Trees Planted"
           placeholder="e.g. 2500"
           value={numTrees}
-          onChange={setNumTrees}
+          onChange={(val) => setNumTrees(val as number)} // Cast to number for NumberInput onChange
         />
         <Group mt="md">
           <Button onClick={() => handleSubmit(false)}>Submit Planted Tree Numbers</Button>
@@ -272,40 +283,40 @@ const TreeTrackerPage = () => {
 
       <Tabs.Panel value="summaries">
         <Group>
-            <DatePickerInput
-                label="From"
-                value={summaryDateRange[0]}
-                onChange={(d) => setSummaryDateRange([d, summaryDateRange[1]])}
-            />
-            <DatePickerInput
-                label="Until"
-                value={summaryDateRange[1]}
-                onChange={(d) => setSummaryDateRange([summaryDateRange[0], d])}
-            />
+          <DatePickerInput
+            label="From"
+            value={summaryDateRange[0]}
+            onChange={(d) => setSummaryDateRange([d, summaryDateRange[1]])}
+          />
+          <DatePickerInput
+            label="Until"
+            value={summaryDateRange[1]}
+            onChange={(d) => setSummaryDateRange([summaryDateRange[0], d])}
+          />
         </Group>
         <Table mt="md">
-            <thead>
-                <tr>
-                    <Th sorted={sortKey === 'date'} reversed={sortOrder === 'desc'} onSort={() => handleSort('date')}>Date</Th>
-                    <Th sorted={sortKey === 'species'} reversed={sortOrder === 'desc'} onSort={() => handleSort('species')}>Species</Th>
-                    <Th sorted={sortKey === 'stickerCode'} reversed={sortOrder === 'desc'} onSort={() => handleSort('stickerCode')}>Sticker Code</Th>
-                    <Th sorted={sortKey === 'payRate'} reversed={sortOrder === 'desc'} onSort={() => handleSort('payRate')}>Pay Rate</Th>
-                    <th>Number of Trees</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {sortedSummaryData.map(entry => (
-                    <tr key={entry.id}>
-                        <td>{entry.date}</td>
-                        <td>{entry.species}</td>
-                        <td>{entry.stickerCode}</td>
-                        <td>${entry.payRate.toFixed(2)}</td>
-                        <td>{entry.numTrees}</td>
-                        <td>${(entry.numTrees * entry.payRate).toFixed(2)}</td>
-                    </tr>
-                ))}
-            </tbody>
+          <thead>
+            <tr>
+              <Th sorted={sortKey === 'date'} reversed={sortOrder === 'desc'} onSort={() => handleSort('date')}>Date</Th>
+              <Th sorted={sortKey === 'species'} reversed={sortOrder === 'desc'} onSort={() => handleSort('species')}>Species</Th>
+              <Th sorted={sortKey === 'stickerCode'} reversed={sortOrder === 'desc'} onSort={() => handleSort('stickerCode')}>Sticker Code</Th>
+              <Th sorted={sortKey === 'payRate'} reversed={sortOrder === 'desc'} onSort={() => handleSort('payRate')}>Pay Rate</Th>
+              <th>Number of Trees</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedSummaryData.map(entry => (
+              <tr key={entry.id}>
+                <td>{entry.date}</td>
+                <td>{entry.species}</td>
+                <td>{entry.stickerCode}</td>
+                <td>${entry.payRate.toFixed(2)}</td>
+                <td>{entry.numTrees}</td>
+                <td>${(entry.numTrees * entry.payRate).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
         </Table>
         <Group mt="md">
           <Text>Total Trees: {summaryData.reduce((acc, entry) => acc + Number(entry.numTrees), 0)}</Text>
