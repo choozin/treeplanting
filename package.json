@@ -30,6 +30,7 @@
     "@next/bundle-analyzer": "^15.1.5",
     "@tabler/icons": "^3.31.0",
     "@tabler/icons-react": "^3.31.0",
+    "date-fns": "^4.1.0",
     "firebase": "^11.4.0",
     "firebase-admin": "^13.4.0",
     "framer-motion": "^12.15.0",
