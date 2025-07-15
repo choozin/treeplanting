@@ -55,7 +55,13 @@ interface Camp {
   isActive: boolean;
 }
 
-const DayOffRidesPage = () => {
+// Define the props interface for DayOffRidesPage
+interface DayOffRidesPageProps {
+  campID: string | null;
+  effectiveRole: number;
+}
+
+const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<string | null>('ride-offers');
   const [offerModalOpen, setOfferModalOpen] = useState(false);
@@ -707,7 +713,6 @@ const DayOffRidesPage = () => {
             placeholder="Select time"
             value={departureTime}
             onChange={(event) => setDepartureTime(event.currentTarget.value)}
-            // Removed icon prop
             required
           />
           <Select
@@ -779,7 +784,6 @@ const DayOffRidesPage = () => {
             placeholder="Select time"
             value={requestDepartureTime}
             onChange={(event) => setRequestDepartureTime(event.currentTarget.value)}
-            // Removed icon prop
             required
           />
           <Select
