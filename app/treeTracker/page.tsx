@@ -9,8 +9,8 @@ import { ref, onValue, push, update, remove, query, orderByChild, startAt, endAt
 import { notifications } from '@mantine/notifications';
 
 interface PartialTreeEntry {
-  id?: string; // Made optional
-  date?: string; // Made optional
+  id?: string;
+  date?: string;
   species: string;
   stickerCode: string;
   payRate: number;
@@ -237,8 +237,7 @@ const TreeTrackerPage = () => {
           label="Pay Rate"
           value={payRate}
           onChange={(val) => setPayRate(val as number)}
-          precision={2}
-          step={0.01}
+        // Removed precision and step props due to Mantine update
         />
         <NumberInput
           label="Number of Trees Planted"
