@@ -45,7 +45,7 @@ interface AppUser {
     name: string;
     email: string;
     role: number;
-    assignedCamps?: Record<string, { campName: string; role: number; crewId?: string; }>;
+    assignedCamps?: Record<string, { campName: string; role: number; crewId?: string | string[]; }>;
 }
 
 // --- Main Component ---
@@ -88,6 +88,7 @@ const CrewManagement = () => {
             const usersData = snapshot.val() || {};
             const usersArray = Object.keys(usersData).map(id => ({ id, ...usersData[id] }));
             setUsers(usersArray);
+            console.log("CrewManagement - users:", usersArray);
         }));
         
         setIsLoading(false);
@@ -97,7 +98,9 @@ const CrewManagement = () => {
 
     const usersInCamp = useMemo(() => {
         if (!campID) return [];
-        return users.filter(u => u.assignedCamps && u.assignedCamps[campID]);
+        const filteredUsers = users.filter(u => u.assignedCamps && u.assignedCamps[campID]);
+        console.log("CrewManagement - usersInCamp:", filteredUsers);
+        return filteredUsers;
     }, [users, campID]);
 
     const getUserName = (userId: string) => users.find(u => u.id === userId)?.name || 'Unknown User';
@@ -110,7 +113,12 @@ const CrewManagement = () => {
             setCrewType(crew.crewType || '');
             setSelectedBosses(crew.crewBosses ? Object.keys(crew.crewBosses) : []);
             if (campID) {
-                setSelectedMembers(usersInCamp.filter(u => u.assignedCamps?.[campID]?.crewId === crew.id).map(u => u.id));
+                setSelectedMembers(usersInCamp.filter(u => {
+                    const userCrewIds = Array.isArray(u.assignedCamps?.[campID]?.crewId)
+                        ? u.assignedCamps[campID].crewId
+                        : (u.assignedCamps?.[campID]?.crewId ? [u.assignedCamps[campID].crewId] : []);
+                    return userCrewIds.includes(crew.id);
+                }).map(u => u.id));
             }
         } else {
             setEditingCrew(null);
@@ -145,17 +153,36 @@ const CrewManagement = () => {
         const allSelectedMembers = Array.from(new Set([...selectedMembers, ...selectedBosses]));
 
         const memberUpdates: Record<string, any> = {};
-        usersInCamp.forEach(u => {
+        for (const u of usersInCamp) {
             if (campID) {
-                const isCurrentlyInCrew = u.assignedCamps?.[campID]?.crewId === crewId;
-                const shouldBeInCrew = allSelectedMembers.includes(u.id); // Use allSelectedMembers here
-                if (isCurrentlyInCrew && !shouldBeInCrew) {
+                // Fetch the latest user data to avoid stale state issues
+                const userSnapshot = await get(ref(database, `users/${u.id}/assignedCamps/${campID}`));
+                const userCampData = userSnapshot.val();
+
+                const userCurrentCrewIds = Array.isArray(userCampData?.crewId)
+                    ? userCampData.crewId
+                    : (userCampData?.crewId ? [userCampData.crewId] : []);
+
+                const shouldBeInCrew = allSelectedMembers.includes(u.id);
+                const isCurrentlyInThisCrew = userCurrentCrewIds.includes(crewId);
+
+                let newCrewIds = [...userCurrentCrewIds];
+
+                if (shouldBeInCrew && !isCurrentlyInThisCrew) {
+                    // Add to crew
+                    newCrewIds.push(crewId);
+                } else if (!shouldBeInCrew && isCurrentlyInThisCrew) {
+                    // Remove from crew
+                    newCrewIds = newCrewIds.filter(id => id !== crewId);
+                }
+
+                if (newCrewIds.length > 0) {
+                    memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = newCrewIds;
+                } else {
                     memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = null;
-                } else if (!isCurrentlyInCrew && shouldBeInCrew) {
-                    memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = crewId;
                 }
             }
-        });
+        }
 
         try {
             await set(crewRef, crewData);
@@ -186,11 +213,25 @@ const CrewManagement = () => {
                  try {
                     await remove(ref(database, `camps/${campID}/crews/${crew.id}`));
                     const memberUpdates: Record<string, any> = {};
-                    usersInCamp.forEach(u => {
-                        if(u.assignedCamps?.[campID]?.crewId === crew.id) {
-                            memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = null;
+                    for (const u of usersInCamp) {
+                        if (campID) {
+                            // Fetch the latest user data to avoid stale state issues
+                            const userSnapshot = await get(ref(database, `users/${u.id}/assignedCamps/${campID}`));
+                            const userCampData = userSnapshot.val();
+
+                            const userCurrentCrewIds = Array.isArray(userCampData?.crewId)
+                                ? userCampData.crewId
+                                : (userCampData?.crewId ? [userCampData.crewId] : []);
+
+                            const newCrewIds = userCurrentCrewIds.filter(id => id !== crew.id);
+
+                            if (newCrewIds.length > 0) {
+                                memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = newCrewIds;
+                            } else {
+                                memberUpdates[`users/${u.id}/assignedCamps/${campID}/crewId`] = null;
+                            }
                         }
-                    });
+                    }
                     if (Object.keys(memberUpdates).length > 0) {
                         await update(ref(database), memberUpdates);
                     }
@@ -225,7 +266,15 @@ const CrewManagement = () => {
             <Accordion>
                 {crews.map((crew) => {
                     const crewBosses = crew.crewBosses ? Object.keys(crew.crewBosses) : [];
-                    const crewMembers = usersInCamp.filter(u => campID && u.assignedCamps?.[campID]?.crewId === crew.id);
+                    const crewMembers = usersInCamp.filter(u => {
+                        if (!campID || !u.assignedCamps?.[campID]) return false;
+                        const userCrewIds = Array.isArray(u.assignedCamps[campID].crewId)
+                            ? u.assignedCamps[campID].crewId
+                            : (u.assignedCamps[campID].crewId ? [u.assignedCamps[campID].crewId] : []);
+                        return userCrewIds.includes(crew.id);
+                    });
+                    console.log(`Crew ${crew.crewName} - crewBosses:`, crewBosses);
+                    console.log(`Crew ${crew.crewName} - crewMembers:`, crewMembers);
                     const isUserCrewBoss = crewBosses.includes(user?.uid || '');
 
                     return (

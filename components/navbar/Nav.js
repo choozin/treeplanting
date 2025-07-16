@@ -56,6 +56,7 @@ export default function Nav() {
     const [widgetsOpen, setWidgetsOpen] = useState(false);
 
     const [unreadCount, setUnreadCount] = useState(0);
+    const [crews, setCrews] = useState([]);
 
     useEffect(() => {
         if (user === null) {
@@ -80,8 +81,21 @@ export default function Nav() {
             setUnreadCount(unreadMessages.length);
         });
 
-        return () => unsubscribe();
-    }, [user]);
+        let unsubscribeCrews = null;
+        if (campID) {
+            const crewsRef = ref(database, `camps/${campID}/crews`);
+            unsubscribeCrews = onValue(crewsRef, (snapshot) => {
+                const crewsVal = snapshot.val();
+                const loadedCrews = crewsVal ? Object.keys(crewsVal).map(key => ({ id: key, ...crewsVal[key] })) : [];
+                setCrews(loadedCrews);
+            });
+        }
+
+        return () => {
+            unsubscribe();
+            if (unsubscribeCrews) unsubscribeCrews();
+        };
+    }, [user, campID]);
 
     const confirmLogout = async () => {
         if (user) Cookies.remove(`campID_${user.uid}`);
@@ -235,6 +249,7 @@ export default function Nav() {
                                             campID={campID}
                                             onCampSelect={setCampID}
                                             effectiveRole={effectiveRole}
+                                            crews={crews}
                                         />
                                     </div>
 

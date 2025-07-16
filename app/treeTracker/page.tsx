@@ -43,7 +43,7 @@ const TreeTrackerPage = () => {
       const fourWeeksAgo = new Date();
       fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
-      const userCalendarRef = ref(database, `Users/${user.uid}/calendar`);
+      const userCalendarRef = ref(database, `users/${user.uid}/calendar`);
       onValue(userCalendarRef, (snapshot) => {
         const calendarData = snapshot.val();
         const partials: PartialTreeEntry[] = [];
@@ -68,7 +68,7 @@ const TreeTrackerPage = () => {
   useEffect(() => {
     if (user && date) {
       const dateString = date.toISOString().split('T')[0];
-      const dailyEntriesRef = ref(database, `Users/${user.uid}/calendar/${dateString}/treeTracking/entries`);
+      const dailyEntriesRef = ref(database, `users/${user.uid}/calendar/${dateString}/treeTracking/entries`);
       onValue(dailyEntriesRef, (snapshot) => {
         const entries: any[] = [];
         if (snapshot.exists()) {
@@ -87,7 +87,7 @@ const TreeTrackerPage = () => {
       const endDate = summaryDateRange[1];
       endDate.setHours(23, 59, 59, 999); // Include the entire end day
 
-      const userCalendarRef = ref(database, `Users/${user.uid}/calendar`);
+      const userCalendarRef = ref(database, `users/${user.uid}/calendar`);
 
       onValue(userCalendarRef, (snapshot) => {
         const data: any[] = [];
@@ -128,7 +128,7 @@ const TreeTrackerPage = () => {
     }
 
     const dateString = date.toISOString().split('T')[0];
-    const path = isPartial ? `Users/${user.uid}/calendar/${dateString}/treeTracking/partials` : `Users/${user.uid}/calendar/${dateString}/treeTracking/entries`;
+        const path = isPartial ? `users/${user.uid}/calendar/${dateString}/treeTracking/partials` : `users/${user.uid}/calendar/${dateString}/treeTracking/entries`;
     const entryRef = ref(database, path);
 
     const entryData: PartialTreeEntry = {
@@ -145,7 +145,7 @@ const TreeTrackerPage = () => {
 
     push(entryRef, entryData).then(() => {
       if (claimingPartial) {
-        const oldPartialRef = ref(database, `Users/${user.uid}/calendar/${claimingPartial.date}/treeTracking/partials/${claimingPartial.id}`);
+        const oldPartialRef = ref(database, `users/${user.uid}/calendar/${claimingPartial.date}/treeTracking/partials/${claimingPartial.id}`);
         remove(oldPartialRef);
         setClaimingPartial(null);
       }

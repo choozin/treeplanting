@@ -1,15 +1,16 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Button, Group, Box, Select, TextInput, Textarea, Tooltip, Stack, Radio, NumberInput, Alert, Text, Accordion, Checkbox, Divider, Card, Title, Badge } from '@mantine/core';
+import { Button, Group, Box, Select, TextInput, Textarea, Tooltip, Stack, Radio, NumberInput, Alert, Text, Accordion, Checkbox, Divider, Card, Title, Badge, Modal, Tabs } from '@mantine/core';
 import { TimeInput, DatePickerInput } from '@mantine/dates';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../firebase/firebase';
 import { ref, onValue, push, update, remove, query, orderByChild, startAt, endAt, get } from 'firebase/database';
 import { IconTrash, IconPencil, IconCheck, IconX, IconClock, IconMapPin, IconCalendar, IconUser, IconCar, IconInfoCircle, IconCurrencyDollar, IconBus, IconUsers, IconNotes, IconBolt, IconPhone, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import CustomDayOffDatePicker from '../../components/dayOffRidePlanning/CustomDayOffDatePicker'; // Changed to default import
+import { ROLES } from '../../lib/constants';
+
 import { isWithinInterval, startOfDay, endOfDay, formatISO, parseISO, addDays, subDays } from 'date-fns';
-import { DateInput } from '@mantine/dates';
+
 
 
 interface RideOffer {
@@ -18,11 +19,12 @@ interface RideOffer {
   driverName: string;
   departureDate: string;
   departureTime: string;
-  departureLocation: string;
   destination: string;
   availableSeats: number;
-  costPerPerson: number;
   notes?: string;
+  truckId?: string;
+  requiredReturnTime?: string;
+  allowAutoJoin?: boolean;
   passengers: { [key: string]: string }; // passengerId: passengerName
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   timestamp: string;
@@ -62,7 +64,8 @@ interface DayOffRidesPageProps {
 }
 
 const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
-  const { user, profile } = useAuth();
+  const { user, userData } = useAuth(); // Changed from `profile` to `userData`
+  const profile = userData?.profile; // Access profile from userData
   const [activeTab, setActiveTab] = useState<string | null>('ride-offers');
   const [offerModalOpen, setOfferModalOpen] = useState(false);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -76,6 +79,10 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const [costPerPerson, setCostPerPerson] = useState<number | ''>(0);
   const [offerNotes, setOfferNotes] = useState('');
   const [editingOffer, setEditingOffer] = useState<RideOffer | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [selectedTruck, setSelectedTruck] = useState('');
+  const [requiredReturnTime, setRequiredReturnTime] = useState('');
+  const [allowAutoJoin, setAllowAutoJoin] = useState(false);
 
   // Ride Request State
   const [requestDate, setRequestDate] = useState<Date | null>(null);
@@ -94,6 +101,9 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const [currentPassengers, setCurrentPassengers] = useState<{ [key: string]: string }>({});
   const [allUsers, setAllUsers] = useState<any[]>([]); // To get user names for passengers
   const [camps, setCamps] = useState<Camp[]>([]);
+  const [calendarData, setCalendarData] = useState<any>(null);
+  const [crews, setCrews] = useState<any[]>([]);
+  const [trucks, setTrucks] = useState<any[]>([]);
 
   // Filtering and Sorting
   const [offerDateRange, setOfferDateRange] = useState<[Date | null, Date | null]>([new Date(), addDays(new Date(), 30)]);
@@ -110,16 +120,20 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   useEffect(() => {
     if (!user) return;
 
-    const offersRef = ref(database, 'dayOffRides/offers');
-    const requestsRef = ref(database, 'dayOffRides/requests');
-    const usersRef = ref(database, 'Users');
+    const offersRef = ref(database, `camps/${campID}/dayOffRides/offers`);
+    const requestsRef = ref(database, `camps/${campID}/dayOffRides/requests`);
+    const usersRef = ref(database, 'users');
     const campsRef = ref(database, 'camps');
+    const crewsRef = ref(database, `camps/${campID}/crews`);
 
     const unsubscribeOffers = onValue(offersRef, (snapshot) => {
       const offersVal = snapshot.val();
       const loadedOffers: RideOffer[] = offersVal ? Object.keys(offersVal).map(key => ({ id: key, ...offersVal[key] })) : [];
+      console.log("DayOffRidesPage - campID:", campID);
+      console.log("DayOffRidesPage - Raw loadedOffers:", loadedOffers);
       const upcoming = loadedOffers.filter(offer => parseISO(offer.departureDate) >= startOfDay(new Date()));
       const past = loadedOffers.filter(offer => parseISO(offer.departureDate) < startOfDay(new Date()));
+      console.log("DayOffRidesPage - Upcoming offers after date filter:", upcoming);
       setRideOffers(upcoming);
       setPastRides(past);
     });
@@ -135,7 +149,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       const loadedUsers: any[] = [];
       if (usersVal) {
         Object.keys(usersVal).forEach(uid => {
-          loadedUsers.push({ id: uid, ...usersVal[uid].profile });
+          loadedUsers.push({ id: uid, ...usersVal[uid] });
         });
       }
       setAllUsers(loadedUsers);
@@ -147,13 +161,41 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       setCamps(loadedCamps.filter(camp => camp.isActive));
     });
 
+    let unsubscribeCalendar: (() => void) | undefined;
+    let unsubscribeCrews: (() => void) | undefined;
+    let unsubscribeTrucks: (() => void) | undefined;
+
+    if (campID) {
+      const calendarRef = ref(database, `camps/${campID}/calendar`);
+      unsubscribeCalendar = onValue(calendarRef, (snapshot) => {
+        setCalendarData(snapshot.val());
+      });
+
+      const crewsRef = ref(database, `camps/${campID}/crews`);
+      unsubscribeCrews = onValue(crewsRef, (snapshot) => {
+        const crewsVal = snapshot.val();
+        const loadedCrews: any[] = crewsVal ? Object.keys(crewsVal).map(key => ({ id: key, ...crewsVal[key] })) : [];
+        setCrews(loadedCrews);
+      });
+
+      const trucksRef = ref(database, `camps/${campID}/trucks`);
+      unsubscribeTrucks = onValue(trucksRef, (snapshot) => {
+        const trucksVal = snapshot.val();
+        const loadedTrucks: any[] = trucksVal ? Object.keys(trucksVal).map(key => ({ id: key, ...trucksVal[key] })) : [];
+        setTrucks(loadedTrucks);
+      });
+    }
+
     return () => {
       unsubscribeOffers();
       unsubscribeRequests();
       unsubscribeUsers();
       unsubscribeCamps();
+      if (unsubscribeCalendar) unsubscribeCalendar();
+      if (unsubscribeCrews) unsubscribeCrews();
+      if (unsubscribeTrucks) unsubscribeTrucks();
     };
-  }, [user]);
+  }, [user, campID]);
 
   const campOptions = camps.map(camp => ({ value: camp.name, label: camp.name }));
 
@@ -165,17 +207,35 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       setDepartureLocation(offer.departureLocation);
       setDestination(offer.destination);
       setAvailableSeats(offer.availableSeats);
-      setCostPerPerson(offer.costPerPerson);
-      setOfferNotes(offer.notes || '');
+      setSelectedTruck(offer.truckId || '');
+      setRequiredReturnTime(offer.requiredReturnTime || '');
+      setAllowAutoJoin(offer.allowAutoJoin || false);
     } else {
       setEditingOffer(null);
-      setDepartureDate(null);
+      
+      let nextDayOff: Date | null = null;
+      if (calendarData) {
+        const sortedDates = Object.keys(calendarData).sort();
+        const today = startOfDay(new Date());
+
+        for (const dateString of sortedDates) {
+          const date = parseISO(dateString);
+          if (date >= today && calendarData[dateString]?.shiftDay === 0) {
+            nextDayOff = date;
+            break;
+          }
+        }
+      }
+      setDepartureDate(nextDayOff || addDays(new Date(), 1)); // Default to tomorrow if no day off found
       setDepartureTime('');
-      setDepartureLocation('');
       setDestination('');
       setAvailableSeats('');
-      setCostPerPerson(0);
       setOfferNotes('');
+      setSelectedDriverId(canCreateRideOffer ? user?.uid || null : null);
+      setSelectedTruck('');
+      setCostPerPerson(0);
+      setRequiredReturnTime('');
+      setAllowAutoJoin(false);
     }
     setOfferModalOpen(true);
   };
@@ -202,29 +262,38 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   };
 
   const handleOfferSubmit = async () => {
-    if (!user || !profile || !departureDate || !departureTime || !departureLocation || !destination || availableSeats === '' || costPerPerson === '') {
+    if (!user || !profile || !departureDate || !departureTime || !destination || availableSeats === '' || !selectedDriverId || !selectedTruck) {
       notifications.show({ title: 'Error', message: 'Please fill all required offer fields.', color: 'red' });
       return;
     }
 
-    const offerData: Omit<RideOffer, 'id' | 'passengers' | 'status' | 'timestamp' | 'driverId'> & { driverId: string } = {
-      driverId: user.uid,
-      driverName: profile.name,
+    const selectedDriver = allUsers.find(u => u.id === selectedDriverId);
+    if (!selectedDriver) {
+      notifications.show({ title: 'Error', message: 'Selected driver not found.', color: 'red' });
+      return;
+    }
+
+    const offerData: Omit<RideOffer, 'id' | 'passengers' | 'status' | 'timestamp'> = {
+      driverId: selectedDriverId,
+      driverName: selectedDriver.name,
       departureDate: formatISO(departureDate, { representation: 'date' }),
       departureTime,
-      departureLocation,
       destination,
       availableSeats: Number(availableSeats),
-      costPerPerson: Number(costPerPerson),
       notes: offerNotes,
+      truckId: selectedTruck,
+      requiredReturnTime,
+      allowAutoJoin,
     };
+
+    console.log("Profile object before submit:", profile);
 
     try {
       if (editingOffer) {
-        await update(ref(database, `dayOffRides/offers/${editingOffer.id}`), offerData);
+        await update(ref(database, `camps/${campID}/dayOffRides/offers/${editingOffer.id}`), offerData);
         notifications.show({ title: 'Success', message: 'Ride offer updated successfully!', color: 'green' });
       } else {
-        await push(ref(database, 'dayOffRides/offers'), { ...offerData, passengers: {}, status: 'pending', timestamp: formatISO(new Date()) });
+        await push(ref(database, `camps/${campID}/dayOffRides/offers`), { ...offerData, passengers: {}, status: 'pending', timestamp: formatISO(new Date()) });
         notifications.show({ title: 'Success', message: 'Ride offer created successfully!', color: 'green' });
       }
       setOfferModalOpen(false);
@@ -252,10 +321,10 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     try {
       if (editingRequest) {
-        await update(ref(database, `dayOffRides/requests/${editingRequest.id}`), requestData);
+        await update(ref(database, `camps/${campID}/dayOffRides/requests/${editingRequest.id}`), requestData);
         notifications.show({ title: 'Success', message: 'Ride request updated successfully!', color: 'green' });
       } else {
-        await push(ref(database, 'dayOffRides/requests'), { ...requestData, status: 'pending', timestamp: formatISO(new Date()) });
+        await push(ref(database, `camps/${campID}/dayOffRides/requests`), { ...requestData, status: 'pending', timestamp: formatISO(new Date()) });
         notifications.show({ title: 'Success', message: 'Ride request created successfully!', color: 'green' });
       }
       setRequestModalOpen(false);
@@ -267,7 +336,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const handleDeleteOffer = async (offerId: string) => {
     if (window.confirm('Are you sure you want to delete this ride offer?')) {
       try {
-        await remove(ref(database, `dayOffRides/offers/${offerId}`));
+        await remove(ref(database, `camps/${campID}/dayOffRides/offers/${offerId}`));
         notifications.show({ title: 'Success', message: 'Ride offer deleted.', color: 'green' });
       } catch (error: any) {
         notifications.show({ title: 'Error', message: `Failed to delete offer: ${error.message}`, color: 'red' });
@@ -278,7 +347,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const handleDeleteRequest = async (requestId: string) => {
     if (window.confirm('Are you sure you want to delete this ride request?')) {
       try {
-        await remove(ref(database, `dayOffRides/requests/${requestId}`));
+        await remove(ref(database, `camps/${campID}/dayOffRides/requests/${requestId}`));
         notifications.show({ title: 'Success', message: 'Ride request deleted.', color: 'green' });
       } catch (error: any) {
         notifications.show({ title: 'Error', message: `Failed to delete request: ${error.message}`, color: 'red' });
@@ -306,7 +375,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     try {
       const newPassengers = { ...(offer.passengers || {}), [user.uid]: profile.name };
-      await update(ref(database, `dayOffRides/offers/${offer.id}`), {
+      await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
         passengers: newPassengers,
         availableSeats: offer.availableSeats - 1,
       });
@@ -327,7 +396,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       try {
         const newPassengers = { ...offer.passengers };
         delete newPassengers[user.uid];
-        await update(ref(database, `dayOffRides/offers/${offer.id}`), {
+        await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
           passengers: newPassengers,
           availableSeats: offer.availableSeats + 1,
         });
@@ -348,14 +417,14 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       try {
         // Update offer: reduce seats, add request as passenger (simplified for now)
         const newPassengers = { ...(offer.passengers || {}), [request.requesterId]: request.requesterName };
-        await update(ref(database, `dayOffRides/offers/${offer.id}`), {
+        await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
           availableSeats: offer.availableSeats - request.numberOfPeople,
           passengers: newPassengers, // This assumes a single requester fills multiple spots, might need refinement
           status: offer.availableSeats - request.numberOfPeople === 0 ? 'confirmed' : 'pending'
         });
 
         // Update request: set status to confirmed, link to offer
-        await update(ref(database, `dayOffRides/requests/${request.id}`), {
+        await update(ref(database, `camps/${campID}/dayOffRides/requests/${request.id}`), {
           status: 'confirmed',
           offeredRideId: offer.id
         });
@@ -376,16 +445,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     return passengerUser ? passengerUser.phoneNumber || passengerUser.email || 'N/A' : 'N/A';
   };
 
-  const Th = ({ children, sorted, reversed, onSort }: { children: React.ReactNode, sorted: boolean, reversed: boolean, onSort: () => void }) => (
-    <th>
-      <UnstyledButton onClick={onSort} >
-        <Group justify="space-between">
-          <Text fw={500} fz="sm">{children}</Text>
-          {sorted && (reversed ? <IconChevronUp /> : <IconChevronDown />)}
-        </Group>
-      </UnstyledButton>
-    </th>
-  );
+  
 
   const filterAndSort = (data: any[], dateRange: [Date | null, Date | null], sortKey: string | null, sortOrder: 'asc' | 'desc') => {
     const [startDate, endDate] = dateRange;
@@ -400,8 +460,18 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     if (sortKey) {
       return [...filteredData].sort((a, b) => {
-        const aVal = a[sortKey];
-        const bVal = b[sortKey];
+        let aVal = a[sortKey];
+        let bVal = b[sortKey];
+
+        // Handle date sorting specifically if the sortKey is a date field
+        if (sortKey === 'departureDate' || sortKey === 'requestDate') {
+          aVal = parseISO(a.departureDate || a.requestDate);
+          bVal = parseISO(b.departureDate || b.requestDate);
+        }
+
+        // Handle cases where values might be undefined or null
+        if (aVal === undefined || aVal === null) return sortOrder === 'asc' ? 1 : -1;
+        if (bVal === undefined || bVal === null) return sortOrder === 'asc' ? -1 : 1;
 
         if (typeof aVal === 'string' && typeof bVal === 'string') {
           return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
@@ -409,6 +479,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
         if (typeof aVal === 'number' && typeof bVal === 'number') {
           return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
         }
+        // Fallback for other types or if types don't match
         return 0;
       });
     }
@@ -419,6 +490,21 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const filteredAndSortedOffers = filterAndSort(rideOffers, offerDateRange, offerSortKey, offerSortOrder);
   const filteredAndSortedRequests = filterAndSort(rideRequests, requestDateRange, requestSortKey, requestSortOrder);
   const filteredAndSortedPastRides = filterAndSort(pastRides, pastDateRange, pastSortKey, pastSortOrder);
+
+  const userCrewIds = Array.isArray(userData?.assignedCamps?.[campID]?.crewId)
+    ? userData.assignedCamps[campID].crewId
+    : (userData?.assignedCamps?.[campID]?.crewId ? [userData.assignedCamps[campID].crewId] : []);
+
+  const isDriverCrew = userCrewIds.some(crewId => {
+    const crew = crews.find(c => c.id === crewId);
+    return crew?.crewType === "Drivers";
+  });
+  const isCrewModerator = effectiveRole === ROLES.CrewModerator;
+  const isCrewBoss = effectiveRole === ROLES.CrewBoss;
+
+  const canCreateRideOffer = isDriverCrew || isCrewModerator || isCrewBoss;
+
+  console.log("DayOffRidesPage - filteredAndSortedOffers:", filteredAndSortedOffers);
 
   return (
     <Box style={{ padding: '20px' }}>
@@ -433,13 +519,49 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
         <Tabs.Panel value="ride-offers" pt="xs">
           <Group mt="md">
-            <Button onClick={() => openOfferModal()}>Create New Ride Offer</Button>
+            <Tooltip
+              label="Only Drivers, Crew Moderators or Bosses can create a new ride."
+              disabled={canCreateRideOffer}
+              withArrow
+            >
+              <Button
+                onClick={() => openOfferModal()}
+                disabled={!canCreateRideOffer}
+              >
+                Create New Ride Offer
+              </Button>
+            </Tooltip>
             <DatePickerInput
               type="range"
               label="Filter by Date Range"
               placeholder="Pick dates"
               value={offerDateRange}
               onChange={setOfferDateRange}
+            />
+            <Select
+              label="Sort By"
+              placeholder="Select field to sort"
+              data={[
+                { value: 'departureDate', label: 'Departure Date' },
+                { value: 'departureTime', label: 'Departure Time' },
+                { value: 'departureLocation', label: 'Departure Location' },
+                { value: 'destination', label: 'Destination' },
+                { value: 'availableSeats', label: 'Available Seats' },
+              ]}
+              value={offerSortKey}
+              onChange={setOfferSortKey}
+              clearable
+            />
+            <Select
+              label="Sort Order"
+              placeholder="Select order"
+              data={[
+                { value: 'asc', label: 'Ascending' },
+                { value: 'desc', label: 'Descending' },
+              ]}
+              value={offerSortOrder}
+              onChange={(value) => setOfferSortOrder(value as 'asc' | 'desc')}
+              clearable
             />
           </Group>
 
@@ -458,9 +580,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                         <Group>
                           <Badge color={offer.availableSeats > 0 ? 'green' : 'red'}>
                             Seats: {offer.availableSeats}
-                          </Badge>
-                          <Badge color="blue">
-                            ${offer.costPerPerson.toFixed(2)}/person
                           </Badge>
                         </Group>
                       </Group>
@@ -484,9 +603,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                         </Group>
                         <Group>
                           <IconUsers size={16} /><Text size="sm">Available Seats: {offer.availableSeats}</Text>
-                        </Group>
-                        <Group>
-                          <IconCurrencyDollar size={16} /><Text size="sm">Cost Per Person: ${offer.costPerPerson.toFixed(2)}</Text>
                         </Group>
                         {offer.notes && (
                           <Group>
@@ -556,6 +672,31 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
               placeholder="Pick dates"
               value={requestDateRange}
               onChange={setRequestDateRange}
+            />
+            <Select
+              label="Sort By"
+              placeholder="Select field to sort"
+              data={[
+                { value: 'requestDate', label: 'Request Date' },
+                { value: 'departureTime', label: 'Departure Time' },
+                { value: 'departureLocation', label: 'Departure Location' },
+                { value: 'destination', label: 'Destination' },
+                { value: 'numberOfPeople', label: 'Number of People' },
+              ]}
+              value={requestSortKey}
+              onChange={setRequestSortKey}
+              clearable
+            />
+            <Select
+              label="Sort Order"
+              placeholder="Select order"
+              data={[
+                { value: 'asc', label: 'Ascending' },
+                { value: 'desc', label: 'Descending' },
+              ]}
+              value={requestSortOrder}
+              onChange={(value) => setRequestSortOrder(value as 'asc' | 'desc')}
+              clearable
             />
           </Group>
 
@@ -629,6 +770,30 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
               value={pastDateRange}
               onChange={setPastDateRange}
             />
+            <Select
+              label="Sort By"
+              placeholder="Select field to sort"
+              data={[
+                { value: 'departureDate', label: 'Departure Date' },
+                { value: 'departureTime', label: 'Departure Time' },
+                { value: 'departureLocation', label: 'Departure Location' },
+                { value: 'destination', label: 'Destination' },
+              ]}
+              value={pastSortKey}
+              onChange={setPastSortKey}
+              clearable
+            />
+            <Select
+              label="Sort Order"
+              placeholder="Select order"
+              data={[
+                { value: 'asc', label: 'Ascending' },
+                { value: 'desc', label: 'Descending' },
+              ]}
+              value={pastSortOrder}
+              onChange={(value) => setPastSortOrder(value as 'asc' | 'desc')}
+              clearable
+            />
           </Group>
           <Stack mt="lg">
             {filteredAndSortedPastRides.length === 0 ? (
@@ -643,11 +808,8 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                           {offer.departureDate} | {offer.departureTime} from {offer.departureLocation} to {offer.destination}
                         </Text>
                         <Group>
-                          <Badge color="gray">
-                            Completed
-                          </Badge>
-                          <Badge color="blue">
-                            ${offer.costPerPerson.toFixed(2)}/person
+                          <Badge color={offer.availableSeats > 0 ? 'green' : 'red'}>
+                            Seats: {offer.availableSeats}
                           </Badge>
                         </Group>
                       </Group>
@@ -671,9 +833,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                         </Group>
                         <Group>
                           <IconUsers size={16} /><Text size="sm">Original Seats: {offer.availableSeats + Object.keys(offer.passengers || {}).length}</Text>
-                        </Group>
-                        <Group>
-                          <IconCurrencyDollar size={16} /><Text size="sm">Cost Per Person: ${offer.costPerPerson.toFixed(2)}</Text>
                         </Group>
                         {offer.notes && (
                           <Group>
@@ -716,21 +875,33 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             required
           />
           <Select
-            label="Departure Location"
-            placeholder="Select or type departure location"
-            data={campOptions}
-            searchable
-            creatable
-            getCreateLabel={(query) => `+ Create ${query}`}
-            onCreate={(query) => {
-              const item = { value: query, label: query };
-              setCamps((current) => [...current, { id: query, name: query, location: query, isActive: true }]);
-              return item;
-            }}
-            value={departureLocation}
-            onChange={(value) => setDepartureLocation(value || '')}
+            label="Driver"
+            placeholder="Select a driver"
+            data={(() => {
+              const driverUsers = allUsers.filter(u => {
+                const userCrewIds = Array.isArray(u.assignedCamps?.[campID]?.crewId)
+                  ? u.assignedCamps[campID].crewId
+                  : (u.assignedCamps?.[campID]?.crewId ? [u.assignedCamps[campID].crewId] : []);
+                return userCrewIds.some(crewId => {
+                  const crew = crews.find(c => c.id === crewId);
+                  return crew?.crewType === "Drivers";
+                });
+              }).map(u => ({ value: u.id, label: u.profile?.nickname || u.name }));
+              return driverUsers;
+            })()}
+            value={selectedDriverId}
+            onChange={(value) => setSelectedDriverId(value)}
             required
           />
+          <Select
+            label="Truck"
+            placeholder="Select a truck"
+            data={trucks.map(truck => ({ value: truck.id, label: truck.name }))}
+            value={selectedTruck}
+            onChange={(value) => setSelectedTruck(value || '')}
+            required
+          />
+          
           <TextInput
             label="Destination"
             placeholder="e.g. Town, City, Home"
@@ -746,16 +917,18 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             min={1}
             required
           />
-          <NumberInput
-            label="Cost Per Person ($)"
-            placeholder="e.g. 20.00"
-            value={costPerPerson}
-            onChange={(val) => setCostPerPerson(val)}
-            min={0}
-            precision={2}
-            step={0.01}
-            required
+          <TimeInput
+            label="Required Return Time (optional)"
+            placeholder="Select time"
+            value={requiredReturnTime}
+            onChange={(event) => setRequiredReturnTime(event.currentTarget.value)}
           />
+          <Checkbox
+            label="Allow people to join your ride without your approval?"
+            checked={allowAutoJoin}
+            onChange={(event) => setAllowAutoJoin(event.currentTarget.checked)}
+          />
+          
           <Textarea
             label="Notes (optional)"
             placeholder="Any additional information, e.g., 'Will stop in ABC town', 'Luggage space limited'"
@@ -791,7 +964,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             placeholder="Select or type departure location"
             data={campOptions}
             searchable
-            creatable
+            creatable="true"
             getCreateLabel={(query) => `+ Create ${query}`}
             onCreate={(query) => {
               const item = { value: query, label: query };

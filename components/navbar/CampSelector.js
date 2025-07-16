@@ -14,7 +14,7 @@ import {
 
 import classes from './Navbar.module.css';
 
-const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, effectiveRole }, forwardedRef) => {
+const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, effectiveRole, crews }, forwardedRef) => {
     const [camps, setCamps] = useState({});
     const [loadingCamps, setLoadingCamps] = useState(true);
     const [errorCamps, setErrorCamps] = useState(null);
@@ -65,7 +65,13 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, effecti
 
     const roleTitle = effectiveRole > 0 ? ROLES[effectiveRole] || 'Member' : 'N/A';
     const displayName = userData?.profile?.nickname || userData?.name;
-    const currentCampName = userData?.assignedCamps?.[campID]?.campName; // Fixed line here
+    const currentCampName = userData?.assignedCamps?.[campID]?.campName;
+    const userCrewIds = Array.isArray(userData?.assignedCamps?.[campID]?.crewId)
+        ? userData.assignedCamps[campID].crewId
+        : (userData?.assignedCamps?.[campID]?.crewId ? [userData.assignedCamps[campID].crewId] : []);
+    const userCrewNames = userCrewIds.map(crewId => crews.find(crew => crew.id === crewId)?.crewName).filter(Boolean);
+
+    
 
     return (
         <div ref={forwardedRef} style={{ width: '100%' }}>
@@ -79,6 +85,11 @@ const CampSelector = forwardRef(({ user, userData, campID, onCampSelect, effecti
                     <Text size="sm" c="dimmed" ta="center">
                         Welcome, {roleTitle} {displayName}
                     </Text>
+                    {userCrewNames.length > 0 && (
+                        <Text size="sm" c="dimmed" ta="center">
+                            Crew(s): {userCrewNames.join(", ")}
+                        </Text>
+                    )}
                     {campOptions.length > 1 && (
                         <>
                             <Divider my="sm" label="Switch Camp" labelPosition="center" />

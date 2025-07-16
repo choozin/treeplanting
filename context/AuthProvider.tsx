@@ -11,7 +11,7 @@ interface UserData {
     name: string;
     email: string;
     role: number;
-    assignedCamps?: Record<string, { campName: string; role: number; crewId?: string }>;
+    assignedCamps?: Record<string, { campName: string; role: number; crewId?: string | string[]; }>;
     profile?: any;
     dashboardPreferences?: {
         layout: string[];
@@ -59,6 +59,7 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [campID, setCampIDState] = useState<string | null>(null);
     const [effectiveRole, setEffectiveRole] = useState<number>(0);
     const [loading, setLoading] = useState(true);
+    const [crews, setCrews] = useState<any[]>([]);
 
     const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
     const [composeInitialState, setComposeInitialState] = useState<ComposeModalState | null>(null);
@@ -143,6 +144,21 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }, [fetchCurrentUserData]);
 
     useEffect(() => {
+        let unsubscribeCrews: (() => void) | undefined;
+        if (campID) {
+            const crewsRef = ref(database, `camps/${campID}/crews`);
+            unsubscribeCrews = onValue(crewsRef, (snapshot) => {
+                const crewsVal = snapshot.val();
+                const loadedCrews: any[] = crewsVal ? Object.keys(crewsVal).map(key => ({ id: key, ...crewsVal[key] })) : [];
+                setCrews(loadedCrews);
+            });
+        }
+        return () => {
+            if (unsubscribeCrews) unsubscribeCrews();
+        };
+    }, [campID]);
+
+    useEffect(() => {
         if (!user || !userData) {
             setEffectiveRole(0);
             return;
@@ -153,8 +169,18 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             return;
         }
         const campSpecificRole = userData.assignedCamps?.[campID]?.role || 0;
-        setEffectiveRole(Math.max(globalRole, campSpecificRole));
-    }, [user, userData, campID]);
+        
+        let crewRole = 0;
+        const userCrewId = userData.assignedCamps?.[campID]?.crewId;
+        if (userCrewId && crews.length > 0) {
+            const userCrew = crews.find(crew => crew.id === userCrewId);
+            if (userCrew && userCrew.role !== undefined) {
+                crewRole = userCrew.role;
+            }
+        }
+
+        setEffectiveRole(Math.max(globalRole, campSpecificRole, crewRole));
+    }, [user, userData, campID, crews]);
 
     const value = useMemo(() => ({
         user,
