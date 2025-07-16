@@ -7,7 +7,7 @@ import { database } from '../../firebase/firebase';
 import { ref, onValue, push, update, remove, query, orderByChild, startAt, endAt, get } from 'firebase/database';
 import { IconTrash, IconPencil, IconCheck, IconX, IconClock, IconMapPin, IconCalendar, IconUser, IconCar, IconInfoCircle, IconCurrencyDollar, IconBus, IconUsers, IconNotes, IconBolt, IconPhone, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { CustomDayOffDatePicker } from '../../components/dayOffRidePlanning/CustomDayOffDatePicker';
+import CustomDayOffDatePicker from '../../components/dayOffRidePlanning/CustomDayOffDatePicker'; // Changed to default import
 import { isWithinInterval, startOfDay, endOfDay, formatISO, parseISO, addDays, subDays } from 'date-fns';
 import { DateInput } from '@mantine/dates';
 
