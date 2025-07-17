@@ -64,7 +64,7 @@ interface DayOffRidesPageProps {
 }
 
 const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
-  const { user, userData } = useAuth(); // Changed from `profile` to `userData`
+  const { user, userData, loading } = useAuth(); // Changed from `profile` to `userData`
   const profile = userData?.profile; // Access profile from userData
   const [activeTab, setActiveTab] = useState<string | null>('ride-offers');
   const [offerModalOpen, setOfferModalOpen] = useState(false);
@@ -131,6 +131,8 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       const loadedOffers: RideOffer[] = offersVal ? Object.keys(offersVal).map(key => ({ id: key, ...offersVal[key] })) : [];
       console.log("DayOffRidesPage - campID:", campID);
       console.log("DayOffRidesPage - Raw loadedOffers:", loadedOffers);
+      console.log("DayOffRidesPage - effectiveRole:", effectiveRole);
+      console.log("DayOffRidesPage - ROLES:", ROLES);
       const upcoming = loadedOffers.filter(offer => parseISO(offer.departureDate) >= startOfDay(new Date()));
       const past = loadedOffers.filter(offer => parseISO(offer.departureDate) < startOfDay(new Date()));
       console.log("DayOffRidesPage - Upcoming offers after date filter:", upcoming);
@@ -356,6 +358,19 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   };
 
   const handleJoinRide = async (offer: RideOffer) => {
+    console.log("handleJoinRide: user", user);
+    console.log("handleJoinRide: profile", profile);
+    console.log("handleJoinRide: loading", loading);
+    console.log("handleJoinRide: offer.passengers", offer.passengers);
+    console.log("handleJoinRide: user.uid", user?.uid);
+    if (loading) {
+      notifications.show({
+        title: 'Info',
+        message: 'Verifying login status. Please wait a moment.',
+        color: 'blue',
+      });
+      return;
+    }
     if (!user || !profile) {
       notifications.show({ title: 'Error', message: 'You must be logged in to join a ride.', color: 'red' });
       return;
@@ -581,6 +596,9 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                           <Badge color={offer.availableSeats > 0 ? 'green' : 'red'}>
                             Seats: {offer.availableSeats}
                           </Badge>
+                          {user && offer.passengers && offer.passengers[user.uid] && (
+                            <Badge color="blue" variant="filled">Joined</Badge>
+                          )}
                         </Group>
                       </Group>
                     </Accordion.Control>
@@ -811,6 +829,9 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                           <Badge color={offer.availableSeats > 0 ? 'green' : 'red'}>
                             Seats: {offer.availableSeats}
                           </Badge>
+                          {user && offer.passengers && offer.passengers[user.uid] && (
+                            <Badge color="blue" variant="filled">Joined</Badge>
+                          )}
                         </Group>
                       </Group>
                     </Accordion.Control>
