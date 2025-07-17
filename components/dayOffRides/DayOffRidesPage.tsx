@@ -611,8 +611,8 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                         )}
                         <Group>
                           <Text size="sm">Passengers:</Text>
-                          {Object.keys(offer.passengers || {}).length > 0 ? (
-                            <Button variant="light" size="xs" onClick={() => showPassengerDetails(offer.passengers)}>View Passengers</Button>
+                          {offer.passengers && Object.keys(offer.passengers).length > 0 ? (
+                            <Text size="sm">{Object.values(offer.passengers).join(', ')}</Text>
                           ) : (
                             <Text size="sm" c="dimmed">None yet.</Text>
                           )}
