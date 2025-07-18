@@ -2,19 +2,15 @@
 
 import React, { FC, useEffect, useMemo, useState } from 'react';
 import {
-  IconAlertCircle,
   IconCalendar,
-  IconCheck,
   IconChevronDown,
   IconHome,
-  IconMapPin,
   IconPencil,
   IconPlus,
   IconTrash,
-  IconTruck,
   IconUserMinus,
 } from '@tabler/icons-react';
-import { push as firebasePush, get, onValue, ref, remove, set, update } from 'firebase/database';
+import { push as firebasePush, onValue, ref, remove, set, update } from 'firebase/database';
 import {
   Accordion,
   ActionIcon,
@@ -22,13 +18,11 @@ import {
   Badge,
   Button,
   Container,
-  Divider,
   Group,
   Modal,
   NumberInput,
   Paper,
   Select,
-  SimpleGrid,
   Stack,
   Tabs,
   Text,
@@ -38,6 +32,7 @@ import {
 import { DatePickerInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
 import { useModals } from '@mantine/modals';
+import { notifications } from '@mantine/notifications';
 import { database } from '../../firebase/firebase';
 import { ROLES } from '../../lib/constants'; // Import ROLES
 
@@ -78,6 +73,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
   const [locationStartDate, setLocationStartDate] = useState<Date | null>(null);
   const [locationEndDate, setLocationEndDate] = useState<Date | null>(null);
   const [shiftLength, setShiftLength] = useState<number | string>(3);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
 
   const modals = useModals();
 
@@ -109,9 +105,12 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         setLoading(false);
       },
       (err: any) => {
-        setError('Error fetching camp data.');
+        notifications.show({
+          title: 'Error',
+          message: 'Error fetching camp data: ' + err.message,
+          color: 'red',
+        });
         setLoading(false);
-        console.error(err);
       }
     );
 
@@ -126,7 +125,11 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         }
       },
       (err: any) => {
-        console.error('Error fetching users in camp:', err);
+        notifications.show({
+          title: 'Error',
+          message: 'Error fetching users in camp: ' + err.message,
+          color: 'red',
+        });
       }
     );
 
@@ -146,14 +149,16 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
           const usersData = snapshot.val();
           const usersList = Object.entries(usersData).map(([uid, data]) => ({ uid, ...data }));
           setAllUsers(usersList);
-          console.log('Fetched all users:', usersList); // Debug log
         } else {
           setAllUsers([]);
-          console.log('No users found in database.'); // Debug log
         }
       },
       (err: any) => {
-        console.error('Error fetching users:', err);
+        notifications.show({
+          title: 'Error',
+          message: 'Error fetching users: ' + err.message,
+          color: 'red',
+        });
       }
     );
 
@@ -170,6 +175,36 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     const filteredUsers = allUsers.filter((user) => campUserUids.has(user.uid));
     return filteredUsers;
   }, [allUsers, campUserUids]);
+
+  const isExtendMode = useMemo(() => {
+    if (!selectedLocationId || !campData?.campLocations?.[selectedYear]?.[selectedLocationId]?.calendarConfig) {
+      return false;
+    }
+    const currentConfig = campData.campLocations[selectedYear][selectedLocationId].calendarConfig;
+    const newStartDate = locationStartDate?.toISOString().split('T')[0];
+    const newEndDate = locationEndDate?.toISOString().split('T')[0];
+
+    return (
+      currentConfig.startDate === newStartDate &&
+      newEndDate &&
+      new Date(newEndDate) > new Date(currentConfig.endDate)
+    );
+  }, [selectedLocationId, campData, selectedYear, locationStartDate, locationEndDate]);
+
+  const isShortenMode = useMemo(() => {
+    if (!selectedLocationId || !campData?.campLocations?.[selectedYear]?.[selectedLocationId]?.calendarConfig) {
+      return false;
+    }
+    const currentConfig = campData.campLocations[selectedYear][selectedLocationId].calendarConfig;
+    const newStartDate = locationStartDate?.toISOString().split('T')[0];
+    const newEndDate = locationEndDate?.toISOString().split('T')[0];
+
+    return (
+      currentConfig.startDate === newStartDate &&
+      newEndDate &&
+      new Date(newEndDate) < new Date(currentConfig.endDate)
+    );
+  }, [selectedLocationId, campData, selectedYear, locationStartDate, locationEndDate]);
 
   const handleRemoveUserFromCamp = (userUid: string, userName: string) => {
     modals.openConfirmModal({
@@ -189,10 +224,17 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
           await remove(ref(database, `users/${userUid}/assignedCamps/${campID}`));
           // Remove the user from the camp's list of users
           await remove(ref(database, `camps/${campID}/users/${userUid}`));
-          alert(`${userName} has been removed from this camp's assigned camps.`);
-        } catch (e) {
-          console.error('Failed to remove user from camp:', e);
-          alert(`Failed to remove ${userName} from camp.`);
+          notifications.show({
+            title: 'User Removed',
+            message: `${userName} has been removed from this camp's assigned camps.`,
+            color: 'green',
+          });
+        } catch (e: any) {
+          notifications.show({
+            title: 'Error',
+            message: `Failed to remove user from camp: ${e.message}`,
+            color: 'red',
+          });
         }
       },
     });
@@ -216,7 +258,11 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
 
   const handlePrimaryLocationSubmit = async () => {
     if (!locationName || latitude === '' || longitude === '') {
-      alert('All fields are required.');
+      notifications.show({
+        title: 'Error',
+        message: 'All fields are required.',
+        color: 'red',
+      });
       return;
     }
     const locationData = {
@@ -231,21 +277,35 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
 
     try {
       await set(ref(database, path), locationData);
-      alert(`Primary location ${modalMode === 'add' ? 'added' : 'updated'} successfully.`);
+      notifications.show({
+        title: 'Success',
+        message: `Primary location ${modalMode === 'add' ? 'added' : 'updated'} successfully.`,
+        color: 'green',
+      });
       closePrimaryModal();
-    } catch (e) {
-      console.error(e);
-      alert('Failed to save primary location.');
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to save primary location: ' + e.message,
+        color: 'red',
+      });
     }
   };
 
   const handleSetAsPrimary = async (locationId: string) => {
     try {
       await update(ref(database, `camps/${campID}`), { activeLocationId: locationId });
-      alert('Active location updated successfully.');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to set active location.');
+      notifications.show({
+        title: 'Success',
+        message: 'Active location updated successfully.',
+        color: 'green',
+      });
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to set active location: ' + e.message,
+        color: 'red',
+      });
     }
   };
 
@@ -303,7 +363,11 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
 
   const handleBlockLocationSubmit = async () => {
     if (!locationName || latitude === '' || longitude === '') {
-      alert('All fields are required.');
+      notifications.show({
+        title: 'Error',
+        message: 'All fields are required.',
+        color: 'red',
+      });
       return;
     }
     const blockData = {
@@ -316,18 +380,29 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     const path = `camps/${campID}/campLocations/${selectedYear}/${editingLocation.primaryId}/secondaryLocations/${modalMode === 'add' ? firebasePush(ref(database, `camps/${campID}/campLocations/${selectedYear}/${editingLocation.primaryId}/secondaryLocations`)).key : editingLocation.id}`;
     try {
       await set(ref(database, path), blockData);
-      alert(`Block location ${modalMode === 'add' ? 'added' : 'updated'} successfully.`);
+      notifications.show({
+        title: 'Success',
+        message: `Block location ${modalMode === 'add' ? 'added' : 'updated'} successfully.`,
+        color: 'green',
+      });
       closeBlockModal();
-    } catch (e) {
-      console.error(e);
-      alert('Failed to save block location.');
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to save block location: ' + e.message,
+        color: 'red',
+      });
     }
   };
 
   // --- Calendar Handlers ---
   const handleSaveSeasonDates = async () => {
     if (!campID || !seasonStartDate || !seasonEndDate) {
-      alert('Please select both a start and end date for the season.');
+      notifications.show({
+        title: 'Error',
+        message: 'Please select both a start and end date for the season.',
+        color: 'red',
+      });
       return;
     }
 
@@ -338,62 +413,152 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
 
     try {
       await update(ref(database, `camps/${campID}/seasonInfo`), seasonData);
-      alert('Season dates saved successfully.');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to save season dates.');
+      notifications.show({
+        title: 'Success',
+        message: 'Season dates saved successfully.',
+        color: 'green',
+      });
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to save season dates: ' + e.message,
+        color: 'red',
+      });
     }
   };
 
-  const handleGenerateCalendar = async (locationId: string) => {
+  const handleUpdateCalendar = async (locationId: string) => {
     if (!campID || !locationStartDate || !locationEndDate || !shiftLength) {
-      alert('Please set the camp start date, end date, and shift length first.');
+      notifications.show({
+        title: 'Error',
+        message: 'Please set the camp start date, end date, and shift length first.',
+        color: 'red',
+      });
       return;
     }
 
-    const calendarConfig = {
-      startDate: locationStartDate.toISOString().split('T')[0],
-      endDate: locationEndDate.toISOString().split('T')[0],
-      shiftLength: typeof shiftLength === 'string' ? parseInt(shiftLength) : shiftLength,
-    };
+    const currentCalendarConfig = campData?.campLocations?.[selectedYear]?.[locationId]?.calendarConfig;
+    const currentCalendarData = campData?.calendar; // Assuming calendar data is directly under campID/calendar
 
-    const calendarData: { [key: string]: any } = {};
-    let currentDate = new Date(locationStartDate);
-    let currentShiftDay = 1;
+    const newStartDate = locationStartDate.toISOString().split('T')[0];
+    const newEndDate = locationEndDate.toISOString().split('T')[0];
+    const newShiftLength = typeof shiftLength === 'string' ? parseInt(shiftLength, 10) : shiftLength;
 
-    while (currentDate <= locationEndDate) {
-      const dateString = currentDate.toISOString().split('T')[0];
-      calendarData[dateString] = { shiftDay: currentShiftDay };
+    let calendarToUpdate: { [key: string]: any } = {};
+    let startingShiftDay = 1;
+    let startDateForGeneration = new Date(locationStartDate);
 
-      if (currentShiftDay === 0) {
-        currentShiftDay = 1;
-      } else if (currentShiftDay >= calendarConfig.shiftLength) {
-        currentShiftDay = 0;
-      } else {
-        currentShiftDay++;
+    const isExtending = (
+      currentCalendarConfig &&
+      currentCalendarData &&
+      currentCalendarConfig.startDate === newStartDate &&
+      new Date(newEndDate) > new Date(currentCalendarConfig.endDate)
+    );
+
+    const isShortening = (
+      currentCalendarConfig &&
+      currentCalendarData &&
+      currentCalendarConfig.startDate === newStartDate &&
+      new Date(newEndDate) < new Date(currentCalendarConfig.endDate)
+    );
+
+    if (isExtending) {
+      // Extend existing calendar
+      calendarToUpdate = { ...currentCalendarData };
+      startDateForGeneration = new Date(currentCalendarConfig.endDate);
+      startDateForGeneration.setDate(startDateForGeneration.getDate() + 1); // Start from the day after the old end date
+
+      // Find the last shift day from the existing calendar
+      const sortedDates = Object.keys(currentCalendarData).sort();
+      if (sortedDates.length > 0) {
+        const lastDate = sortedDates[sortedDates.length - 1];
+        startingShiftDay = currentCalendarData[lastDate]?.shiftDay;
+        // If the last day was a day off (0), the next day starts a new cycle (1)
+        if (startingShiftDay === 0) {
+          startingShiftDay = 1;
+        } else if (startingShiftDay >= newShiftLength) {
+          // If the last day was the end of a cycle, the next day is a day off (0)
+          startingShiftDay = 0;
+        } else {
+          // Otherwise, increment the shift day
+          startingShiftDay++;
+        }
       }
-
-      currentDate.setDate(currentDate.getDate() + 1);
+    } else if (isShortening) {
+      // Shorten existing calendar
+      calendarToUpdate = {};
+      for (const dateString in currentCalendarData) {
+        if (new Date(dateString) <= new Date(newEndDate)) {
+          calendarToUpdate[dateString] = currentCalendarData[dateString];
+        }
+      }
+      notifications.show({
+        title: 'Info',
+        message: 'Shortening calendar. Dates beyond the new end date will be removed.',
+        color: 'orange',
+      });
+    } else {
+      // Generate new calendar from scratch
+      notifications.show({
+        title: 'Info',
+        message: 'Generating new calendar. Existing calendar data will be overwritten.',
+        color: 'orange',
+      });
     }
 
+    // Only proceed with date generation if not shortening or if extending
+    if (!isShortening) {
+      let currentDate = startDateForGeneration;
+      let currentShiftDay = startingShiftDay;
+
+      while (currentDate <= locationEndDate) {
+        const dateString = currentDate.toISOString().split('T')[0];
+        calendarToUpdate[dateString] = { shiftDay: currentShiftDay };
+
+        if (currentShiftDay === 0) {
+          currentShiftDay = 1;
+        } else if (currentShiftDay >= newShiftLength) {
+          currentShiftDay = 0;
+        } else {
+          currentShiftDay++;
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    }
+
+    const updatedCalendarConfig = {
+      startDate: newStartDate,
+      endDate: newEndDate,
+      shiftLength: newShiftLength,
+    };
+
     try {
-      await update(ref(database, `camps/${campID}/calendar`), calendarData);
+      await update(ref(database, `camps/${campID}/calendar`), calendarToUpdate);
       await update(
         ref(database, `camps/${campID}/campLocations/${selectedYear}/${locationId}/calendarConfig`),
-        calendarConfig
+        updatedCalendarConfig
       );
-      alert('Calendar generated successfully!');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to generate calendar.');
+      notifications.show({
+        title: 'Success',
+        message: `Calendar ${isExtending ? 'extended' : 'generated'} successfully!`,
+        color: 'green',
+      });
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: `Failed to ${isExtending ? 'extend' : 'generate'} calendar: ${e.message}`,
+        color: 'red',
+      });
     }
   };
 
   const handleAccordionChange = (value: string | null) => {
+    setSelectedLocationId(value);
     if (value && campData?.campLocations?.[selectedYear]?.[value]?.calendarConfig) {
       const config = campData.campLocations[selectedYear][value].calendarConfig;
       setLocationStartDate(config.startDate ? new Date(config.startDate) : null);
-      setLocationEndDate(config.endDate ? new Date(config.endDate) : null);
+      setLocationEndDate(config.endDate ? new Date(config.endDate + 'T12:00:00') : null);
       setShiftLength(config.shiftLength || 3);
     } else {
       setLocationStartDate(null);
@@ -418,7 +583,11 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
 
   const handleSaveTruck = async () => {
     if (!campID || !truckName || !truckCapacity) {
-      alert('All truck fields are required.');
+      notifications.show({
+        title: 'Error',
+        message: 'All truck fields are required.',
+        color: 'red',
+      });
       return;
     }
 
@@ -431,11 +600,18 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
 
     try {
       await set(ref(database, path), truckData);
-      alert(`Truck ${modalMode === 'add' ? 'added' : 'updated'} successfully.`);
+      notifications.show({
+        title: 'Success',
+        message: `Truck ${modalMode === 'add' ? 'added' : 'updated'} successfully.`,
+        color: 'green',
+      });
       closeTruckModal();
-    } catch (e) {
-      console.error(e);
-      alert('Failed to save truck.');
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to save truck: ' + e.message,
+        color: 'red',
+      });
     }
   };
 
@@ -567,10 +743,10 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
                       />
                       <Group justify="flex-end" mt="md">
                         <Button
-                          onClick={() => handleGenerateCalendar(id)}
+                          onClick={() => handleUpdateCalendar(id)}
                           leftSection={<IconCalendar size={16} />}
                         >
-                          Generate Calendar
+                          {isShortenMode ? 'Shorten Calendar' : (isExtendMode ? 'Extend Calendar' : 'Generate Calendar')}
                         </Button>
                       </Group>
                     </Paper>

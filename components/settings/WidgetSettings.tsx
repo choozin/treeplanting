@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { IconArrowDown, IconArrowUp } from '@tabler/icons-react';
-import { onValue, ref, update } from 'firebase/database';
+import { ref, update } from 'firebase/database';
 import {
   ActionIcon,
   Button,
@@ -80,11 +80,10 @@ const WidgetSettings = () => {
         message: 'Your dashboard layout has been saved.',
         color: 'green',
       });
-    } catch (err) {
-      console.error('Error saving dashboard layout:', err);
+    } catch (err: any) {
       notifications.show({
         title: 'Save Failed',
-        message: (err as Error).message,
+        message: 'Error saving dashboard layout: ' + err.message,
         color: 'red',
       });
     } finally {
@@ -114,13 +113,15 @@ const WidgetSettings = () => {
       <Stack>
         {layout.map((widgetId, index) => {
           const widget = ALL_WIDGETS.find((w) => w.id === widgetId);
-          if (!widget) return null;
+          if (!widget) {
+            return null;
+          }
           return (
             <Paper key={widgetId} p="xs" withBorder radius="sm">
               <Group justify="space-between">
                 <Switch
                   label={widget.label}
-                  checked={true}
+                  checked
                   onChange={(e) => handleToggleWidget(widget.id, e.currentTarget.checked)}
                 />
                 <Group gap="xs">

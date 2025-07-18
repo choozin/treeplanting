@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { IconAlertCircle, IconBellRinging } from '@tabler/icons-react';
-import { get, ref, update } from 'firebase/database';
+import { IconAlertCircle } from '@tabler/icons-react';
+import { ref, update } from 'firebase/database';
 import {
   Alert,
   Button,
   Checkbox,
   Group,
   Paper,
-  Select,
   Stack,
   Switch,
   Text,
@@ -34,11 +33,13 @@ const NotificationSettings = () => {
 
   useEffect(() => {
     if (!('Notification' in window)) {
-      console.log('This browser does not support desktop notification');
-    } else {
-      if (Notification.permission === 'granted') {
-        setIsSubscribed(true);
-      }
+      notifications.show({
+        title: 'Browser Support',
+        message: 'This browser does not support desktop notification',
+        color: 'blue',
+      });
+    } else if (Notification.permission === 'granted') {
+      setIsSubscribed(true);
     }
 
     const classifiedsPrefs = userData?.notificationPreferences?.classifieds;
@@ -105,11 +106,10 @@ const NotificationSettings = () => {
         message: 'Your notification settings have been updated.',
         color: 'green',
       });
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
       notifications.show({
         title: 'Error',
-        message: 'Could not save your preferences.',
+        message: 'Could not save your preferences: ' + err.message,
         color: 'red',
       });
     } finally {

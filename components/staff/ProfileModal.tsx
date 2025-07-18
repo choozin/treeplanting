@@ -25,7 +25,6 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { ROLES } from '../../lib/constants';
 import classes from './Staff.module.css';
 
 interface ProfileModalProps {
@@ -45,7 +44,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const displayName = user.profile?.nickname || user.name;
   const roleTitle = ROLES[user.role as keyof typeof ROLES] || 'Unknown Role';

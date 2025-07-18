@@ -29,35 +29,19 @@ import {
 import { useWeather } from '../../hooks/useWeather';
 
 const getWeatherIcon = (code: number, size: number = 24) => {
-  if (code >= 0 && code <= 1) return <IconSun size={size} />;
-  if (code >= 2 && code <= 3) return <IconCloud size={size} />;
-  if (code >= 51 && code <= 99) return <IconCloudRain size={size} />;
-  if (code >= 71 && code <= 77) return <IconSnowflake size={size} />;
+  if (code >= 0 && code <= 1) {
+    return <IconSun size={size} />;
+  }
+  if (code >= 2 && code <= 3) {
+    return <IconCloud size={size} />;
+  }
+  if (code >= 51 && code <= 99) {
+    return <IconCloudRain size={size} />;
+  }
+  if (code >= 71 && code <= 77) {
+    return <IconSnowflake size={size} />;
+  }
   return <IconCloud size={size} />;
-};
-
-const getCardinalDirection = (degrees: number) => {
-  if (typeof degrees !== 'number' || isNaN(degrees)) return 'N/A';
-  const directions = [
-    'N',
-    'NNE',
-    'NE',
-    'ENE',
-    'E',
-    'ESE',
-    'SE',
-    'SSE',
-    'S',
-    'SSW',
-    'SW',
-    'WSW',
-    'W',
-    'WNW',
-    'NW',
-    'NNW',
-  ];
-  const index = Math.round(degrees / 22.5) % 16;
-  return directions[index];
 };
 
 const WeatherWidget = () => {
@@ -221,9 +205,15 @@ const WeatherWidget = () => {
       );
     }
 
-    if (view === 'current') return renderCurrentView();
-    if (view === 'hourly') return renderHourlyView();
-    if (view === 'daily') return renderDailyView();
+    if (view === 'current') {
+      return renderCurrentView();
+    }
+    if (view === 'hourly') {
+      return renderHourlyView();
+    }
+    if (view === 'daily') {
+      return renderDailyView();
+    }
     return null;
   };
 

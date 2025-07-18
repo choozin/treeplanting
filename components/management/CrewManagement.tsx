@@ -1,13 +1,10 @@
 'use client';
 
-import React, { FC, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { IconPencil, IconPlus, IconTrash, IconUsers } from '@tabler/icons-react';
-import { User as FirebaseUser } from 'firebase/auth';
 import { push as firebasePush, onValue, ref, remove, set, update } from 'firebase/database';
 import {
   Accordion,
-  ActionIcon,
-  Badge,
   Box,
   Button,
   Center,
@@ -24,7 +21,6 @@ import {
   TextInput,
   ThemeIcon,
   Title,
-  Tooltip,
 } from '@mantine/core';
 import { useModals } from '@mantine/modals';
 import { database } from '../../firebase/firebase';
@@ -91,7 +87,11 @@ const CrewManagement = () => {
         const usersData = snapshot.val() || {};
         const usersArray = Object.keys(usersData).map((id) => ({ id, ...usersData[id] }));
         setUsers(usersArray);
-        console.log('CrewManagement - users:', usersArray);
+        notifications.show({
+          title: 'Debug Info',
+          message: `CrewManagement - users: ${JSON.stringify(usersArray)}`,
+          color: 'blue',
+        });
       })
     );
 
@@ -100,9 +100,15 @@ const CrewManagement = () => {
   }, [campID]);
 
   const usersInCamp = useMemo(() => {
-    if (!campID) return [];
+    if (!campID) {
+      return [];
+    }
     const filteredUsers = users.filter((u) => u.assignedCamps && u.assignedCamps[campID]);
-    console.log('CrewManagement - usersInCamp:', filteredUsers);
+    notifications.show({
+      title: 'Debug Info',
+      message: `CrewManagement - usersInCamp: ${JSON.stringify(filteredUsers)}`,
+      color: 'blue',
+    });
     return filteredUsers;
   }, [users, campID]);
 
@@ -142,11 +148,19 @@ const CrewManagement = () => {
 
   const handleSaveCrew = async () => {
     if (!campID) {
-      alert('No camp selected.');
+      notifications.show({
+        title: 'Error',
+        message: 'No camp selected.',
+        color: 'red',
+      });
       return;
     }
     if (!crewName) {
-      alert('Crew name is required.');
+      notifications.show({
+        title: 'Error',
+        message: 'Crew name is required.',
+        color: 'red',
+      });
       return;
     }
     setIsSaving(true);
@@ -204,10 +218,12 @@ const CrewManagement = () => {
         await update(ref(database), memberUpdates);
       }
       setIsModalOpen(false);
-    } catch (error) {
-      console.error('Error saving crew:', error);
-    } finally {
-      setIsSaving(false);
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Error saving crew: ' + error.message,
+        color: 'red',
+      });
     }
   };
 
@@ -224,7 +240,9 @@ const CrewManagement = () => {
       labels: { confirm: 'Delete Crew', cancel: 'Cancel' },
       confirmProps: { color: 'red' },
       onConfirm: async () => {
-        if (!campID) return;
+        if (!campID) {
+          return;
+        }
         try {
           await remove(ref(database, `camps/${campID}/crews/${crew.id}`));
           const memberUpdates: Record<string, any> = {};
@@ -254,8 +272,12 @@ const CrewManagement = () => {
           if (Object.keys(memberUpdates).length > 0) {
             await update(ref(database), memberUpdates);
           }
-        } catch (error) {
-          console.error('Error deleting crew:', error);
+        } catch (error: any) {
+          notifications.show({
+            title: 'Error',
+            message: 'Error deleting crew: ' + error.message,
+            color: 'red',
+          });
         }
       },
     });
@@ -294,7 +316,9 @@ const CrewManagement = () => {
         {crews.map((crew) => {
           const crewBosses = crew.crewBosses ? Object.keys(crew.crewBosses) : [];
           const crewMembers = usersInCamp.filter((u) => {
-            if (!campID || !u.assignedCamps?.[campID]) return false;
+            if (!campID || !u.assignedCamps?.[campID]) {
+              return false;
+            }
             const userCrewIds = Array.isArray(u.assignedCamps[campID].crewId)
               ? u.assignedCamps[campID].crewId
               : u.assignedCamps[campID].crewId
@@ -302,8 +326,16 @@ const CrewManagement = () => {
                 : [];
             return userCrewIds.includes(crew.id);
           });
-          console.log(`Crew ${crew.crewName} - crewBosses:`, crewBosses);
-          console.log(`Crew ${crew.crewName} - crewMembers:`, crewMembers);
+          notifications.show({
+            title: 'Debug Info',
+            message: `Crew ${crew.crewName} - crewBosses: ${JSON.stringify(crewBosses)}`,
+            color: 'blue',
+          });
+          notifications.show({
+            title: 'Debug Info',
+            message: `Crew ${crew.crewName} - crewMembers: ` + JSON.stringify(crewMembers),
+            color: 'blue',
+          });
           const isUserCrewBoss = crewBosses.includes(user?.uid || '');
 
           return (

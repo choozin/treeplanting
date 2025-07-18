@@ -6,7 +6,7 @@ import MyProfile from '../../components/MyAccount/MyProfile';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function MyAccountPage() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (

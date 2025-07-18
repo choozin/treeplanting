@@ -6,7 +6,7 @@ import SettingsPage from '../../components/settings/SettingsPage';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function AccountSettingsPage() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (

@@ -1,7 +1,7 @@
 import React, { FC } from 'react';
 import { IconTrash } from '@tabler/icons-react';
 import { ref, remove } from 'firebase/database';
-import { ActionIcon, Badge, Button, Group, Paper, Stack, Table, Text, Title } from '@mantine/core';
+import { ActionIcon, Badge, Group, Paper, Stack, Table, Text, Title } from '@mantine/core';
 import { useModals } from '@mantine/modals';
 import { database } from '../../firebase/firebase';
 import { ROLES } from '../../lib/constants';
@@ -46,7 +46,11 @@ const AdminUserList: FC<AdminUserListProps> = ({ allUsers, allCamps }) => {
         try {
           // 1. Delete user data from Realtime Database
           await remove(ref(database, `users/${user.id}`));
-          console.log(`User ${user.id} data deleted from Realtime Database.`);
+          notifications.show({
+            title: 'User Data Deleted',
+            message: `User ${user.id} data deleted from Realtime Database.`,
+            color: 'green',
+          });
 
           // 2. Attempt to delete user from Firebase Authentication (requires server-side)
           // We will call a Next.js API route for this
@@ -57,17 +61,30 @@ const AdminUserList: FC<AdminUserListProps> = ({ allUsers, allCamps }) => {
           });
 
           if (response.ok) {
-            alert(`${user.name} has been permanently deleted.`);
+            notifications.show({
+              title: 'User Deleted',
+              message: `${user.name} has been permanently deleted.`,
+              color: 'green',
+            });
           } else {
             const errorData = await response.json();
-            alert(
-              `Failed to delete ${user.name} from Firebase Auth: ${errorData.message || response.statusText}`
-            );
-            console.error(`Failed to delete user ${user.id} from Firebase Auth:`, errorData);
+            notifications.show({
+              title: 'Deletion Failed',
+              message: `Failed to delete ${user.name} from Firebase Auth: ${errorData.message || response.statusText}`,
+              color: 'red',
+            });
+            notifications.show({
+              title: 'Error',
+              message: `Failed to delete user ${user.id} from Firebase Auth: ${JSON.stringify(errorData)}`,
+              color: 'red',
+            });
           }
-        } catch (e) {
-          console.error('Error during user deletion:', e);
-          alert(`An error occurred while deleting ${user.name}.`);
+        } catch (e: any) {
+          notifications.show({
+            title: 'Error',
+            message: `An error occurred during user deletion: ${e.message}`,
+            color: 'red',
+          });
         }
       },
     });

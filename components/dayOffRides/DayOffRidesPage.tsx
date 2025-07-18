@@ -1,21 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  IconBolt,
-  IconBus,
   IconCalendar,
-  IconCar,
   IconCheck,
-  IconChevronDown,
-  IconChevronUp,
   IconClock,
-  IconCurrencyDollar,
-  IconInfoCircle,
   IconMapPin,
   IconNotes,
   IconPencil,
-  IconPhone,
   IconTrash,
   IconUser,
   IconUsers,
@@ -30,31 +22,17 @@ import {
   startOfDay,
   subDays,
 } from 'date-fns';
-import {
-  endAt,
-  get,
-  onValue,
-  orderByChild,
-  push,
-  query,
-  ref,
-  remove,
-  startAt,
-  update,
-} from 'firebase/database';
+import { get, onValue, push, ref, remove, update } from 'firebase/database';
 import {
   Accordion,
-  Alert,
   Badge,
   Box,
   Button,
   Card,
   Checkbox,
-  Divider,
   Group,
   Modal,
   NumberInput,
-  Radio,
   Select,
   Stack,
   Tabs,
@@ -65,6 +43,7 @@ import {
   Tooltip,
 } from '@mantine/core';
 import { DatePickerInput, TimeInput } from '@mantine/dates';
+import { useModals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { database } from '../../firebase/firebase';
 import { useAuth } from '../../hooks/useAuth';
@@ -82,7 +61,7 @@ interface RideOffer {
   truckId?: string;
   requiredReturnTime?: string;
   allowAutoJoin?: boolean;
-  passengers: { [key: string]: string }; // passengerId: passengerName
+  passengers: { [key: string]: number }; // passengerId: numberOfPeople
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   timestamp: string;
 }
@@ -93,18 +72,12 @@ interface RideRequest {
   requesterName: string;
   requestDate: string;
   departureTime: string;
-  departureLocation: string;
   destination: string;
   numberOfPeople: number;
   notes?: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   offeredRideId?: string; // If matched with an offer
   timestamp: string;
-}
-
-interface PassengerDetails {
-  name: string;
-  contact: string;
 }
 
 interface Camp {
@@ -122,6 +95,7 @@ interface DayOffRidesPageProps {
 
 const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const { user, userData, loading } = useAuth(); // Changed from `profile` to `userData`
+  const modals = useModals();
   const profile = userData?.profile; // Access profile from userData
   const [activeTab, setActiveTab] = useState<string | null>('ride-offers');
   const [offerModalOpen, setOfferModalOpen] = useState(false);
@@ -130,10 +104,8 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   // Ride Offer State
   const [departureDate, setDepartureDate] = useState<Date | null>(null);
   const [departureTime, setDepartureTime] = useState('');
-  const [departureLocation, setDepartureLocation] = useState('');
   const [destination, setDestination] = useState('');
   const [availableSeats, setAvailableSeats] = useState<number | ''>('');
-  const [costPerPerson, setCostPerPerson] = useState<number | ''>(0);
   const [offerNotes, setOfferNotes] = useState('');
   const [editingOffer, setEditingOffer] = useState<RideOffer | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
@@ -141,14 +113,19 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const [requiredReturnTime, setRequiredReturnTime] = useState('');
   const [allowAutoJoin, setAllowAutoJoin] = useState(false);
 
+  // Join Modal State
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
+  const [joinModalStep, setJoinModalStep] = useState('initial'); // 'initial' or 'withOthers'
+  const [otherPeopleJoining, setOtherPeopleJoining] = useState<number | ''>('');
+  const [selectedOfferToJoin, setSelectedOfferToJoin] = useState<RideOffer | null>(null);
+
   // Ride Request State
   const [requestDate, setRequestDate] = useState<Date | null>(null);
   const [requestDepartureTime, setRequestDepartureTime] = useState('');
-  const [requestDepartureLocation, setRequestDepartureLocation] = useState('');
   const [requestDestination, setRequestDestination] = useState('');
   const [numberOfPeople, setNumberOfPeople] = useState<number | ''>('');
   const [requestNotes, setRequestNotes] = useState('');
-  const [editingRequest, setEditingRequest] = useState<RideRequest | null>(null);
+  
 
   // Data lists
   const [rideOffers, setRideOffers] = useState<RideOffer[]>([]);
@@ -184,30 +161,26 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const [pastSortOrder, setPastSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      return;
+    }
 
     const offersRef = ref(database, `camps/${campID}/dayOffRides/offers`);
     const requestsRef = ref(database, `camps/${campID}/dayOffRides/requests`);
     const usersRef = ref(database, 'users');
     const campsRef = ref(database, 'camps');
-    const crewsRef = ref(database, `camps/${campID}/crews`);
 
     const unsubscribeOffers = onValue(offersRef, (snapshot) => {
       const offersVal = snapshot.val();
       const loadedOffers: RideOffer[] = offersVal
         ? Object.keys(offersVal).map((key) => ({ id: key, ...offersVal[key] }))
         : [];
-      console.log('DayOffRidesPage - campID:', campID);
-      console.log('DayOffRidesPage - Raw loadedOffers:', loadedOffers);
-      console.log('DayOffRidesPage - effectiveRole:', effectiveRole);
-      console.log('DayOffRidesPage - ROLES:', ROLES);
       const upcoming = loadedOffers.filter(
         (offer) => parseISO(offer.departureDate) >= startOfDay(new Date())
       );
       const past = loadedOffers.filter(
         (offer) => parseISO(offer.departureDate) < startOfDay(new Date())
       );
-      console.log('DayOffRidesPage - Upcoming offers after date filter:', upcoming);
       setRideOffers(upcoming);
       setPastRides(past);
     });
@@ -288,7 +261,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       setEditingOffer(offer);
       setDepartureDate(parseISO(offer.departureDate));
       setDepartureTime(offer.departureTime);
-      setDepartureLocation(offer.departureLocation);
       setDestination(offer.destination);
       setAvailableSeats(offer.availableSeats);
       setSelectedTruck(offer.truckId || '');
@@ -317,31 +289,31 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       setOfferNotes('');
       setSelectedDriverId(canCreateRideOffer ? user?.uid || null : null);
       setSelectedTruck('');
-      setCostPerPerson(0);
       setRequiredReturnTime('');
-      setAllowAutoJoin(false);
+      setAllowAutoJoin(true);
     }
     setOfferModalOpen(true);
   };
 
-  const openRequestModal = (request: RideRequest | null = null) => {
-    if (request) {
-      setEditingRequest(request);
-      setRequestDate(parseISO(request.requestDate));
-      setRequestDepartureTime(request.departureTime);
-      setRequestDepartureLocation(request.departureLocation);
-      setRequestDestination(request.destination);
-      setNumberOfPeople(request.numberOfPeople);
-      setRequestNotes(request.notes || '');
-    } else {
-      setEditingRequest(null);
-      setRequestDate(null);
-      setRequestDepartureTime('');
-      setRequestDepartureLocation('');
-      setRequestDestination('');
-      setNumberOfPeople('');
-      setRequestNotes('');
+  const openRequestModal = () => {
+    let nextDayOff: Date | null = null;
+    if (calendarData) {
+      const sortedDates = Object.keys(calendarData).sort();
+      const today = startOfDay(new Date());
+
+      for (const dateString of sortedDates) {
+        const date = parseISO(dateString);
+        if (date >= today && calendarData[dateString]?.shiftDay === 0) {
+          nextDayOff = date;
+          break;
+        }
+      }
     }
+    setRequestDate(nextDayOff || addDays(new Date(), 1)); // Default to tomorrow if no day off found
+    setRequestDepartureTime('');
+    setRequestDestination('');
+    setNumberOfPeople('');
+    setRequestNotes('');
     setRequestModalOpen(true);
   };
 
@@ -383,8 +355,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       allowAutoJoin,
     };
 
-    console.log('Profile object before submit:', profile);
-
     try {
       if (editingOffer) {
         await update(
@@ -425,7 +395,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       !profile ||
       !requestDate ||
       !requestDepartureTime ||
-      !requestDepartureLocation ||
       !requestDestination ||
       numberOfPeople === ''
     ) {
@@ -445,35 +414,22 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       requesterName: profile.name,
       requestDate: formatISO(requestDate, { representation: 'date' }),
       departureTime: requestDepartureTime,
-      departureLocation: requestDepartureLocation,
       destination: requestDestination,
       numberOfPeople: Number(numberOfPeople),
       notes: requestNotes,
     };
 
     try {
-      if (editingRequest) {
-        await update(
-          ref(database, `camps/${campID}/dayOffRides/requests/${editingRequest.id}`),
-          requestData
-        );
-        notifications.show({
-          title: 'Success',
-          message: 'Ride request updated successfully!',
-          color: 'green',
-        });
-      } else {
-        await push(ref(database, `camps/${campID}/dayOffRides/requests`), {
-          ...requestData,
-          status: 'pending',
-          timestamp: formatISO(new Date()),
-        });
-        notifications.show({
-          title: 'Success',
-          message: 'Ride request created successfully!',
-          color: 'green',
-        });
-      }
+      await push(ref(database, `camps/${campID}/dayOffRides/requests`), {
+        ...requestData,
+        status: 'pending',
+        timestamp: formatISO(new Date()),
+      });
+      notifications.show({
+        title: 'Success',
+        message: 'Ride request created successfully!',
+        color: 'green',
+      });
       setRequestModalOpen(false);
     } catch (error: any) {
       notifications.show({
@@ -485,41 +441,79 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   };
 
   const handleDeleteOffer = async (offerId: string) => {
-    if (window.confirm('Are you sure you want to delete this ride offer?')) {
-      try {
-        await remove(ref(database, `camps/${campID}/dayOffRides/offers/${offerId}`));
-        notifications.show({ title: 'Success', message: 'Ride offer deleted.', color: 'green' });
-      } catch (error: any) {
-        notifications.show({
-          title: 'Error',
-          message: `Failed to delete offer: ${error.message}`,
-          color: 'red',
-        });
-      }
-    }
+    modals.openConfirmModal({
+      title: 'Delete Ride Offer',
+      children: (
+        <Text size="sm">
+          Are you sure you want to delete this ride offer? This action cannot be undone.
+        </Text>
+      ),
+      labels: { confirm: 'Delete', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        try {
+          await remove(ref(database, `camps/${campID}/dayOffRides/offers/${offerId}`));
+          notifications.show({ title: 'Success', message: 'Ride offer deleted.', color: 'green' });
+        } catch (error: any) {
+          notifications.show({
+            title: 'Error',
+            message: `Failed to delete offer: ${error.message}`,
+            color: 'red',
+          });
+        }
+      },
+    });
   };
 
-  const handleDeleteRequest = async (requestId: string) => {
-    if (window.confirm('Are you sure you want to delete this ride request?')) {
-      try {
-        await remove(ref(database, `camps/${campID}/dayOffRides/requests/${requestId}`));
-        notifications.show({ title: 'Success', message: 'Ride request deleted.', color: 'green' });
-      } catch (error: any) {
-        notifications.show({
-          title: 'Error',
-          message: `Failed to delete request: ${error.message}`,
-          color: 'red',
-        });
-      }
-    }
+  const handleDeleteRequest = async (request: RideRequest) => {
+    modals.openConfirmModal({
+      title: 'Delete Ride Request',
+      children: (
+        <Text size="sm">
+          Are you sure you want to delete this ride request? This action cannot be undone.
+        </Text>
+      ),
+      labels: { confirm: 'Delete', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        try {
+          if (request.status === 'confirmed' && request.offeredRideId) {
+            // Fetch the associated ride offer
+            const offerSnapshot = await get(ref(database, `camps/${campID}/dayOffRides/offers/${request.offeredRideId}`));
+            if (offerSnapshot.exists()) {
+              const offer: RideOffer = offerSnapshot.val();
+              const newPassengers = { ...offer.passengers };
+              delete newPassengers[request.requesterId];
+
+              await update(ref(database, `camps/${campID}/dayOffRides/offers/${request.offeredRideId}`), {
+                passengers: newPassengers,
+                availableSeats: offer.availableSeats + request.numberOfPeople,
+              });
+              notifications.show({
+                title: 'Ride Offer Updated',
+                message: `Seats returned to offer ${offer.id}.`,
+                color: 'blue',
+              });
+            }
+          }
+          await remove(ref(database, `camps/${campID}/dayOffRides/requests/${request.id}`));
+          notifications.show({
+            title: 'Success',
+            message: 'Ride request deleted.',
+            color: 'green',
+          });
+        } catch (error: any) {
+          notifications.show({
+            title: 'Error',
+            message: `Failed to delete request: ${error.message}`,
+            color: 'red',
+          });
+        }
+      },
+    });
   };
 
   const handleJoinRide = async (offer: RideOffer) => {
-    console.log('handleJoinRide: user', user);
-    console.log('handleJoinRide: profile', profile);
-    console.log('handleJoinRide: loading', loading);
-    console.log('handleJoinRide: offer.passengers', offer.passengers);
-    console.log('handleJoinRide: user.uid', user?.uid);
     if (loading) {
       notifications.show({
         title: 'Info',
@@ -561,30 +555,16 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       return;
     }
 
-    try {
-      // Ensure passengerName is always a valid string
-      const passengerName = profile?.name || profile?.nickname || user.email || user.uid; // Prioritize name/nickname, fallback to email then UID
-      const newPassengers = { ...(offer.passengers || {}), [user.uid]: passengerName };
-      await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
-        passengers: newPassengers,
-        availableSeats: offer.availableSeats - 1,
-      });
-      notifications.show({
-        title: 'Success',
-        message: 'Joined ride successfully!',
-        color: 'green',
-      });
-    } catch (error: any) {
-      notifications.show({
-        title: 'Error',
-        message: `Failed to join ride: ${error.message}`,
-        color: 'red',
-      });
-    }
+    setSelectedOfferToJoin(offer);
+    setJoinModalStep('initial');
+    setOtherPeopleJoining('');
+    setJoinModalOpen(true);
   };
 
   const handleLeaveRide = async (offer: RideOffer) => {
-    if (!user || !profile) return;
+    if (!user || !profile) {
+      return;
+    }
     if (!offer.passengers || !offer.passengers[user.uid]) {
       notifications.show({
         title: 'Info',
@@ -594,27 +574,33 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       return;
     }
 
-    if (window.confirm('Are you sure you want to leave this ride?')) {
-      try {
-        const newPassengers = { ...offer.passengers };
-        delete newPassengers[user.uid];
-        await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
-          passengers: newPassengers,
-          availableSeats: offer.availableSeats + 1,
-        });
-        notifications.show({
-          title: 'Success',
-          message: 'Left ride successfully!',
-          color: 'green',
-        });
-      } catch (error: any) {
-        notifications.show({
-          title: 'Error',
-          message: `Failed to leave ride: ${error.message}`,
-          color: 'red',
-        });
-      }
-    }
+    modals.openConfirmModal({
+      title: 'Leave Ride',
+      children: <Text size="sm">Are you sure you want to leave this ride?</Text>,
+      labels: { confirm: 'Leave', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        try {
+          const newPassengers = { ...offer.passengers };
+          delete newPassengers[user.uid];
+          await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
+            passengers: newPassengers,
+            availableSeats: offer.availableSeats + 1,
+          });
+          notifications.show({
+            title: 'Success',
+            message: 'Left ride successfully!',
+            color: 'green',
+          });
+        } catch (error: any) {
+          notifications.show({
+            title: 'Error',
+            message: `Failed to leave ride: ${error.message}`,
+            color: 'red',
+          });
+        }
+      },
+    });
   };
 
   const handleMatchRequest = async (offer: RideOffer, request: RideRequest) => {
@@ -627,40 +613,88 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       return;
     }
 
-    if (
-      window.confirm(
-        `Match request from ${request.requesterName} (${request.numberOfPeople} people) with your ride offer?`
-      )
-    ) {
-      try {
-        // Update offer: reduce seats, add request as passenger (simplified for now)
-        const newPassengers = {
-          ...(offer.passengers || {}),
-          [request.requesterId]: request.requesterName,
-        };
-        await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
-          availableSeats: offer.availableSeats - request.numberOfPeople,
-          passengers: newPassengers, // This assumes a single requester fills multiple spots, might need refinement
-          status: offer.availableSeats - request.numberOfPeople === 0 ? 'confirmed' : 'pending',
-        });
+    modals.openConfirmModal({
+      title: 'Match Ride Request',
+      children: (
+        <Text size="sm">
+          `Match request from ${request.requesterName} (${request.numberOfPeople} people) with your
+          ride offer?`
+        </Text>
+      ),
+      labels: { confirm: 'Match', cancel: 'Cancel' },
+      onConfirm: async () => {
+        try {
+          // Update offer: reduce seats, add request as passenger (simplified for now)
+          const newPassengers = {
+            ...(offer.passengers || {}),
+            [request.requesterId]: request.numberOfPeople,
+          };
+          await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
+            availableSeats: offer.availableSeats - request.numberOfPeople,
+            passengers: newPassengers, // This assumes a single requester fills multiple spots, might need refinement
+            status: offer.availableSeats - request.numberOfPeople === 0 ? 'confirmed' : 'pending',
+          });
 
-        // Update request: set status to confirmed, link to offer
-        await update(ref(database, `camps/${campID}/dayOffRides/requests/${request.id}`), {
-          status: 'confirmed',
-          offeredRideId: offer.id,
-        });
-        notifications.show({
-          title: 'Success',
-          message: 'Request matched successfully!',
-          color: 'green',
-        });
-      } catch (error: any) {
-        notifications.show({
-          title: 'Error',
-          message: `Failed to match request: ${error.message}`,
-          color: 'red',
-        });
-      }
+          // Update request: set status to confirmed, link to offer
+          await update(ref(database, `camps/${campID}/dayOffRides/requests/${request.id}`), {
+            status: 'confirmed',
+            offeredRideId: offer.id,
+          });
+          notifications.show({
+            title: 'Success',
+            message: 'Request matched successfully!',
+            color: 'green',
+          });
+        } catch (error: any) {
+          notifications.show({
+            title: 'Error',
+            message: `Failed to match request: ${error.message}`,
+            color: 'red',
+          });
+        }
+      },
+    });
+  };
+
+  const handleConfirmJoin = async (offer: RideOffer, additionalPeople: number) => {
+    if (!user || !profile) {
+      notifications.show({
+        title: 'Error',
+        message: 'You must be logged in to join a ride.',
+        color: 'red',
+      });
+      return;
+    }
+
+    const totalPeople = 1 + additionalPeople;
+
+    if (offer.availableSeats < totalPeople) {
+      notifications.show({
+        title: 'Error',
+        message: `Not enough seats available. Only ${offer.availableSeats} seat(s) left.`,
+        color: 'red',
+      });
+      return;
+    }
+
+    try {
+      const newPassengers = { ...(offer.passengers || {}), [user.uid]: totalPeople };
+      await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
+        passengers: newPassengers,
+        availableSeats: offer.availableSeats - totalPeople,
+      });
+      notifications.show({
+        title: 'Success',
+        message: 'Joined ride successfully!',
+        color: 'green',
+      });
+      setJoinModalOpen(false);
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: `Failed to join ride: ${error.message}`,
+        color: 'red',
+      });
     }
   };
 
@@ -702,8 +736,12 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
         }
 
         // Handle cases where values might be undefined or null
-        if (aVal === undefined || aVal === null) return sortOrder === 'asc' ? 1 : -1;
-        if (bVal === undefined || bVal === null) return sortOrder === 'asc' ? -1 : 1;
+        if (aVal === undefined || aVal === null) {
+          return sortOrder === 'asc' ? 1 : -1;
+        }
+        if (bVal === undefined || bVal === null) {
+          return sortOrder === 'asc' ? -1 : 1;
+        }
 
         if (typeof aVal === 'string' && typeof bVal === 'string') {
           return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
@@ -752,7 +790,17 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
   const canCreateRideOffer = isDriverCrew || isCrewModerator || isCrewBoss;
 
-  console.log('DayOffRidesPage - filteredAndSortedOffers:', filteredAndSortedOffers);
+  const availableTrucks = useMemo(() => {
+    if (!departureDate) return trucks; // If no date selected, all trucks are potentially available
+
+    const offersOnSelectedDate = rideOffers.filter(
+      (offer) => offer.departureDate === formatISO(departureDate, { representation: 'date' })
+    );
+
+    const assignedTruckIds = new Set(offersOnSelectedDate.map((offer) => offer.truckId));
+
+    return trucks.filter((truck) => !assignedTruckIds.has(truck.id) || (editingOffer && truck.id === editingOffer.truckId));
+  }, [trucks, departureDate, rideOffers, editingOffer]);
 
   return (
     <Box style={{ padding: '20px' }}>
@@ -764,7 +812,9 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
         <Tabs.List>
           <Tabs.Tab value="ride-offers">Ride Offers</Tabs.Tab>
           <Tabs.Tab value="ride-requests">Ride Requests</Tabs.Tab>
-          <Tabs.Tab value="past-rides">Past Rides</Tabs.Tab>
+          {effectiveRole >= ROLES.Admin && (
+            <Tabs.Tab value="past-rides">Past Rides</Tabs.Tab>
+          )}
         </Tabs.List>
 
         <Tabs.Panel value="ride-offers" pt="xs">
@@ -791,7 +841,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
               data={[
                 { value: 'departureDate', label: 'Departure Date' },
                 { value: 'departureTime', label: 'Departure Time' },
-                { value: 'departureLocation', label: 'Departure Location' },
                 { value: 'destination', label: 'Destination' },
                 { value: 'availableSeats', label: 'Available Seats' },
               ]}
@@ -822,8 +871,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                     <Accordion.Control>
                       <Group justify="space-between">
                         <Text fw={700}>
-                          {offer.departureDate} | {offer.departureTime} from{' '}
-                          {offer.departureLocation} to {offer.destination}
+                          {offer.departureDate} | {offer.departureTime} to {offer.destination}
                         </Text>
                         <Group>
                           <Badge color={offer.availableSeats > 0 ? 'green' : 'red'}>
@@ -853,10 +901,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                         </Group>
                         <Group>
                           <IconMapPin size={16} />
-                          <Text size="sm">From: {offer.departureLocation}</Text>
-                        </Group>
-                        <Group>
-                          <IconMapPin size={16} />
                           <Text size="sm">To: {offer.destination}</Text>
                         </Group>
                         <Group>
@@ -872,7 +916,16 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                         <Group>
                           <Text size="sm">Passengers:</Text>
                           {offer.passengers && Object.keys(offer.passengers).length > 0 ? (
-                            <Text size="sm">{Object.values(offer.passengers).join(', ')}</Text>
+                            <Text size="sm">
+                              {Object.keys(offer.passengers)
+                                .map((passengerId) => {
+                                  const passengerUser = allUsers.find((u) => u.id === passengerId);
+                                  const numPeople = offer.passengers[passengerId];
+                                  const name = passengerUser?.profile?.nickname || passengerUser?.profile?.name || 'Name N/A';
+                                  return numPeople > 1 ? `${name} (+${numPeople - 1})` : name;
+                                })
+                                .join(', ')}}
+                            </Text>
                           ) : (
                             <Text size="sm" c="dimmed">
                               None yet.
@@ -954,8 +1007,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                                       withBorder
                                     >
                                       <Text size="sm" fw={500}>
-                                        {req.requesterName} ({req.numberOfPeople} people) from{' '}
-                                        {req.departureLocation}
+                                        {req.requesterName} ({req.numberOfPeople} people)
                                       </Text>
                                       <Text size="xs" c="dimmed">
                                         {req.requestDate} at {req.departureTime}
@@ -1003,7 +1055,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
               data={[
                 { value: 'requestDate', label: 'Request Date' },
                 { value: 'departureTime', label: 'Departure Time' },
-                { value: 'departureLocation', label: 'Departure Location' },
                 { value: 'destination', label: 'Destination' },
                 { value: 'numberOfPeople', label: 'Number of People' },
               ]}
@@ -1058,10 +1109,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                         </Group>
                         <Group>
                           <IconMapPin size={16} />
-                          <Text size="sm">From: {request.departureLocation}</Text>
-                        </Group>
-                        <Group>
-                          <IconMapPin size={16} />
                           <Text size="sm">To: {request.destination}</Text>
                         </Group>
                         <Group>
@@ -1078,16 +1125,9 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                           {user && request.requesterId === user.uid ? (
                             <>
                               <Button
-                                leftSection={<IconPencil size={16} />}
-                                onClick={() => openRequestModal(request)}
-                                size="sm"
-                              >
-                                Edit Request
-                              </Button>
-                              <Button
                                 leftSection={<IconTrash size={16} />}
                                 color="red"
-                                onClick={() => handleDeleteRequest(request.id)}
+                                onClick={() => handleDeleteRequest(request)}
                                 size="sm"
                               >
                                 Delete Request
@@ -1123,7 +1163,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
               data={[
                 { value: 'departureDate', label: 'Departure Date' },
                 { value: 'departureTime', label: 'Departure Time' },
-                { value: 'departureLocation', label: 'Departure Location' },
                 { value: 'destination', label: 'Destination' },
               ]}
               value={pastSortKey}
@@ -1152,8 +1191,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                     <Accordion.Control>
                       <Group justify="space-between">
                         <Text fw={700}>
-                          {offer.departureDate} | {offer.departureTime} from{' '}
-                          {offer.departureLocation} to {offer.destination}
+                          {offer.departureDate} | {offer.departureTime}
                         </Text>
                         <Group>
                           <Badge color={offer.availableSeats > 0 ? 'green' : 'red'}>
@@ -1180,10 +1218,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                         <Group>
                           <IconClock size={16} />
                           <Text size="sm">Time: {offer.departureTime}</Text>
-                        </Group>
-                        <Group>
-                          <IconMapPin size={16} />
-                          <Text size="sm">From: {offer.departureLocation}</Text>
                         </Group>
                         <Group>
                           <IconMapPin size={16} />
@@ -1263,7 +1297,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                   return userCrewIds.some((crewId) => {
                     const crew = crews.find((c) => c.id === crewId);
                     return crew?.crewType === 'Drivers';
-                  });
+                  }) || (editingOffer && u.id === editingOffer.driverId); // Include current driver if editing
                 })
                 .map((u) => ({ value: u.id, label: u.profile?.nickname || u.name }));
               return driverUsers;
@@ -1275,11 +1309,12 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
           <Select
             label="Truck"
             placeholder="Select a truck"
-            data={trucks.map((truck) => ({ value: truck.id, label: truck.name }))}
+            data={availableTrucks.map((truck) => ({ value: truck.id, label: truck.name }))}
             value={selectedTruck}
             onChange={(value) => setSelectedTruck(value || '')}
             required
           />
+          
 
           <TextInput
             label="Destination"
@@ -1329,7 +1364,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       <Modal
         opened={requestModalOpen}
         onClose={() => setRequestModalOpen(false)}
-        title={editingRequest ? 'Edit Ride Request' : 'Create New Ride Request'}
+        title={'Create New Ride Request'}
       >
         <Stack>
           <DatePickerInput
@@ -1344,25 +1379,6 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             placeholder="Select time"
             value={requestDepartureTime}
             onChange={(event) => setRequestDepartureTime(event.currentTarget.value)}
-            required
-          />
-          <Select
-            label="Departure Location"
-            placeholder="Select or type departure location"
-            data={campOptions}
-            searchable
-            creatable="true"
-            getCreateLabel={(query) => `+ Create ${query}`}
-            onCreate={(query) => {
-              const item = { value: query, label: query };
-              setCamps((current) => [
-                ...current,
-                { id: query, name: query, location: query, isActive: true },
-              ]);
-              return item;
-            }}
-            value={requestDepartureLocation}
-            onChange={(value) => setRequestDepartureLocation(value || '')}
             required
           />
           <TextInput
@@ -1391,7 +1407,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
               Cancel
             </Button>
             <Button onClick={handleRequestSubmit}>
-              {editingRequest ? 'Update Request' : 'Create Request'}
+              {'Create Request'}
             </Button>
           </Group>
         </Stack>
@@ -1417,6 +1433,51 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                 </Group>
               </Card>
             ))}
+          </Stack>
+        )}
+      </Modal>
+
+      {/* Join Ride Modal */}
+      <Modal
+        opened={joinModalOpen}
+        onClose={() => setJoinModalOpen(false)}
+        title="Join Ride"
+      >
+        {selectedOfferToJoin && joinModalStep === 'initial' && (
+          <Stack>
+            <Text>How many people are joining this ride?</Text>
+            <Group grow>
+              <Button onClick={() => handleConfirmJoin(selectedOfferToJoin, 0)}>
+                Only Me Joining
+              </Button>
+              <Button onClick={() => setJoinModalStep('withOthers')}>
+                Me and Other People Joining
+              </Button>
+            </Group>
+          </Stack>
+        )}
+
+        {selectedOfferToJoin && joinModalStep === 'withOthers' && (
+          <Stack>
+            <NumberInput
+              label="Number of other people joining with you"
+              placeholder="e.g., 2"
+              value={otherPeopleJoining}
+              onChange={(val) => setOtherPeopleJoining(val)}
+              min={1}
+              required
+            />
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setJoinModalStep('initial')}>
+                Back
+              </Button>
+              <Button
+                onClick={() => handleConfirmJoin(selectedOfferToJoin, Number(otherPeopleJoining))}
+                disabled={!otherPeopleJoining || Number(otherPeopleJoining) <= 0}
+              >
+                Join with Others
+              </Button>
+            </Group>
           </Stack>
         )}
       </Modal>

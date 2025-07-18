@@ -3,17 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { push, ref, serverTimestamp } from 'firebase/database';
-import {
-  Button,
-  Group,
-  Modal,
-  Radio,
-  Select,
-  Stepper,
-  Text,
-  Textarea,
-  TextInput,
-} from '@mantine/core';
+import { Button, Group, Modal, Radio, Stepper, Text, Textarea, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { database } from '../../firebase/firebase';
@@ -47,17 +37,23 @@ const AppFeedbackModal: React.FC<AppFeedbackModalProps> = ({ opened, onClose }) 
     },
     validate: (values) => {
       if (active === 0) {
-        if (!feedbackType) return { feedbackType: 'Please select a feedback type' };
-        if (feedbackType !== 'newIdea' && !isCurrentPageRelated)
+        if (!feedbackType) {
+          return { feedbackType: 'Please select a feedback type' };
+        }
+        if (feedbackType !== 'newIdea' && !isCurrentPageRelated) {
           return { isCurrentPageRelated: 'Please select an option' };
+        }
       }
       if (active === 1) {
-        if (feedbackType === 'bug' && !values.description)
+        if (feedbackType === 'bug' && !values.description) {
           return { description: 'Please describe the bug' };
-        if (feedbackType !== 'newIdea' && !values.newFeatureIdea)
+        }
+        if (feedbackType !== 'newIdea' && !values.newFeatureIdea) {
           return { newFeatureIdea: 'Please describe your idea' };
-        if (feedbackType === 'help' && !values.helpNeeded)
+        }
+        if (feedbackType === 'help' && !values.helpNeeded) {
           return { helpNeeded: 'Please describe what help you need' };
+        }
       }
       return {};
     },
@@ -115,11 +111,10 @@ const AppFeedbackModal: React.FC<AppFeedbackModalProps> = ({ opened, onClose }) 
       setIsCurrentPageRelated(null);
       setActive(0);
       onClose();
-    } catch (error) {
-      console.error('Error submitting feedback:', error);
+    } catch (error: any) {
       notifications.show({
         title: 'Error',
-        message: 'Failed to submit feedback. Please try again.',
+        message: 'Error submitting feedback: ' + error.message,
         color: 'red',
       });
     }

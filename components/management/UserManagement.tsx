@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FC, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   IconAlertCircle,
   IconPencil,
@@ -8,13 +8,11 @@ import {
   IconUsers,
   IconUsersGroup,
 } from '@tabler/icons-react';
-import { User as FirebaseUser } from 'firebase/auth';
-import { getDatabase, onValue, ref, update } from 'firebase/database';
+import { onValue, ref, update } from 'firebase/database';
 import {
   ActionIcon,
   Alert,
   Badge,
-  Box,
   Button,
   Center,
   Container,
@@ -84,11 +82,6 @@ const UserManagement: FC<{
   const [roleFilter, setRoleFilter] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('employees');
 
-  const viewer = useMemo(
-    () => allUsers.find((u) => u.id === currentUser.uid),
-    [allUsers, currentUser.uid]
-  );
-
   useEffect(() => {
     setIsLoading(true);
     const usersRef = ref(database, 'users');
@@ -157,7 +150,9 @@ const UserManagement: FC<{
   };
 
   const handleSaveChanges = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser) {
+      return;
+    }
     setIsSaving(true);
 
     const updates: Record<string, any> = {};
@@ -178,31 +173,36 @@ const UserManagement: FC<{
     try {
       await update(ref(database), updates);
       setIsEditModalOpen(false);
-    } catch (e) {
-      console.error('Failed to save changes:', e);
-    } finally {
-      setIsSaving(false);
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to save changes: ' + e.message,
+        color: 'red',
+      });
     }
   };
 
-  if (isLoading)
+  if (isLoading) {
     return (
       <Center>
         <Loader />
       </Center>
     );
-  if (error)
+  }
+  if (error) {
     return (
       <Alert color="red" title="Error">
         {error}
       </Alert>
     );
-  if (effectiveRole < 4)
+  }
+  if (effectiveRole < 4) {
     return (
       <Alert color="red" title="Access Denied">
         You do not have permission to view this page.
       </Alert>
     );
+  }
   if (effectiveRole < 9 && !campID) {
     return (
       <Container size="xs" mt="xl">

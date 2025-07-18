@@ -4,12 +4,14 @@ import React, { useMemo } from 'react';
 import { IconCake } from '@tabler/icons-react';
 import { get, ref } from 'firebase/database';
 import useSWR from 'swr';
-import { Center, Group, Paper, Skeleton, Stack, Text, Title } from '@mantine/core';
+import { Group, Paper, Skeleton, Stack, Text, Title } from '@mantine/core';
 import { database } from '../../firebase/firebase';
 
 const usersFetcher = async (path: string) => {
   const snapshot = await get(ref(database, path));
-  if (!snapshot.exists()) return [];
+  if (!snapshot.exists()) {
+    return [];
+  }
   const usersData = snapshot.val();
   return Object.keys(usersData).map((uid) => ({
     uid,
@@ -21,7 +23,9 @@ const BirthdaysWidget = () => {
   const { data: allUsers, error, isLoading } = useSWR('users', usersFetcher);
 
   const upcomingBirthdays = useMemo(() => {
-    if (!allUsers) return [];
+    if (!allUsers) {
+      return [];
+    }
 
     const currentYear = new Date().getFullYear();
     const today = new Date();
@@ -30,7 +34,7 @@ const BirthdaysWidget = () => {
     return allUsers
       .filter((user) => user.profile?.isBirthdayVisible && user.profile?.birthday)
       .map((user) => {
-        const [year, month, day] = user.profile.birthday.split('-').map(Number);
+        const [_year, month, day] = user.profile.birthday.split('-').map(Number);
         const birthdayThisYear = new Date(currentYear, month - 1, day);
         return {
           name: user.profile.nickname || user.name,

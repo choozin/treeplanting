@@ -1,31 +1,22 @@
 'use client';
 
-import React, { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  IconAlertCircle,
   IconArrowDown,
   IconArrowUp,
   IconChartBar,
   IconCircleCheck,
   IconCircleX,
-  IconClock,
-  IconEye,
-  IconFileDescription,
   IconHelpCircle,
-  IconLockAccess,
   IconPencil,
   IconPlus,
   IconSend,
-  IconSettings,
   IconTrash,
-  IconUserCircle,
   IconX,
 } from '@tabler/icons-react';
-import { User } from 'firebase/auth';
 import {
   ref as firebaseDatabaseRef,
   get,
-  getDatabase,
   increment,
   onValue,
   push,
@@ -36,6 +27,7 @@ import {
 } from 'firebase/database';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  Accordion,
   ActionIcon,
   Alert,
   Badge,
@@ -52,9 +44,7 @@ import {
   Progress,
   Radio,
   ScrollArea,
-  SimpleGrid,
   Stack,
-  Switch,
   Text,
   Textarea,
   TextInput,
@@ -441,12 +431,13 @@ const calculateRankedChoiceWinner = (
 
 const RankedResultsDisplay: FC<{ poll: Poll }> = ({ poll }) => {
   const { rounds, winner, error } = useMemo(() => calculateRankedChoiceWinner(poll), [poll]);
-  if (error)
+  if (error) {
     return (
       <Alert color="blue" title="Results" icon={<IconAlertCircle />}>
         {error}
       </Alert>
     );
+  }
   if (!poll || !poll.options) return <Text>Loading results...</Text>;
   return (
     <ScrollArea style={{ maxHeight: '50vh' }}>
@@ -548,7 +539,11 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         }
       },
       (errorObject) => {
-        console.error('Error fetching global users for map:', errorObject);
+        notifications.show({
+          title: 'Error',
+          message: 'Error fetching global users for map: ' + errorObject.message,
+          color: 'red',
+        });
       }
     );
     return () => unsubscribeUsers();
@@ -608,11 +603,11 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         setIsLoading(false);
       },
       (err) => {
-        console.error('Error fetching polls:', err);
-        setError('Failed to load polls.');
-        setPolls([]);
-        setUserVotes({});
-        setIsLoading(false);
+        notifications.show({
+          title: 'Error',
+          message: 'Error fetching polls: ' + err.message,
+          color: 'red',
+        });
       }
     );
 
@@ -643,7 +638,11 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
 
   const removePollOptionField = (index: number) => {
     if (newPollData.options.length <= 2) {
-      alert('A poll must have at least two options.');
+      notifications.show({
+        title: 'Error',
+        message: 'A poll must have at least two options.',
+        color: 'red',
+      });
       return;
     }
     setNewPollData((prev) => ({ ...prev, options: prev.options.filter((_, i) => i !== index) }));
@@ -665,12 +664,20 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
 
   const handleCreatePollSubmit = async () => {
     if (!newPollData.questionText.trim() || !user) {
-      alert('Poll question cannot be empty.');
+      notifications.show({
+        title: 'Error',
+        message: 'Poll question cannot be empty.',
+        color: 'red',
+      });
       return;
     }
     const validOptions = newPollData.options.filter((opt) => opt.trim() !== '');
     if (validOptions.length < 2) {
-      alert('Please provide at least two valid options.');
+      notifications.show({
+        title: 'Error',
+        message: 'Please provide at least two valid options.',
+        color: 'red',
+      });
       return;
     }
 
@@ -720,15 +727,20 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     try {
       const newPollRef = push(firebaseDatabaseRef(database, `camps/${campID}/polls`));
       await set(newPollRef, pollObject);
-      alert(
-        isCreatorAdmin
+      notifications.show({
+        title: 'Poll Created',
+        message: isCreatorAdmin
           ? 'Poll created and automatically approved!'
-          : 'Poll created! It needs approval from a Moderator or higher to be displayed.'
-      );
+          : 'Poll created! It needs approval from a Moderator or higher to be displayed.',
+        color: 'green',
+      });
       handleCloseCreatePoll();
-    } catch (e) {
-      console.error('Error creating poll:', e);
-      alert('Failed to create poll: ' + (e as Error).message);
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to create poll: ' + e.message,
+        color: 'red',
+      });
     }
   };
 
@@ -754,10 +766,17 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
 
     try {
       await update(firebaseDatabaseRef(database, `camps/${campID}/polls/${pollId}`), updates);
-      alert(`Poll ${approve ? 'approved' : 'rejected'} successfully.`);
-    } catch (e) {
-      alert(`Failed to ${approve ? 'approve' : 'reject'} poll.`);
-      console.error('Poll approval/rejection error:', e);
+      notifications.show({
+        title: 'Success',
+        message: `Poll ${approve ? 'approved' : 'rejected'} successfully.`,
+        color: 'green',
+      });
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: `Failed to ${approve ? 'approve' : 'reject'} poll: ${e.message}`,
+        color: 'red',
+      });
     }
   };
 
@@ -786,10 +805,17 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
       await update(firebaseDatabaseRef(database, `camps/${campID}/polls/${pollId}`), {
         lastUpdatedAt: serverTimestamp(),
       });
-      alert(`Option ${approve ? 'approved' : 'rejected'} successfully.`);
-    } catch (e) {
-      alert(`Failed to ${approve ? 'approve' : 'reject'} option.`);
-      console.error('Option approval/rejection error:', e);
+      notifications.show({
+        title: 'Success',
+        message: `Option ${approve ? 'approved' : 'rejected'} successfully.`,
+        color: 'green',
+      });
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: `Failed to ${approve ? 'approve' : 'reject'} option: ${e.message}`,
+        color: 'red',
+      });
     }
   };
 
@@ -803,11 +829,19 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
       !user ||
       !campID
     ) {
-      alert('Please make a selection before submitting.');
+      notifications.show({
+        title: 'Error',
+        message: 'Please make a selection before submitting.',
+        color: 'red',
+      });
       return;
     }
     if (userVotes[selectedPoll.id]) {
-      alert('You have already voted in this poll.');
+      notifications.show({
+        title: 'Info',
+        message: 'You have already voted in this poll.',
+        color: 'blue',
+      });
       return;
     }
 
@@ -823,15 +857,22 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     try {
       await update(firebaseDatabaseRef(database), updates);
       setUserVotes((prev) => ({ ...prev, [selectedPoll.id]: finalVoteData }));
-    } catch (e) {
-      console.error('Error submitting vote:', e);
-      alert('Failed to submit vote.');
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to submit vote: ' + e.message,
+        color: 'red',
+      });
     }
   };
 
   const handleOptionSuggestionSubmit = async () => {
     if (!newOptionText.trim() || !selectedPoll || !user || !campID) {
-      alert('Please enter an option to suggest.');
+      notifications.show({
+        title: 'Error',
+        message: 'Please enter an option to suggest.',
+        color: 'red',
+      });
       return;
     }
 
@@ -859,9 +900,12 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         "Option submitted, awaiting approval. If you'd like to vote for this option, please wait until it has been approved, then vote for it from the updated list. You may continue to submit additional option suggestions."
       );
       setNewOptionText('');
-    } catch (e) {
-      console.error('Error submitting option:', e);
-      setOptionSubmissionMessage('Failed to submit option. Please try again.');
+    } catch (e: any) {
+      notifications.show({
+        title: 'Error',
+        message: 'Error submitting option: ' + e.message,
+        color: 'red',
+      });
     }
   };
 
@@ -943,19 +987,21 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     backgroundColor: 'var(--mantine-color-gray-0)',
   };
 
-  if (isLoading)
+  if (isLoading) {
     return (
       <Paper p="xl" shadow="xs" style={{ textAlign: 'center' }}>
         <Text>Loading polls...</Text>
       </Paper>
     );
-  if (error)
+  }
+  if (error) {
     return (
       <Paper p="xl" shadow="xs" style={{ textAlign: 'center' }}>
         <Text c="red">{error}</Text>
       </Paper>
     );
-  if (!user || !campID)
+  }
+  if (!user || !campID) {
     return (
       <Container size="xs" mt="xl">
         <Alert
@@ -968,6 +1014,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         </Alert>
       </Container>
     );
+  }
 
   return (
     <Container size="lg" style={{ marginTop: '2rem', marginBottom: '4rem' }}>

@@ -3,6 +3,7 @@
 import React from 'react';
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import { Button, Group, Text } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 
 interface CustomDayOffDatePickerProps {
   selectedDate: Date | null;
@@ -20,9 +21,11 @@ const CustomDayOffDatePicker: React.FC<CustomDayOffDatePickerProps> = ({
   };
 
   const navigateDate = (direction: 'prev' | 'next') => {
-    if (!selectedDate) return;
+    if (!selectedDate) {
+      return;
+    }
 
-    let newDate = new Date(selectedDate);
+    const newDate = new Date(selectedDate);
     let foundDayOff = false;
     let attempts = 0;
     const maxAttempts = 365; // Prevent infinite loops
@@ -38,8 +41,11 @@ const CustomDayOffDatePicker: React.FC<CustomDayOffDatePickerProps> = ({
     }
 
     if (!foundDayOff) {
-      // Handle case where no next/previous day off is found within maxAttempts
-      console.warn(`No ${direction} day off found within ${maxAttempts} days.`);
+      notifications.show({
+        title: 'No Day Off Found',
+        message: `No ${direction} day off found within ${maxAttempts} days.`,
+        color: 'yellow',
+      });
     }
   };
 

@@ -7,17 +7,7 @@ import {
   IconInfoCircle,
   IconQuestionMark,
 } from '@tabler/icons-react';
-import {
-  endAt,
-  onValue,
-  orderByChild,
-  push,
-  query,
-  ref,
-  remove,
-  startAt,
-  update,
-} from 'firebase/database';
+import { onValue, push, ref, remove } from 'firebase/database';
 import {
   Alert,
   Button,
@@ -230,11 +220,17 @@ const TreeTrackerPage = () => {
   );
 
   const sortedSummaryData = [...summaryData].sort((a, b) => {
-    if (!sortKey) return 0;
+    if (!sortKey) {
+      return 0;
+    }
     const aVal = a[sortKey];
     const bVal = b[sortKey];
-    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    if (aVal < bVal) {
+      return sortOrder === 'asc' ? -1 : 1;
+    }
+    if (aVal > bVal) {
+      return sortOrder === 'asc' ? 1 : -1;
+    }
     return 0;
   });
 
@@ -321,7 +317,6 @@ const TreeTrackerPage = () => {
         />
         <NumberInput
           label="Number of Trees Planted"
-          placeholder="e.g. 2500"
           value={numTrees}
           onChange={(val) => setNumTrees(val as number)}
         />

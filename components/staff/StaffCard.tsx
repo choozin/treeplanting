@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Avatar, Paper, Stack, Text } from '@mantine/core';
-import { ROLES } from '../../lib/constants';
 import classes from './Staff.module.css';
 
 const sharpieColors = ['#FF4500', '#FF0000', '#FF69B4', '#800080', '#1E90FF'];
@@ -39,10 +38,7 @@ const StaffCard: React.FC<StaffCardProps> = ({ user }) => {
 
     const zIndex = Math.floor(Math.random() * 11) + 40;
 
-    setStyle({
-      rotate: tilt,
-      zIndex: zIndex,
-    });
+    setStyle({ rotate: tilt, zIndex });
   }, []);
 
   return (

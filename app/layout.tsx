@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: any }) {
       <body>
         <MantineProvider theme={theme} defaultColorScheme="auto">
           <ModalsProvider>
-            <Notifications />
+            <Notifications position="top-right" />
             <WeatherProvider>
               <AuthProvider>
                 <Nav />

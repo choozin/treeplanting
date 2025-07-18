@@ -17,7 +17,6 @@ import {
   Table,
   Text,
   TextInput,
-  Title,
 } from '@mantine/core';
 import ProfileModal from '../../components/staff/ProfileModal';
 import StaffCard from '../../components/staff/StaffCard';
@@ -96,7 +95,9 @@ const StaffPage = () => {
   }, [campID]);
 
   const calculateUserEffectiveRole = (user: AppUser) => {
-    if (!campID) return user.role;
+    if (!campID) {
+      return user.role;
+    }
     const campRole = user.assignedCamps?.[campID]?.role || 0;
     return Math.max(user.role || 0, campRole);
   };
