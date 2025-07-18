@@ -251,12 +251,23 @@ const StaffPage = () => {
         <ProfileModal
           user={selectedUser}
           crewName={
-            selectedUser
-              ? Array.isArray(selectedUser.assignedCamps?.[campID!]?.crewId)
-                ? selectedUser.assignedCamps[campID!].crewId
-                    .map((id) => crews[id] || 'Unknown Crew')
-                    .join(', ')
-                : crews[selectedUser.assignedCamps?.[campID!]?.crewId || ''] || 'No Crew'
+            selectedUser && selectedUser.assignedCamps?.[campID!] // Ensure assignedCamps and campID exist
+              ? (() => {
+                  const assignedCamp = selectedUser.assignedCamps[campID!];
+                  const crewId = assignedCamp.crewId; // This can be string | undefined
+
+                  if (crewId === undefined) {
+                    return 'No Crew';
+                  }
+
+                  if (Array.isArray(crewId)) {
+                    return (crewId as string[])
+                      .map((id) => crews[id] || 'Unknown Crew')
+                      .join(', ');
+                  } else {
+                    return crews[crewId] || 'No Crew';
+                  }
+                })()
               : ''
           }
           opened={!!selectedUser}
