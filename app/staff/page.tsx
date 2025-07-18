@@ -240,7 +240,7 @@ const StaffPage = () => {
                     <Table.Td>
                       {crews[u.assignedCamps?.[campID!]?.crewId || ''] || 'No Crew'}
                     </Table.Td>
-                    <Table.Td>{ROLES[u.effectiveRole as keyof typeof ROLES]}</Table.Td>
+                    <Table.Td>{ROLES[u.effectiveRole as number]}</Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
