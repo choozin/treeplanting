@@ -29,7 +29,6 @@ export default function RootLayout({ children }: { children: any }) {
     <html
       lang="en"
       className={nunito.variable}
-      data-mantine-color-scheme={theme.defaultColorScheme}
     >
       <head>
         <ColorSchemeScript defaultColorScheme="auto" />
