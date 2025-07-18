@@ -780,7 +780,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       return [];
     }
     const currentCampId = campID as string; // Explicitly cast to string
-    const assignedCamp = userData.assignedCamps?.[currentCampId];
+    const assignedCamp = userData.assignedCamps && userData.assignedCamps[currentCampId];
     if (!assignedCamp || !assignedCamp.crewId) {
       return [];
     }
