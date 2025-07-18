@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { database } from '../../firebase/firebase';
-import { ref, onValue, get, update } from 'firebase/database';
+import { ref, onValue, get, update, set } from 'firebase/database';
 import { notifications } from '@mantine/notifications';
 import {
     Box,
@@ -21,134 +21,146 @@ import {
     Paper,
     Stack
 } from '@mantine/core';
-import { IconSend, IconCheck, IconX, IconArrowLeft } from '@tabler/icons-react';
+import { IconSend, IconCheck, IconX, IconArrowLeft, IconTrash } from '@tabler/icons-react';
 import classes from './Messages.module.css';
 
-const MessageDetail = ({ messageId, currentUser, onBack }) => {
+const MessageDetail = ({ threadId, currentUser, onBack }) => {
     const { openComposeModal } = useAuth();
-    const [thread, setThread] = useState([]);
+    const [threadData, setThreadData] = useState(null);
+    const [messages, setMessages] = useState([]);
     const [participants, setParticipants] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [userResponse, setUserResponse] = useState(null);
+    const [newMessageBody, setNewMessageBody] = useState(''); // New state for new message input
 
     useEffect(() => {
-        if (!messageId || !currentUser) return;
+        if (!threadId || !currentUser) return;
         setLoading(true);
 
-        const fetchThread = async () => {
-            try {
-                const initialMsgRef = ref(database, `messages/${messageId}`);
-                const initialMsgSnap = await get(initialMsgRef);
-                if (!initialMsgSnap.exists()) {
-                    setError("Message not found. It may have been deleted.");
-                    setLoading(false);
-                    return;
+        const threadRef = ref(database, `threads/${threadId}`);
+        const messagesRef = ref(database, `threads/${threadId}/messages`);
+
+        const unsubscribeThread = onValue(threadRef, async (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                setThreadData(data);
+
+                // Fetch participant names
+                const participantIds = Object.keys(data.participants || {});
+                const usersData = {};
+                for (const uid of participantIds) {
+                    const userSnap = await get(ref(database, `users/${uid}`));
+                    if (userSnap.exists()) {
+                        usersData[uid] = userSnap.val().profile?.nickname || userSnap.val().name || userSnap.val().email;
+                    }
                 }
-                const initialMsg = { id: messageId, ...initialMsgSnap.val() };
-                const threadId = initialMsg.threadId || messageId;
-
-                const messagesQuery = ref(database, 'messages');
-                const allMessagesSnap = await get(messagesQuery);
-                const allMessages = allMessagesSnap.val() || {};
-
-                const messagesInThread = Object.entries(allMessages)
-                    .map(([id, data]) => ({ id, ...data }))
-                    .filter(msg => msg.threadId === threadId);
-
-                if (!messagesInThread.some(msg => msg.id === messageId)) {
-                    messagesInThread.push(initialMsg);
-                }
-
-                messagesInThread.sort((a, b) => a.sentAt - b.sentAt);
-
-                const userIds = new Set(messagesInThread.map(msg => msg.senderId));
-                const userPromises = Array.from(userIds).map(uid => get(ref(database, `users/${uid}`)));
-                const userSnapshots = await Promise.all(userPromises);
-                const usersData = userSnapshots.reduce((acc, snap) => {
-                    if (snap.exists()) acc[snap.key] = snap.val().name || snap.val().email;
-                    return acc;
-                }, {});
-
                 setParticipants(usersData);
-                setThread(messagesInThread);
-
-            } catch (err) {
-                console.error("Failed to load message thread:", err);
-                setError("Could not load the conversation.");
-            } finally {
-                setLoading(false);
+            } else {
+                setError("Thread not found.");
             }
-        };
-
-        fetchThread();
-
-        const userResponseRef = ref(database, `/user-inboxes/${currentUser.uid}/${messageId}/userResponse`);
-        const unsubUserResponse = onValue(userResponseRef, (snapshot) => {
-            setUserResponse(snapshot.val() || null);
+            setLoading(false);
+        }, (err) => {
+            console.error("Error fetching thread data:", err);
+            setError("Could not load thread data.");
+            setLoading(false);
         });
 
-        return () => unsubUserResponse();
-    }, [messageId, currentUser]);
+        const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const msgs = snapshot.val();
+                const messagesList = Object.keys(msgs).map(key => ({
+                    id: key,
+                    ...msgs[key]
+                })).sort((a, b) => a.sentAt - b.sentAt);
+                setMessages(messagesList);
+            } else {
+                setMessages([]);
+            }
+        }, (err) => {
+            console.error("Error fetching messages:", err);
+            setError("Could not load messages.");
+        });
 
-    const handleAction = async (action) => {
-        const updates = {};
-        updates[`/user-inboxes/${currentUser.uid}/${messageId}/userResponse`] = action;
-        updates[`/messages/${messageId}/responses/${currentUser.uid}`] = action;
+        return () => {
+            unsubscribeThread();
+            unsubscribeMessages();
+        };
+    }, [threadId, currentUser]);
+
+    const handleSendMessage = async () => {
+        if (!newMessageBody.trim()) return;
+
+        const messageTimestamp = Date.now();
+        const newMessageRef = ref(database, `threads/${threadId}/messages/${messageTimestamp}`);
+
+        const messageData = {
+            senderId: currentUser.uid,
+            body: newMessageBody.trim(),
+            sentAt: messageTimestamp,
+            readBy: { [currentUser.uid]: true }, // Sender has read it
+            complexContent: null, // Placeholder
+        };
 
         try {
+            await set(newMessageRef, messageData);
+            // Update lastMessageTimestamp in thread
+            await update(ref(database, `threads/${threadId}`), { lastMessageTimestamp: messageTimestamp });
+
+            // Update readBy for all participants in the thread
+            const updates = {};
+            Object.keys(threadData.participants || {}).forEach(uid => {
+                updates[`threads/${threadId}/messages/${messageTimestamp}/readBy/${uid}`] = true;
+            });
             await update(ref(database), updates);
-            notifications.show({ title: 'Response Recorded', message: `Your response "${action}" has been saved.`, color: 'green' });
+
+            setNewMessageBody('');
         } catch (err) {
-            console.error("Failed to record response:", err);
-            notifications.show({ title: 'Error', message: 'Could not record your response.', color: 'red' });
+            console.error("Failed to send message:", err);
+            notifications.show({ title: 'Error', message: 'Failed to send message.', color: 'red' });
         }
     };
 
-    const handleReply = () => {
-        const originalMessage = thread.find(m => m.id === messageId) || thread[0];
-        openComposeModal({
-            recipientId: originalMessage.senderId,
-            recipientName: participants[originalMessage.senderId] || 'Unknown',
-            subject: `Re: ${thread[0].subject}`,
-        });
+    const handleDeleteMessage = async (messageTimestampToDelete) => {
+        if (window.confirm("Are you sure you want to delete this message?")) {
+            try {
+                await set(ref(database, `threads/${threadId}/messages/${messageTimestampToDelete}`), null);
+                notifications.show({ title: 'Message Deleted', message: 'Message has been deleted.', color: 'green' });
+            } catch (err) {
+                console.error("Failed to delete message:", err);
+                notifications.show({ title: 'Error', message: 'Failed to delete message.', color: 'red' });
+            }
+        }
     };
 
-    // NOTE: Reply All functionality would require more complex logic to gather all unique participants.
-    // For now, it will function the same as a standard reply.
-    const handleReplyAll = () => {
-        const originalMessage = thread.find(m => m.id === messageId) || thread[0];
-        openComposeModal({
-            recipientId: originalMessage.senderId,
-            recipientName: participants[originalMessage.senderId] || 'Unknown',
-            subject: `Re: ${thread[0].subject}`,
-        });
-    };
-
-    if (loading) return <Text>Loading message...</Text>;
+    if (loading) return <Text>Loading conversation...</Text>;
     if (error) return <Alert color="red" title="Error">{error}</Alert>;
-    if (thread.length === 0) return <Text>Message not found.</Text>;
+    if (!threadData) return <Text>Conversation not found.</Text>;
 
-    const rootMessage = thread[0];
-    const originalMessage = thread.find(m => m.id === messageId) || rootMessage;
-    const canReply = !userResponse;
+    const isCreator = threadData.creatorId === currentUser.uid;
+    const canAddParticipants = threadData.canAddParticipants || isCreator;
 
     return (
         <Box className={classes.detailView} style={{ height: 'calc(100vh - var(--navbar-height))' }}>
             <div className={classes.detailHeader}>
-                <Group>
-                    {onBack && (
-                        <ActionIcon onClick={onBack} variant="subtle" aria-label="Back to messages">
-                            <IconArrowLeft />
-                        </ActionIcon>
+                <Group justify="space-between" align="center">
+                    <Group>
+                        {onBack && (
+                            <ActionIcon onClick={onBack} variant="subtle" aria-label="Back to conversations">
+                                <IconArrowLeft />
+                            </ActionIcon>
+                        )}
+                        <Title order={4}>{threadData.name}</Title>
+                    </Group>
+                    {canAddParticipants && (
+                        <Button size="xs" onClick={() => notifications.show({ title: 'Add Participant', message: 'Functionality to be implemented.' })}>Add Participant</Button>
                     )}
-                    <Title order={4}>{rootMessage.subject}</Title>
                 </Group>
+                <Text size="sm" c="dimmed">Participants: {Object.values(participants).join(', ')}</Text>
             </div>
 
             <ScrollArea className={classes.detailBody}>
                 <Stack gap="md">
-                    {thread.map(msg => {
+                    {messages.map(msg => {
                         const isCurrentUser = msg.senderId === currentUser.uid;
                         const senderName = participants[msg.senderId] || 'Unknown';
                         return (
@@ -158,8 +170,23 @@ const MessageDetail = ({ messageId, currentUser, onBack }) => {
                                 )}
                                 <Paper shadow="sm" className={`${classes.messageBubble} ${isCurrentUser ? classes.userBubble : classes.otherBubble}`}>
                                     <Text style={{ whiteSpace: 'pre-wrap' }}>{msg.body}</Text>
+                                    {msg.complexContent && (
+                                        <Text size="xs" c="dimmed" mt="xs">[Complex Content]</Text>
+                                    )}
                                 </Paper>
-                                <Text size="xs" c="dimmed" className={classes.bubbleMeta}>{new Date(msg.sentAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
+                                <Group justify={isCurrentUser ? "flex-end" : "flex-start"} gap="xs">
+                                    <Text size="xs" c="dimmed" className={classes.bubbleMeta}>{new Date(msg.sentAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
+                                    {isCurrentUser && (
+                                        <ActionIcon
+                                            variant="subtle"
+                                            color="gray"
+                                            size="xs"
+                                            onClick={() => handleDeleteMessage(msg.id)}
+                                        >
+                                            <IconTrash size={12} />
+                                        </ActionIcon>
+                                    )}
+                                </Group>
                             </div>
                         );
                     })}
@@ -167,16 +194,18 @@ const MessageDetail = ({ messageId, currentUser, onBack }) => {
             </ScrollArea>
 
             <div className={classes.replySection}>
-                {canReply ? (
-                    <Group>
-                        <Button variant="outline" onClick={handleReply}>Reply</Button>
-                        {Object.keys(originalMessage?.recipients || {}).length > 1 && <Button variant="outline" onClick={handleReplyAll}>Reply All</Button>}
-                        <Button color="green" leftSection={<IconCheck size={16} />} onClick={() => handleAction('Confirmed')}>Confirm</Button>
-                        <Button color="red" leftSection={<IconX size={16} />} onClick={() => handleAction('Denied')}>Deny</Button>
-                    </Group>
-                ) : (
-                    <Badge color={userResponse === 'Confirmed' ? 'green' : 'red'} size="lg" variant="light">You responded: {userResponse}</Badge>
-                )}
+                <Group wrap="nowrap" align="flex-end">
+                    <Textarea
+                        placeholder="Type your message..."
+                        value={newMessageBody}
+                        onChange={(event) => setNewMessageBody(event.currentTarget.value)}
+                        minRows={1}
+                        maxRows={4}
+                        autosize
+                        style={{ flexGrow: 1 }}
+                    />
+                    <Button onClick={handleSendMessage} rightSection={<IconSend size={16} />}>Send</Button>
+                </Group>
             </div>
         </Box>
     );

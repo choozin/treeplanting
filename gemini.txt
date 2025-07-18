@@ -1,82 +1,1235 @@
-[Intervention] Images loaded lazily and replaced with placeholders. Load events are deferred. See https://go.microsoft.com/fwlink/?linkid=2048113
-hook.js:608  A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+Okay, I remember the original messaging system and the detailed plan for the new,
+  thread-centric version. I can provide you with extremely detailed instructions for another AI
+  to re-implement that first version of the new messaging system.
 
-- A server/client branch `if (typeof window !== 'undefined')`.
-- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
-- Date formatting in a user's locale which doesn't match the server.
-- External changing data without sending a snapshot of it along with the HTML.
-- Invalid HTML tag nesting.
+  Original Messaging System Structure (for context)
 
-It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+  Before our changes, the system was message-centric:
 
-https://react.dev/link/hydration-mismatch
+   * `/messages/{messageId}`: Stored individual message data (sender, subject, body,
+     recipients, isFormal, campId, threadId, liveCopies, messageType, areRecipientsVisible).
+   * `/user-inboxes/{userId}/{messageId}`: Essentially a copy of the message data, with an
+     additional isRead flag for that specific user.
+   * MessageDetail.js fetched and displayed individual messages.
 
-  ...
-    <HotReload assetPrefix="" globalError={[...]}>
-      <AppDevOverlay state={{nextId:1, ...}} globalError={[...]}>
-        <AppDevOverlayErrorBoundary globalError={[...]} onError={function bound dispatchSetState}>
-          <ReplaySsrOnlyErrors>
-          <DevRootHTTPAccessFallbackBoundary>
-            <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
-              <HTTPAccessFallbackErrorBoundary pathname="/campManag..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
-                <RedirectBoundary>
-                  <RedirectErrorBoundary router={{...}}>
-                    <Head>
-                    <link>
-                    <RootLayout>
-                      <html
-                        lang="en"
-                        className="__variable_0bb10f"
--                       data-mantine-color-scheme="light"
-                      >
-                        <head>
-                        <body
--                         data-new-gr-c-s-check-loaded="14.1111.0"
--                         data-gr-ext-installed=""
-                        >
-                    ...
-        ...
+  New Messaging System Structure (First Version - as implemented)
 
-overrideMethod @ hook.js:608
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:127 Filtering camp users...
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:128 Current campID: scooter
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:129 All users for filtering: Array(0)
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:130 Current campData: null
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:135 Filtered camp users: Array(0)
-hook.js:377 Filtering camp users...
-hook.js:377 Current campID: scooter
-hook.js:377 All users for filtering: Array(0)
-hook.js:377 Current campData: null
-hook.js:377 Filtered camp users: Array(0)
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:127 Filtering camp users...
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:128 Current campID: scooter
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:129 All users for filtering: Array(0)
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:130 Current campData: Object
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:135 Filtered camp users: Array(0)
-hook.js:377 Filtering camp users...
-hook.js:377 Current campID: scooter
-hook.js:377 All users for filtering: Array(0)
-hook.js:377 Current campData: Object
-hook.js:377 Filtered camp users: Array(0)
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:108 Fetched all users: Array(16)
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:127 Filtering camp users...
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:128 Current campID: scooter
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:129 All users for filtering: Array(16)
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:130 Current campData: Object
-16C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:132 Comparing user.campName: 'undefined' with campData.campName: 'Scooter's Camp'
-C:\Users\ctayl\projects\treeplanting\components\management\CampManagement.tsx:135 Filtered camp users: Array(0)
-hook.js:377 Filtering camp users...
-hook.js:377 Current campID: scooter
-hook.js:377 All users for filtering: Array(16)
-hook.js:377 Current campData: Object
-16hook.js:377 Comparing user.campName: 'undefined' with campData.campName: 'Scooter's Camp'
-hook.js:377 Filtered camp users: Array(0)
-campManagement:1  The resource http://localhost:3000/icons/icon-192x192.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
-[NEW] Explain Console errors by using Copilot in Edge: click
-         
-         to explain an error. 
-        Learn more
-        Don't show again
-C:\src\client\components\react-dev-overlay\app\hot-reloader-client.tsx:306 [Fast Refresh] rebuilding
-C:\src\client\components\react-dev-overlay\utils\report-hmr-latency.ts:26 [Fast Refresh] done in 845ms
-campManagement:1  The resource http://localhost:3000/icons/icon-192x192.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+  The new system is thread-centric, designed for group conversations:
+
+   * `/threads/{threadId}`:
+       * name: string (The subject/name of the conversation, set by the creator).
+       * creatorId: string (UID of the user who initiated the thread).
+       * lastMessageTimestamp: number (Timestamp of the most recent message in this thread).
+       * canAddParticipants: boolean (Determines if non-creators can add new participants).
+       * messageType: string (e.g., 'Social', 'Formal', 'Operational', 'System' - defines the
+         overall character/color of messages within this thread).
+       * participants: map of uid: true (A list of all user UIDs currently part of this
+         thread).
+       * messages: A sub-collection containing the actual messages within this thread.
+           * /{timestamp} (The key for each message is its sentAt timestamp for chronological
+             ordering):
+               * senderId: string (UID of the message sender).
+               * body: string (The content of the message).
+               * sentAt: number (Timestamp when the message was sent).
+               * readBy: map of uid: true (Users who have read this specific message).
+               * complexContent: any (Optional field for future complex message types, e.g., {
+                 type: 'recipe', recipeId: 'abc' }).
+   * `/user-inboxes/{userId}/{threadId}`:
+       * lastReadMessageTimestamp: number (Timestamp of the last message read by this specific
+         user in this specific thread. Used for unread indicators).
+
+  Detailed Instructions for Another AI
+
+  Assume the AI has access to the project files and can perform read_file, write_file,
+  replace, run_shell_command, and search_file_content.
+
+  ---
+
+  Goal: Implement the new thread-based messaging system as described above.
+
+  Phase 1: Modify `components/messages/ComposeMessage.js` (Thread Creation)
+
+   * Objective: Change the message composition logic to create a new thread instead of a
+     standalone message.
+   * Steps:
+       1. Open `components/messages/ComposeMessage.js`.
+       2. Add `notifications` import: Ensure notifications is imported from
+          @mantine/notifications.
+       3. Add `canAddParticipants` state:
+           * Old String:
+   1             const [isFormal, setIsFormal] = useState(false);
+           * New String:
+
+   1             const [isFormal, setIsFormal] = useState(false);
+   2             const [canAddParticipants, setCanAddParticipants] = useState(true); //
+     New state variable
+           * Tool Call: replace
+       4. Modify `handleSend` function: This is the core change. The existing newMessageRef and
+          messageData logic needs to be replaced with thread and initial message creation.
+           * Old String (around line 137, be precise with context):
+
+    1             const newMessageRef = firebasePush(ref(database, 'messages'));
+    2             const messageId = newMessageRef.key;
+    3
+    4             const messageData = {
+    5                 senderId: currentUser.uid,
+    6                 subject: subject.trim(),
+    7                 body: body.trim(),
+    8                 sentAt: serverTimestamp(),
+    9                 recipients: selectedUsers.reduce((acc, userId) => {
+   10                     acc[userId] = true;
+   11                     return acc;
+   12                 }, {}),
+   13                 isFormal: isFormal,
+   14                 campId: campID,
+   15                 threadId: messageId,
+   16                 liveCopies: selectedUsers.length,
+   17                 messageType: isFormal ? 'Formal' : 'Social',
+   18                 areRecipientsVisible: true,
+   19             };
+   20
+   21             const fanOutUpdates = {};
+   22             fanOutUpdates[`/messages/${messageId}`] = messageData;
+   23
+   24             selectedUsers.forEach(uid => {
+   25                 const inboxItem = {
+   26                     isRead: false,
+   27                     senderName: senderName,
+   28                     subject: messageData.subject,
+   29                     sentAt: serverTimestamp(),
+   30                     messageType: messageData.messageType,
+   31                     recipientCount: selectedUsers.length,
+   32                     areRecipientsVisible: messageData.areRecipientsVisible,
+   33                 };
+   34                 fanOutUpdates[`/user-inboxes/${uid}/${messageId}`] = inboxItem;
+   35             });
+   36
+   37             try {
+   38                 await update(ref(database), fanOutUpdates);
+           * New String:
+
+    1             const newThreadRef = firebasePush(ref(database, 'threads'));
+    2             const threadId = newThreadRef.key;
+    3             const messageTimestamp = Date.now(); // Use client-side timestamp for
+      message key
+    4
+    5             const threadParticipants = selectedUsers.reduce((acc, userId) => {
+    6                 acc[userId] = true;
+    7                 return acc;
+    8             }, {});
+    9             // Add sender to participants
+   10             threadParticipants[currentUser.uid] = true;
+   11
+   12             const threadData = {
+   13                 name: subject.trim(),
+   14                 creatorId: currentUser.uid,
+   15                 lastMessageTimestamp: messageTimestamp,
+   16                 canAddParticipants: canAddParticipants, // New state variable
+   17                 messageType: isFormal ? 'Formal' : 'Social', // Renamed from
+      isFormal to messageType
+   18                 participants: threadParticipants,
+   19             };
+   20
+   21             const initialMessageData = {
+   22                 senderId: currentUser.uid,
+   23                 body: body.trim(),
+   24                 sentAt: messageTimestamp,
+   25                 readBy: { [currentUser.uid]: true }, // Sender has read it
+   26                 complexContent: null, // Placeholder for future complex messages
+   27             };
+   28
+   29             const fanOutUpdates = {};
+   30
+   31             // Nest the initial message directly within the threadData
+   32             threadData.messages = {
+   33                 [messageTimestamp]: initialMessageData
+   34             };
+   35
+   36             fanOutUpdates[`/threads/${threadId}`] = threadData;
+   37
+   38             // Update user inboxes for all participants
+   39             Object.keys(threadParticipants).forEach(uid => {
+   40                 fanOutUpdates[`/user-inboxes/${uid}/${threadId}`] = {
+   41                     lastReadMessageTimestamp: messageTimestamp, // Mark as read
+      for all initial participants
+   42                 };
+   43             });
+   44
+   45             try {
+   46                 await update(ref(database), fanOutUpdates);
+           * Tool Call: replace
+       5. Add `canAddParticipants` checkbox to JSX:
+           * Old String (around line 200, be precise with context):
+
+   1                         {effectiveRole >= 5 && (
+   2                             <Checkbox
+   3                                 label="Send as Formal Announcement"
+   4                                 checked={isFormal}
+   5                                 onChange={(e) => setIsFormal(e.currentTarget.
+     checked)}
+   6                                 mb="md"
+   7                             />
+   8                         )}
+           * New String:
+
+    1                         <Checkbox
+    2                             label="Allow others to add participants"
+    3                             checked={canAddParticipants}
+    4                             onChange={(e) => setCanAddParticipants(e.currentTarget
+      .checked)}
+    5                             mb="md"
+    6                         />
+    7
+    8                         {effectiveRole >= 5 && (
+    9                             <Checkbox
+   10                                 label="Send as Formal Announcement"
+   11                                 checked={isFormal}
+   12                                 onChange={(e) => setIsFormal(e.currentTarget.
+      checked)}
+   13                                 mb="md"
+   14                             />
+   15                         )}
+           * Tool Call: replace
+
+  ---
+
+  Phase 2: Modify `components/messages/MessagesPage.js` (Inbox Display & Thread Selection)
+
+   * Objective: Adapt the inbox to display threads and handle thread selection/deletion.
+   * Steps:
+       1. Open `components/messages/MessagesPage.js`.
+       2. Add `get` to Firebase imports:
+           * Old String:
+
+   1             import { ref, onValue, update, set, push, serverTimestamp } from
+     'firebase/database';
+           * New String:
+   1             import { ref, onValue, update, set, push, serverTimestamp, get } from
+     'firebase/database';
+           * Tool Call: replace
+       3. Update state variables:
+           * Old String:
+   1                 const [messages, setMessages] = useState([]);
+   2                 const [selectedMessage, setSelectedMessage] = useState(null);
+           * New String:
+
+   1                 const [threads, setThreads] = useState([]);
+   2                 const [selectedThread, setSelectedThread] = useState(null);
+           * Tool Call: replace
+       4. Modify `useEffect` for data fetching: This will change how threads are loaded.
+           * Old String (around line 20, be precise with context):
+
+    1                 useEffect(() => {
+    2                     if (!user) {
+    3                         setIsLoading(false);
+    4                         return;
+    5                     }
+    6
+    7                     const userInboxRef = ref(database, `user-inboxes/${user.uid}`
+      );
+    8                     const unsubscribe = onValue(userInboxRef, (snapshot) => {
+    9                         if (snapshot.exists()) {
+   10                             const inboxData = snapshot.val();
+   11                             const messagesArray = Object.entries(inboxData).map((
+      [id, data]) => ({
+   12                                 id,
+   13                                 ...data,
+   14                             }));
+   15                             messagesArray.sort((a, b) => b.sentAt - a.sentAt);
+   16                             setMessages(messagesArray);
+   17                         } else {
+   18                             setMessages([]);
+   19                         }
+   20                         setIsLoading(false);
+   21                     }, (err) => {
+   22                         console.error("Error fetching messages:", err);
+   23                         setError("Could not load your messages.");
+   24                         setIsLoading(false);
+   25                     });
+   26
+   27                     return () => unsubscribe();
+   28                 }, [user]);
+           * New String:
+
+    1                 const [usersMap, setUsersMap] = useState({}); // New state for
+      user names
+    2
+    3                 useEffect(() => {
+    4                     const fetchUsers = async () => {
+    5                         const usersRef = ref(database, 'users');
+    6                         onValue(usersRef, (snapshot) => {
+    7                             const usersData = snapshot.val() || {};
+    8                             const map = {};
+    9                             for (const uid in usersData) {
+   10                                 map[uid] = usersData[uid].profile?.nickname ||
+      usersData[uid].name || usersData[uid].email;
+   11                             }
+   12                             setUsersMap(map);
+   13                         });
+   14                     };
+   15                     fetchUsers();
+   16                 }, []); // Run once on mount
+   17
+   18                 useEffect(() => {
+   19                     if (!user) {
+   20                         setIsLoading(false);
+   21                         return;
+   22                     }
+   23
+   24                     const userInboxRef = ref(database, `user-inboxes/${user.uid}`
+      );
+   25                     const unsubscribe = onValue(userInboxRef, async (snapshot) =>
+      {
+   26                         if (snapshot.exists()) {
+   27                             const inboxData = snapshot.val();
+   28                             const threadIds = Object.keys(inboxData);
+   29
+   30                             const fetchedThreads = [];
+   31                             for (const threadId of threadIds) {
+   32                                 const threadRef = ref(database, `threads/
+      ${threadId}`);
+   33                                 const threadSnapshot = await get(threadRef);
+   34                                 if (threadSnapshot.exists()) {
+   35                                     const threadData = threadSnapshot.val();
+   36                                     // Get all messages for the thread
+   37                                     const messagesRef = ref(database, `threads/
+      ${threadId}/messages`);
+   38                                     const messagesSnapshot = await get
+      (messagesRef);
+   39                                     const messagesData = messagesSnapshot.val();
+   40
+   41                                     let firstMessage = null;
+   42                                     let lastMessage = null;
+   43
+   44                                     if (messagesData) {
+   45                                         const sortedMessageKeys = Object.keys
+      (messagesData).sort();
+   46                                         const firstMessageKey = sortedMessageKeys[
+      0];
+   47                                         const lastMessageKey =
+      sortedMessageKeys[sortedMessageKeys.length - 1];
+   48
+   49                                         firstMessage =
+      messagesData[firstMessageKey];
+   50                                         lastMessage =
+      messagesData[lastMessageKey];
+   51                                     }
+   52
+   53                                     fetchedThreads.push({
+   54                                         id: threadId,
+   55                                         ...threadData,
+   56                                         firstMessage: firstMessage,
+   57                                         lastMessage: lastMessage,
+   58                                         lastReadMessageTimestamp:
+      inboxData[threadId].lastReadMessageTimestamp || 0,
+   59                                     });
+   60                                 }
+   61                             }
+   62                             fetchedThreads.sort((a, b) => (b.lastMessage?.sentAt
+      || 0) - (a.lastMessage?.sentAt || 0));
+   63                             setThreads(fetchedThreads);
+   64                         } else {
+   65                             setThreads([]);
+   66                         }
+   67                         setIsLoading(false);
+   68                     }, (err) => {
+   69                         console.error("Error fetching threads:", err);
+   70                         setError("Could not load your threads.");
+   71                         setIsLoading(false);
+   72                     });
+   73
+   74                     return () => unsubscribe();
+   75                 }, [user]);
+           * Tool Call: replace
+       5. Rename and modify `handleSelectMessage` to `handleSelectThread`:
+           * Old String (around line 50, be precise with context):
+
+    1                 const handleSelectMessage = async (message) => {
+    2                     setSelectedMessage(message);
+    3                     if (!message.isRead) {
+    4                         const messageReadRef = ref(database, `user-inboxes/
+      ${user.uid}/${message.id}/isRead`);
+    5                         try {
+    6                             await set(messageReadRef, true);
+    7                         } catch (err) {
+    8                             console.error("Failed to mark message as read:", err);
+    9                         }
+   10                     }
+   11                 };
+           * New String:
+
+    1                 const handleSelectThread = async (thread) => {
+    2                     setSelectedThread(thread);
+    3                     // Update lastReadMessageTimestamp in user's inbox
+    4                     const lastMessageTimestamp = thread.lastMessage?.sentAt || 0;
+    5                     if (lastMessageTimestamp > (thread.lastReadMessageTimestamp ||
+      0)) {
+    6                         const userThreadReadRef = ref(database, `user-inboxes/
+      ${user.uid}/${thread.id}/lastReadMessageTimestamp`);
+    7                         try {
+    8                             await set(userThreadReadRef, lastMessageTimestamp);
+    9                         } catch (err) {
+   10                             console.error("Failed to update last read message
+      timestamp:", err);
+   11                         }
+   12                     }
+   13                 };
+           * Tool Call: replace
+       6. Add `handleDeleteThread` function:
+           * New String (after `handleSelectThread`):
+
+    1                 const handleDeleteThread = async (threadId) => {
+    2                     if (window.confirm("Are you sure you want to remove this
+      conversation from your inbox? This action cannot be undone.")) {
+    3                         try {
+    4                             await set(ref(database, `user-inboxes/${user.uid}/
+      ${threadId}`), null);
+    5                             notifications.show({
+    6                                 title: 'Conversation Removed',
+    7                                 message: 'The conversation has been removed from
+      your inbox.',
+    8                                 color: 'green',
+    9                             });
+   10                         } catch (err) {
+   11                             console.error("Failed to delete thread from inbox:",
+      err);
+   12                             notifications.show({
+   13                                 title: 'Error',
+   14                                 message: 'Failed to remove conversation.',
+   15                                 color: 'red',
+   16                             });
+   17                         }
+   18                     }
+   19                 };
+           * Tool Call: write_file (or replace if you can find a suitable insertion point)
+       7. Update JSX to pass correct props to `MessageList` and `MessageDetail`:
+           * Old String (mobile view, around line 80):
+
+    1                         {selectedMessage ? (
+    2                             <MessageDetail
+    3                                 messageId={selectedMessage.id}
+    4                                 currentUser={user}
+    5                                 onBack={() => setSelectedMessage(null)}
+    6                             />
+    7                         ) : (
+    8                             <Paper withBorder>
+    9                                 <Group justify="space-between" p="md">
+   10                                     <Title order={4}>Inbox</Title>
+   11                                     <Button onClick={() => openComposeModal()}
+      size="xs" leftSection={<IconPlus size={16} />}>
+   12                                         New Message
+   13                                     </Button>
+   14                                 </Group>
+   15                                 <MessageList
+   16                                     messages={messages}
+   17                                     onSelectMessage={handleSelectMessage}
+   18                                     selectedMessageId={null} // No message is
+      "selected" when the list is visible
+   19                                     currentUser={user}
+   20                                 />
+   21                             </Paper>
+   22                         )}
+           * New String:
+
+    1                         {selectedThread ? (
+    2                             <MessageDetail
+    3                                 threadId={selectedThread.id}
+    4                                 currentUser={user}
+    5                                 onBack={() => setSelectedThread(null)}
+    6                             />
+    7                         ) : (
+    8                             <Paper withBorder>
+    9                                 <Group justify="space-between" p="md">
+   10                                     <Title order={4}>Inbox</Title>
+   11                                     <Button onClick={() => openComposeModal()}
+      size="xs" leftSection={<IconPlus size={16} />}>
+   12                                         New Message
+   13                                     </Button>
+   14                                 </Group>
+   15                                 <MessageList
+   16                                     threads={threads}
+   17                                     onSelectThread={handleSelectThread}
+   18                                     selectedThreadId={null} // No thread is
+      "selected" when the list is visible
+   19                                     currentUser={user}
+   20                                     onDeleteThread={handleDeleteThread}
+   21                                     usersMap={usersMap} // Pass usersMap
+   22                                 />
+   23                             </Paper>
+   24                         )}
+           * Tool Call: replace
+           * Old String (desktop view, around line 110):
+
+    1                                 <MessageList
+    2                                     messages={messages}
+    3                                     onSelectMessage={handleSelectMessage}
+    4                                     selectedMessageId={selectedMessage?.id}
+    5                                     currentUser={user}
+    6                                 />
+    7                             </Paper>
+    8                         </Grid.Col>
+    9                         <Grid.Col span={8}>
+   10                             <Paper withBorder style={{ minHeight: 'calc(100vh -
+      120px)' }}>
+   11                                 {selectedMessage ? (
+   12                                     <MessageDetail
+   13                                         messageId={selectedMessage.id}
+   14                                         currentUser={user}
+   15                                     />
+   16                                 ) : (
+   17                                     <Center style={{ height: '100%' }}>
+   18                                         <Text c="dimmed">Select a message to
+      read</Text>
+   19                                     </Center>
+   20                                 )}
+   21                             </Paper>
+   22                         </Grid.Col>
+           * New String:
+
+    1                                 <MessageList
+    2                                     threads={threads}
+    3                                     onSelectThread={handleSelectThread}
+    4                                     selectedThreadId={selectedThread?.id}
+    5                                     currentUser={user}
+    6                                     onDeleteThread={handleDeleteThread}
+    7                                     usersMap={usersMap} // Pass usersMap
+    8                                 />
+    9                             </Paper>
+   10                         </Grid.Col>
+   11                         <Grid.Col span={8}>
+   12                             <Paper withBorder style={{ minHeight: 'calc(100vh -
+      120px)' }}>
+   13                                 {selectedThread ? (
+   14                                     <MessageDetail
+   15                                         threadId={selectedThread.id}
+   16                                         currentUser={user}
+   17                                     />
+   18                                 ) : (
+   19                                     <Center style={{ height: '100%' }}>
+   20                                         <Text c="dimmed">Select a conversation to
+      read</Text>
+   21                                     </Center>
+   22                                 )}
+   23                             </Paper>
+   24                         </Grid.Col>
+           * Tool Call: replace
+
+  ---
+
+  Phase 3: Modify `components/messages/MessageList.js` (Thread List Rendering)
+
+   * Objective: Render thread summaries with conditional display based on read status and show
+     correct sender names.
+   * Steps:
+       1. Open `components/messages/MessageList.js`.
+       2. Update component props:
+           * Old String:
+   1             const MessageList = ({ messages, onSelectMessage, selectedMessageId,
+     currentUser, onDeleteMessage }) => {
+           * New String:
+
+   1             const MessageList = ({ threads, onSelectThread, selectedThreadId,
+     currentUser, onDeleteThread, usersMap }) => {
+           * Tool Call: replace
+       3. Add `getUserDisplayName` helper function:
+           * New String (after `const MessageList = ... => {`):
+
+   1                 const getUserDisplayName = (uid) => {
+   2                     if (!uid) return 'Unknown';
+   3                     return usersMap[uid] || 'Unknown';
+   4                 };
+           * Tool Call: write_file (or replace if you can find a suitable insertion point)
+       4. Modify `getRelativeTime` to handle `ServerValue.TIMESTAMP`:
+           * Old String (around line 11, be precise with context):
+
+    1                 const getRelativeTime = (timestamp) => {
+    2                     if (!timestamp) return '';
+    3                     const now = new Date();
+    4                     const messageDate = new Date(timestamp);
+    5                     const today = new Date(now.getFullYear(), now.getMonth(), now.
+      getDate());
+    6                     const messageDay = new Date(messageDate.getFullYear(),
+      messageDate.getMonth(), messageDate.getDate());
+    7
+    8                     if (today.getTime() === messageDay.getTime()) {
+    9                         return messageDate.toLocaleTimeString([], { hour:
+      '2-digit', minute: '2-digit' });
+   10                     }
+   11
+   12                     const diffDays = Math.round((today - messageDay) / (1000 * 60
+      * 60 * 24));
+   13                     if (diffDays === 1) return 'Yesterday';
+   14                     if (diffDays < 7) return `${diffDays} days ago`;
+   15
+   16                     return messageDate.toLocaleDateString();
+   17                 };
+           * New String:
+
+    1                 const getRelativeTime = (timestamp) => {
+    2                     if (typeof timestamp !== 'number' || isNaN(timestamp)) {
+    3                         if (typeof timestamp === 'object' && timestamp !== null &&
+      timestamp['.sv'] === 'timestamp') {
+    4                             return 'Sending...';
+    5                         }
+    6                         return 'Invalid Date';
+    7                     }
+    8
+    9                     const now = new Date();
+   10                     const messageDate = new Date(timestamp);
+   11
+   12                     const today = new Date(now.getFullYear(), now.getMonth(), now.
+      getDate());
+   13                     const messageDay = new Date(messageDate.getFullYear(),
+      messageDate.getMonth(), messageDate.getDate());
+   14
+   15                     if (today.getTime() === messageDay.getTime()) {
+   16                         return messageDate.toLocaleTimeString([], { hour:
+      '2-digit', minute: '2-digit' });
+   17                     }
+   18
+   19                     const diffDays = Math.round((today.getTime() - messageDay.
+      getTime()) / (1000 * 60 * 60 * 24));
+   20                     if (diffDays === 1) return 'Yesterday';
+   21                     if (diffDays < 7) return `${diffDays} days ago`;
+   22
+   23                     return messageDate.toLocaleDateString();
+   24                 };
+           * Tool Call: replace
+       5. Update rendering logic for threads:
+           * Old String (around line 40, be precise with context):
+
+    1                 if (!messages || messages.length === 0) {
+    2                     return (
+    3                         <Center style={{height: '200px'}}>
+    4                             <Text c="dimmed">Your inbox is empty.</Text>
+    5                         </Center>
+    6                     );
+    7                 }
+    8
+    9                 return (
+   10                     <ScrollArea style={{ height: 'calc(100vh - 180px)'}}>
+   11                          <Text size="xs" c="dimmed" p="xs">Your inbox shows the 20
+      most recent messages.</Text>
+   12                         {messages.map((message) => {
+   13                             const isSelected = selectedMessageId === message.id;
+   14                             const isUnread = !message.isRead;
+   15
+   16                             // **FIX:** Logic to display recipient count
+   17                             const senderDisplay = message.recipientCount > 1
+   18                                 ? `${message.senderName || 'Unknown Sender'} (to
+      ${message.recipientCount} people)`
+   19                                 : message.senderName || 'Unknown Sender';
+   20
+   21                             return (
+   22                                 <Box
+   23                                     key={message.id}
+   24                                     className={`${classes.messageListItem}
+      ${isSelected ? classes.messageListItemSelected : ''}`}
+   25                                 >
+   26                                     <div className={classes.typeIndicator}
+      style={{ backgroundColor: `var(--mantine-color-
+      ${getTypeColor(message.messageType)}-6)` }} />
+   27                                     <div className={classes.messageContent}
+      onClick={() => onSelectMessage(message)}>
+   28                                         <div className={classes.messageHeader}>
+   29                                             <Text truncate className={isUnread ?
+      classes.subjectUnread : classes.subject}>
+   30                                                 {message.subject || '(No Subject)'
+      }
+   31                                             </Text>
+   32                                             <Text className={classes.messageDate
+      }>{getRelativeTime(message.sentAt)}</Text>
+   33                                         </div>
+   34                                         <Text truncate className={isUnread ?
+      classes.senderNameUnread : classes.senderName}>
+   35                                             {senderDisplay}
+   36                                         </Text>
+   37                                     </div>
+   38                                     <ActionIcon
+   39                                         variant="subtle"
+   40                                         color="gray"
+   41                                         className={classes.deleteButton}
+   42                                         onClick={(e) => {
+   43                                             e.stopPropagation(); // Prevent
+      selecting the message
+   44                                             onDeleteMessage(message.id);
+   45                                         }}
+   46                                     >
+   47                                         <IconTrash size={16} />
+   48                                     </ActionIcon>
+   49                                     <div className={classes.bottomIndicator}
+      style={{ backgroundColor: `var(--mantine-color-
+      ${getTypeColor(message.messageType)}-2)` }} />
+   50                                 </Box>
+   51                             )
+   52                         })}
+   53                     </ScrollArea>
+   54                 );
+           * New String:
+
+    1                 if (!threads || threads.length === 0) {
+    2                     return (
+    3                         <Center style={{height: '200px'}}>
+    4                             <Text c="dimmed">Your inbox is empty.</Text>
+    5                         </Center>
+    6                     );
+    7                 }
+    8
+    9                 return (
+   10                     <ScrollArea style={{ height: 'calc(100vh - 180px)'}}>
+   11                          <Text size="xs" c="dimmed" p="xs">Your inbox shows your
+      conversations.</Text>
+   12                         {threads.map((thread) => {
+   13                             const isSelected = selectedThreadId === thread.id;
+   14                             const isUnread = (thread.lastMessage?.sentAt || 0) >
+      (thread.lastReadMessageTimestamp || 0);
+   15
+   16                             return (
+   17                                 <Box
+   18                                     key={thread.id}
+   19                                     className={`${classes.messageListItem}
+      ${isSelected ? classes.messageListItemSelected : ''}`}
+   20                                 >
+   21                                     <div className={classes.typeIndicator}
+      style={{ backgroundColor: `var(--mantine-color-${getTypeColor(thread.messageType)}
+      -6)` }} />
+   22                                     <div className={classes.messageContent}
+      onClick={() => onSelectThread(thread)}>
+   23                                         <div className={classes.messageHeader}>
+   24                                             <Text truncate className={isUnread ?
+      classes.subjectUnread : classes.subject}>
+   25                                                 {thread.name || '(No Subject)'}
+   26                                                 {!isUnread && thread.creatorId &&
+      ` - ${getUserDisplayName(thread.creatorId)}`}
+   27                                             </Text>
+   28                                             <Text className={classes.messageDate
+      }>{getRelativeTime(thread.lastMessage?.sentAt)}</Text>
+   29                                         </div>
+   30                                         <Text truncate className={isUnread ?
+      classes.senderNameUnread : classes.senderName}>
+   31                                             {isUnread ?
+   32                                                 `${thread.firstMessage?.body ||
+      'No messages yet.'} (Started by: ${getUserDisplayName(thread.creatorId)})`
+   33                                                 :
+   34                                                 `${thread.lastMessage?.body || 'No
+      messages yet.'} (Last by: ${getUserDisplayName(thread.lastMessage?.senderId)})`
+   35                                             }
+   36                                         </Text>
+   37                                     </div>
+   38                                     <ActionIcon
+   39                                         variant="subtle"
+   40                                         color="gray"
+   41                                         className={classes.deleteButton}
+   42                                         onClick={(e) => {
+   43                                             e.stopPropagation(); // Prevent
+      selecting the thread
+   44                                             onDeleteThread(thread.id);
+   45                                         }}
+   46                                     >
+   47                                         <IconTrash size={16} />
+   48                                     </ActionIcon>
+   49                                     <div className={classes.bottomIndicator}
+      style={{ backgroundColor: `var(--mantine-color-${getTypeColor(thread.messageType)}
+      -2)` }} />
+   50                                 </Box>
+   51                             )
+   52                         })}
+   53                     </ScrollArea>
+   54                 );
+           * Tool Call: replace
+
+  ---
+
+  Phase 4: Modify `components/messages/MessageDetail.js` (Thread Conversation View)
+
+   * Objective: Display messages within a selected thread, allow new messages, and individual
+     message deletion.
+   * Steps:
+       1. Open `components/messages/MessageDetail.js`.
+       2. Add `set` to Firebase imports:
+           * Old String:
+   1             import { ref, onValue, get, update } from 'firebase/database';
+           * New String:
+
+   1             import { ref, onValue, get, update, set } from 'firebase/database';
+           * Tool Call: replace
+       3. Add `IconTrash` to Tabler Icons imports:
+           * Old String:
+
+   1             import { IconSend, IconCheck, IconX, IconArrowLeft } from
+     '@tabler/icons-react';
+           * New String:
+   1             import { IconSend, IconCheck, IconX, IconArrowLeft, IconTrash } from
+     '@tabler/icons-react';
+           * Tool Call: replace
+       4. Update state variables:
+           * Old String (around line 10, be precise with context):
+
+   1             const MessageDetail = ({ messageId, currentUser, onBack }) => {
+   2                 const { openComposeModal } = useAuth();
+   3                 const [thread, setThread] = useState([]);
+   4                 const [participants, setParticipants] = useState({});
+   5                 const [loading, setLoading] = useState(true);
+   6                 const [error, setError] = useState(null);
+   7                 const [userResponse, setUserResponse] = useState(null);
+           * New String:
+
+   1             const MessageDetail = ({ threadId, currentUser, onBack }) => {
+   2                 const { openComposeModal } = useAuth();
+   3                 const [threadData, setThreadData] = useState(null);
+   4                 const [messages, setMessages] = useState([]);
+   5                 const [participants, setParticipants] = useState({});
+   6                 const [loading, setLoading] = useState(true);
+   7                 const [error, setError] = useState(null);
+   8                 const [newMessageBody, setNewMessageBody] = useState(''); // New
+     state for new message input
+           * Tool Call: replace
+       5. Modify `useEffect` for data fetching:
+           * Old String (around line 18, be precise with context):
+
+    1                 useEffect(() => {
+    2                     if (!messageId || !currentUser) return;
+    3                     setLoading(true);
+    4
+    5                     const fetchThread = async () => {
+    6                         try {
+    7                             const initialMsgRef = ref(database, `messages/
+      ${messageId}`);
+    8                             const initialMsgSnap = await get(initialMsgRef);
+    9                             if (!initialMsgSnap.exists()) {
+   10                                 setError("Message not found. It may have been
+      deleted.");
+   11                                 setLoading(false);
+   12                                 return;
+   13                             }
+   14                             const initialMsg = { id: messageId, ...initialMsgSnap.
+      val() };
+   15                             const threadId = initialMsg.threadId || messageId;
+   16
+   17                             const messagesQuery = ref(database, 'messages');
+   18                             const allMessagesSnap = await get(messagesQuery);
+   19                             const allMessages = allMessagesSnap.val() || {};
+   20
+   21                             const messagesInThread = Object.entries(allMessages)
+   22                                 .map(([id, data]) => ({ id, ...data }))
+   23                                 .filter(msg => msg.threadId === threadId);
+   24
+   25                             if (!messagesInThread.some(msg => msg.id ===
+      messageId)) {
+   26                                 messagesInThread.push(initialMsg);
+   27                             }
+   28
+   29                             messagesInThread.sort((a, b) => a.sentAt - b.sentAt);
+   30
+   31                             const userIds = new Set(messagesInThread.map(msg =>
+      msg.senderId));
+   32                             const userPromises = Array.from(userIds).map(uid =>
+      get(ref(database, `users/${uid}`)));
+   33                             const userSnapshots = await Promise.all(userPromises);
+   34                             const usersData = userSnapshots.reduce((acc, snap) =>
+      {
+   35                                 if (snap.exists()) acc[snap.key] = snap.val().name
+      || snap.val().email;
+   36                                 return acc;
+   37                             }, {});
+   38
+   39                             setParticipants(usersData);
+   40                             setThread(messagesInThread);
+   41
+   42                         } catch (err) {
+   43                             console.error("Failed to load message thread:", err);
+   44                             setError("Could not load the conversation.");
+   45                         } finally {
+   46                             setLoading(false);
+   47                         }
+   48                     };
+   49
+   50                     fetchThread();
+   51
+   52                     const userResponseRef = ref(database, `/user-inboxes/
+      ${currentUser.uid}/${messageId}/userResponse`);
+   53                     const unsubUserResponse = onValue(userResponseRef, (snapshot)
+      => {
+   54                         setUserResponse(snapshot.val() || null);
+   55                     });
+   56
+   57                     return () => unsubUserResponse();
+   58                 }, [messageId, currentUser]);
+           * New String:
+
+    1                 useEffect(() => {
+    2                     if (!threadId || !currentUser) return;
+    3                     setLoading(true);
+    4
+    5                     const threadRef = ref(database, `threads/${threadId}`);
+    6                     const messagesRef = ref(database, `threads/${threadId}
+      /messages`);
+    7
+    8                     const unsubscribeThread = onValue(threadRef, async (snapshot)
+      => {
+    9                         if (snapshot.exists()) {
+   10                             const data = snapshot.val();
+   11                             setThreadData(data);
+   12
+   13                             // Fetch participant names
+   14                             const participantIds = Object.keys(data.participants
+      || {});
+   15                             const usersData = {};
+   16                             for (const uid of participantIds) {
+   17                                 const userSnap = await get(ref(database, `users/
+      ${uid}`));
+   18                                 if (userSnap.exists()) {
+   19                                     usersData[uid] = userSnap.val().profile?.
+      nickname || userSnap.val().name || userSnap.val().email;
+   20                                 }
+   21                             }
+   22                             setParticipants(usersData);
+   23                         } else {
+   24                             setError("Thread not found.");
+   25                         }
+   26                         setLoading(false);
+   27                     }, (err) => {
+   28                         console.error("Error fetching thread data:", err);
+   29                         setError("Could not load thread data.");
+   30                         setLoading(false);
+   31                     });
+   32
+   33                     const unsubscribeMessages = onValue(messagesRef, (snapshot) =>
+      {
+   34                         if (snapshot.exists()) {
+   35                             const msgs = snapshot.val();
+   36                             const messagesList = Object.keys(msgs).map(key => ({
+   37                                 id: key,
+   38                                 ...msgs[key]
+   39                             })).sort((a, b) => a.sentAt - b.sentAt);
+   40                             setMessages(messagesList);
+   41                         } else {
+   42                             setMessages([]);
+   43                         }
+   44                     }, (err) => {
+   45                         console.error("Error fetching messages:", err);
+   46                         setError("Could not load messages.");
+   47                     });
+   48
+   49                     return () => {
+   50                         unsubscribeThread();
+   51                         unsubscribeMessages();
+   52                     };
+   53                 }, [threadId, currentUser]);
+           * Tool Call: replace
+       6. Add `handleSendMessage` and `handleDeleteMessage` functions:
+           * Old String (around line 80, be precise with context):
+
+    1                 const handleAction = async (action) => {
+    2                     const updates = {};
+    3                     updates[`/user-inboxes/${currentUser.uid}/${messageId}
+      /userResponse`] = action;
+    4                     updates[`/messages/${messageId}/responses/${currentUser.uid}`]
+      = action;
+    5
+    6                     try {
+    7                         await update(ref(database), updates);
+    8                         notifications.show({ title: 'Response Recorded', message:
+      `Your response "${action}" has been saved.`, color: 'green' });
+    9                     } catch (err) {
+   10                         console.error("Failed to record response:", err);
+   11                         notifications.show({ title: 'Error', message: 'Could not
+      record your response.', color: 'red' });
+   12                     }
+   13                 };
+   14
+   15                 const handleReply = () => {
+   16                     const originalMessage = thread.find(m => m.id === messageId)
+      || thread[0];
+   17                     openComposeModal({
+   18                         recipientId: originalMessage.senderId,
+   19                         recipientName: participants[originalMessage.senderId] ||
+      'Unknown',
+   20                         subject: `Re: ${thread[0].subject}`,
+   21                     });
+   22                 };
+   23
+   24                 // NOTE: Reply All functionality would require more complex logic
+      to gather all unique participants.
+   25                 // For now, it will function the same as a standard reply.
+   26                 const handleReplyAll = () => {
+   27                     const originalMessage = thread.find(m => m.id === messageId)
+      || thread[0];
+   28                     openComposeModal({
+   29                         recipientId: originalMessage.senderId,
+   30                         recipientName: participants[originalMessage.senderId] ||
+      'Unknown',
+   31                         subject: `Re: ${thread[0].subject}`,
+   32                     });
+   33                 };
+           * New String:
+
+    1                 const handleSendMessage = async () => {
+    2                     if (!newMessageBody.trim()) return;
+    3
+    4                     const messageTimestamp = Date.now();
+    5                     const newMessageRef = ref(database, `threads/${threadId}
+      /messages/${messageTimestamp}`);
+    6
+    7                     const messageData = {
+    8                         senderId: currentUser.uid,
+    9                         body: newMessageBody.trim(),
+   10                         sentAt: messageTimestamp,
+   11                         readBy: { [currentUser.uid]: true }, // Sender has read it
+   12                         complexContent: null, // Placeholder
+   13                     };
+   14
+   15                     try {
+   16                         await set(newMessageRef, messageData);
+   17                         // Update lastMessageTimestamp in thread
+   18                         await update(ref(database, `threads/${threadId}`), {
+      lastMessageTimestamp: messageTimestamp });
+   19
+   20                         // Update readBy for all participants in the thread
+   21                         const updates = {};
+   22                         Object.keys(threadData.participants || {}).forEach(uid =>
+      {
+   23                             updates[`threads/${threadId}/messages/
+      ${messageTimestamp}/readBy/${uid}`] = true;
+   24                         });
+   25                         await update(ref(database), updates);
+   26
+   27                         setNewMessageBody('');
+   28                     } catch (err) {
+   29                         console.error("Failed to send message:", err);
+   30                         notifications.show({ title: 'Error', message: 'Failed to
+      send message.', color: 'red' });
+   31                     }
+   32                 };
+   33
+   34                 const handleDeleteMessage = async (messageTimestampToDelete) => {
+   35                     if (window.confirm("Are you sure you want to delete this
+      message?")) {
+   36                         try {
+   37                             await set(ref(database, `threads/${threadId}/messages/
+      ${messageTimestampToDelete}`), null);
+   38                             notifications.show({ title: 'Message Deleted', message
+      : 'Message has been deleted.', color: 'green' });
+   39                         } catch (err) {
+   40                             console.error("Failed to delete message:", err);
+   41                             notifications.show({ title: 'Error', message: 'Failed
+      to delete message.', color: 'red' });
+   42                         }
+   43                     }
+   44                 };
+           * Tool Call: replace
+       7. Update JSX for rendering and new message input:
+           * Old String (around line 120, be precise with context):
+
+    1                 if (loading) return <Text>Loading message...</Text>;
+    2                 if (error) return <Alert color="red" title="Error">{error}</Alert>
+      ;
+    3                 if (thread.length === 0) return <Text>Message not found.</Text>;
+    4
+    5                 const rootMessage = thread[0];
+    6                 const originalMessage = thread.find(m => m.id === messageId) ||
+      rootMessage;
+    7                 const canReply = !userResponse;
+    8
+    9                 return (
+   10                     <Box className={classes.detailView} style={{ height:
+      'calc(100vh - var(--navbar-height))' }}>
+   11                         <div className={classes.detailHeader}>
+   12                             <Group>
+   13                                 {onBack && (
+   14                                     <ActionIcon onClick={onBack} variant="subtle"
+      aria-label="Back to messages">
+   15                                         <IconArrowLeft />
+   16                                     </ActionIcon>
+   17                                 )}
+   18                                 <Title order={4}>{rootMessage.subject}</Title>
+   19                             </Group>
+   20                         </div>
+   21
+   22                         <ScrollArea className={classes.detailBody}>
+   23                             <Stack gap="md">
+   24                                 {thread.map(msg => {
+   25                                     const isCurrentUser = msg.senderId ===
+      currentUser.uid;
+   26                                     const senderName = participants[msg.senderId]
+      || 'Unknown';
+   27                                     return (
+   28                                         <div key={msg.id} className={`
+      ${classes.messageBubbleContainer} ${isCurrentUser ? classes.userMessage :
+      classes.otherMessage}`}>
+   29                                             {!isCurrentUser && (
+   30                                                 <Text size="xs" c="dimmed"
+      className={classes.bubbleHeader}>{senderName}</Text>
+   31                                             )}
+   32                                             <Paper shadow="sm" className={`
+      ${classes.messageBubble} ${isCurrentUser ? classes.userBubble :
+      classes.otherBubble}`}>
+   33                                                 <Text style={{ whiteSpace:
+      'pre-wrap' }}>{msg.body}</Text>
+   34                                             </Paper>
+   35                                             <Text size="xs" c="dimmed"
+      className={classes.bubbleMeta}>{new Date(msg.sentAt).toLocaleTimeString([], { hour
+      : 'numeric', minute: '2-digit' })}</Text>
+   36                                         </div>
+   37                                     );
+   38                                 })}
+   39                             </Stack>
+   40                         </ScrollArea>
+   41
+   42                         <div className={classes.replySection}>
+   43                             {canReply ? (
+   44                                 <Group>
+   45                                     <Button variant="outline"
+      onClick={handleReply}>Reply</Button>
+   46                                     {Object.keys(originalMessage?.recipients ||
+      {}).length > 1 && <Button variant="outline" onClick={handleReplyAll}>Reply All</
+      Button>}
+   47                                     <Button color="green" leftSection={<IconCheck
+      size={16} />} onClick={() => handleAction('Confirmed')}>Confirm</Button>
+   48                                     <Button color="red" leftSection={<IconX size=
+      {16} />} onClick={() => handleAction('Denied')}>Deny</Button>
+   49                                 </Group>
+   50                             ) : (
+   51                                 <Badge color={userResponse === 'Confirmed' ?
+      'green' : 'red'} size="lg" variant="light">You responded: {userResponse}</Badge>
+   52                             )}
+   53                         </div>
+   54                     </Box>
+   55                 );
+           * New String:
+
+    1                 if (loading) return <Text>Loading conversation...</Text>;
+    2                 if (error) return <Alert color="red" title="Error">{error}</Alert>
+      ;
+    3                 if (!threadData) return <Text>Conversation not found.</Text>;
+    4
+    5                 const isCreator = threadData.creatorId === currentUser.uid;
+    6                 const canAddParticipants = threadData.canAddParticipants ||
+      isCreator;
+    7
+    8                 return (
+    9                     <Box className={classes.detailView} style={{ height:
+      'calc(100vh - var(--navbar-height))' }}>
+   10                         <div className={classes.detailHeader}>
+   11                             <Group justify="space-between" align="center">
+   12                                 <Group>
+   13                                     {onBack && (
+   14                                         <ActionIcon onClick={onBack} variant=
+      "subtle" aria-label="Back to conversations">
+   15                                             <IconArrowLeft />
+   16                                         </ActionIcon>
+   17                                     )}
+   18                                     <Title order={4}>{threadData.name}</Title>
+   19                                 </Group>
+   20                                 {canAddParticipants && (
+   21                                     <Button size="xs" onClick={() =>
+      notifications.show({ title: 'Add Participant', message: 'Functionality to be
+      implemented.' })}>Add Participant</Button>
+   22                                 )}
+   23                             </Group>
+   24                             <Text size="sm" c="dimmed">Participants: {Object.
+      values(participants).join(', ')}</Text>
+   25                         </div>
+   26
+   27                         <ScrollArea className={classes.detailBody}>
+   28                             <Stack gap="md">
+   29                                 {messages.map(msg => {
+   30                                     const isCurrentUser = msg.senderId ===
+      currentUser.uid;
+   31                                     const senderName = participants[msg.senderId]
+      || 'Unknown';
+   32                                     return (
+   33                                         <div key={msg.id} className={`
+      ${classes.messageBubbleContainer} ${isCurrentUser ? classes.userMessage :
+      classes.otherMessage}`}>
+   34                                             {!isCurrentUser && (
+   35                                                 <Text size="xs" c="dimmed"
+      className={classes.bubbleHeader}>{senderName}</Text>
+   36                                             )}
+   37                                             <Paper shadow="sm" className={`
+      ${classes.messageBubble} ${isCurrentUser ? classes.userBubble :
+      classes.otherBubble}`}>
+   38                                                 <Text style={{ whiteSpace:
+      'pre-wrap' }}>{msg.body}</Text>
+   39                                                 {msg.complexContent && (
+   40                                                     <Text size="xs" c="dimmed" mt=
+      "xs">[Complex Content]</Text>
+   41                                                 )}
+   42                                             </Paper>
+   43                                             <Group justify={isCurrentUser ?
+      "flex-end" : "flex-start"} gap="xs">
+   44                                                 <Text size="xs" c="dimmed"
+      className={classes.bubbleMeta}>{new Date(msg.sentAt).toLocaleTimeString([], { hour
+      : 'numeric', minute: '2-digit' })}</Text>
+   45                                                 {isCurrentUser && (
+   46                                                     <ActionIcon
+   47                                                         variant="subtle"
+   48                                                         color="gray"
+   49                                                         size="xs"
+   50                                                         onClick={() =>
+      handleDeleteMessage(msg.id)}
+   51                                                     >
+   52                                                         <IconTrash size={12} />
+   53                                                     </ActionIcon>
+   54                                                 )}
+   55                                             </Group>
+   56                                         </div>
+   57                                     );
+   58                                 })}
+   59                             </Stack>
+   60                         </ScrollArea>
+   61
+   62                         <div className={classes.replySection}>
+   63                             <Group wrap="nowrap" align="flex-end">
+   64                                 <Textarea
+   65                                     placeholder="Type your message..."
+   66                                     value={newMessageBody}
+   67                                     onChange={(event) => setNewMessageBody(event.
+      currentTarget.value)}
+   68                                     minRows={1}
+   69                                     maxRows={4}
+   70                                     autosize
+   71                                     style={{ flexGrow: 1 }}
+   72                                 />
+   73                                 <Button onClick={handleSendMessage} rightSection={
+      <IconSend size={16} />}>Send</Button>
+   74                             </Group>
+   75                         </div>
+   76                     </Box>
+   77                 );
+           * Tool Call: replace
+
+  ---
+
+  Phase 5: Linting and Type Checking (Crucial for another AI)
+
+   * Objective: Ensure the codebase adheres to project standards after modifications.
+   * Steps:
+       1. Run Prettier:
+           * Command: npm run prettier:write
+           * Description: Automatically formats code to ensure consistent style.
+           * Tool Call: run_shell_command
+       2. Run ESLint (with auto-fix):
+           * Command: npm run lint -- --fix
+           * Description: Automatically fixes many common ESLint issues (e.g., unused
+             variables, some formatting).
+           * Tool Call: run_shell_command
+       3. Manually fix remaining ESLint errors:
+           * Identify: Review the output of npm run lint (without --fix) for any remaining
+             errors.
+           * Common Issues to look for and fix:
+               * `@typescript-eslint/no-unused-vars`: Remove any unused import statements or
+                 declared variables.
+               * `no-alert`: Replace window.alert() and window.confirm() calls with Mantine's
+                 notifications.show() and modals.openConfirmModal() respectively. Ensure
+                 useModals is imported from @mantine/modals where needed.
+               * `radix`: For parseInt() calls, always provide the radix parameter (e.g.,
+                 parseInt(value, 10)).
+               * `no-empty`: Ensure there are no empty if/else/try/catch blocks.
+               * `no-console`: Remove console.log, console.error, etc., statements unless they
+                 are intentionally part of the application's logging.
+       4. Run Full Test Suite:
+           * Command: npm run test
+           * Description: This command typically runs Prettier checks, ESLint, TypeScript type
+             checks, and Jest tests. All should pass.
+           * Tool Call: run_shell_command

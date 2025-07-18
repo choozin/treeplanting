@@ -15,6 +15,7 @@ const ComposeMessage = () => {
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [isFormal, setIsFormal] = useState(false);
+    const [canAddParticipants, setCanAddParticipants] = useState(true); // New state variable
 
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,41 +93,48 @@ const ComposeMessage = () => {
             return;
         }
 
-        // **FIX:** Use the imported alias `firebasePush` instead of `push`
-        const newMessageRef = firebasePush(ref(database, 'messages'));
-        const messageId = newMessageRef.key;
+        const newThreadRef = firebasePush(ref(database, 'threads'));
+        const threadId = newThreadRef.key;
+        const messageTimestamp = Date.now(); // Use client-side timestamp for message key
 
-        const messageData = {
+        const threadParticipants = selectedUsers.reduce((acc, userId) => {
+            acc[userId] = true;
+            return acc;
+        }, {});
+        // Add sender to participants
+        threadParticipants[currentUser.uid] = true;
+
+        const threadData = {
+            name: subject.trim(),
+            creatorId: currentUser.uid,
+            lastMessageTimestamp: messageTimestamp,
+            canAddParticipants: canAddParticipants, // New state variable
+            messageType: isFormal ? 'Formal' : 'Social', // Renamed from isFormal to messageType
+            participants: threadParticipants,
+        };
+
+        const initialMessageData = {
             senderId: currentUser.uid,
-            subject: subject.trim(),
             body: body.trim(),
-            sentAt: serverTimestamp(),
-            recipients: selectedUsers.reduce((acc, userId) => {
-                acc[userId] = true;
-                return acc;
-            }, {}),
-            isFormal: isFormal,
-            campId: campID,
-            threadId: messageId,
-            liveCopies: selectedUsers.length,
-            messageType: isFormal ? 'Formal' : 'Social',
-            areRecipientsVisible: true,
+            sentAt: messageTimestamp,
+            readBy: { [currentUser.uid]: true }, // Sender has read it
+            complexContent: null, // Placeholder for future complex messages
         };
 
         const fanOutUpdates = {};
-        fanOutUpdates[`/messages/${messageId}`] = messageData;
 
-        selectedUsers.forEach(uid => {
-            const inboxItem = {
-                isRead: false,
-                senderName: senderName,
-                subject: messageData.subject,
-                sentAt: serverTimestamp(),
-                messageType: messageData.messageType,
-                recipientCount: selectedUsers.length,
-                areRecipientsVisible: messageData.areRecipientsVisible,
+        // Nest the initial message directly within the threadData
+        threadData.messages = {
+            [messageTimestamp]: initialMessageData
+        };
+
+        fanOutUpdates[`/threads/${threadId}`] = threadData;
+
+        // Update user inboxes for all participants
+        Object.keys(threadParticipants).forEach(uid => {
+            fanOutUpdates[`/user-inboxes/${uid}/${threadId}`] = {
+                lastReadMessageTimestamp: messageTimestamp, // Mark as read for all initial participants
             };
-            fanOutUpdates[`/user-inboxes/${uid}/${messageId}`] = inboxItem;
         });
 
         try {
@@ -204,14 +212,21 @@ const ComposeMessage = () => {
                         mb="sm"
                     />
 
-                    {effectiveRole >= 5 && (
-                        <Checkbox
-                            label="Send as Formal Announcement"
-                            checked={isFormal}
-                            onChange={(e) => setIsFormal(e.currentTarget.checked)}
+                    <Checkbox
+                            label="Allow others to add participants"
+                            checked={canAddParticipants}
+                            onChange={(e) => setCanAddParticipants(e.currentTarget.checked)}
                             mb="md"
                         />
-                    )}
+
+                        {effectiveRole >= 5 && (
+                            <Checkbox
+                                label="Send as Formal Announcement"
+                                checked={isFormal}
+                                onChange={(e) => setIsFormal(e.currentTarget.checked)}
+                                mb="md"
+                            />
+                        )}
                 </>
             )}
 
