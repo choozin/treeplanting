@@ -816,7 +816,8 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
           <Tabs.Tab value="ride-offers">Ride Offers</Tabs.Tab>
-          <Tabs.Tab value="ride-requests">Ride Requests</n          {effectiveRole >= 5 && (
+          <Tabs.Tab value="ride-requests">Ride Requests</Tabs.Tab>
+          {effectiveRole >= 5 && (
             <Tabs.Tab value="past-rides">Past Rides</Tabs.Tab>
           )}
         </Tabs.List>
