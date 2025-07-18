@@ -776,10 +776,11 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   );
 
   const userCrewIds = useMemo(() => {
-    if (!userData || !campID) {
+    if (!userData || campID === null) {
       return [];
     }
-    const assignedCamp = userData.assignedCamps?.[campID];
+    const currentCampId = campID as string; // Explicitly cast to string
+    const assignedCamp = userData.assignedCamps?.[currentCampId];
     if (!assignedCamp || !assignedCamp.crewId) {
       return [];
     }
