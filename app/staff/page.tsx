@@ -48,7 +48,15 @@ const StaffPage = () => {
         const unsubscribeUsers = onValue(usersRef, (snapshot) => {
             const allUsers = snapshot.val() || {};
             const campUsers = Object.keys(allUsers)
-                .map(uid => ({ id: uid, ...allUsers[uid] }))
+                .map(uid => ({
+                    id: uid,
+                    ...allUsers[uid],
+                    email: allUsers[uid].email || '',
+                    profile: { // Ensure profile is explicitly mapped
+                        ...allUsers[uid].profile,
+                        isEmailVisible: allUsers[uid].profile?.isEmailVisible || false // Default to false if not present
+                    }
+                }))
                 .filter(u => u.assignedCamps && u.assignedCamps[campID]);
             setUsersInCamp(campUsers);
             setIsLoading(false);
@@ -191,7 +199,11 @@ const StaffPage = () => {
 
                 <ProfileModal
                     user={selectedUser}
-                    crewName={selectedUser ? (crews[selectedUser.assignedCamps?.[campID!]?.crewId || ''] || 'No Crew') : ''}
+                    crewName={selectedUser ? (
+                        Array.isArray(selectedUser.assignedCamps?.[campID!]?.crewId)
+                            ? selectedUser.assignedCamps[campID!].crewId.map(id => crews[id] || 'Unknown Crew').join(', ')
+                            : (crews[selectedUser.assignedCamps?.[campID!]?.crewId || ''] || 'No Crew')
+                    ) : ''}
                     opened={!!selectedUser}
                     onClose={() => setSelectedUser(null)}
                     onMessage={handleMessageUser}

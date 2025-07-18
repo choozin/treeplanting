@@ -57,6 +57,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, crewName, opened, onC
                 withCloseButton={false}
                 padding={0}
                 radius="lg"
+                lockScroll={false}
                 overlayProps={{
                     backgroundOpacity: 0.5,
                     blur: 10,
@@ -83,6 +84,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, crewName, opened, onC
                     <Stack gap="md">
                         {user.profile?.bio && <Text ta="center" c="dimmed">"{user.profile.bio}"</Text>}
 
+                        {user.profile?.isEmailVisible && user.email && (
+                            <Text size="sm" ta="center" c="dimmed">
+                                {user.email}
+                            </Text>
+                        )}
+
                         <SimpleGrid cols={2} spacing="lg">
                             {user.profile?.firstAidLevel && (
                                 <Paper withBorder p="sm" radius="md">
@@ -99,7 +106,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, crewName, opened, onC
                             )}
                         </SimpleGrid>
 
-                        <Group justify="center" gap="xs" mt="md">
+                        <Group justify="center" gap="xs" my={0}>
                             {socialLinks.map(({ platform, icon: Icon, base_url }) => {
                                 const handle = user.profile?.socials?.[platform];
                                 if (!handle) return null;

@@ -6,11 +6,17 @@ import { Badge, Box, Tooltip } from '@mantine/core';
 import classes from './Navbar.module.css';
 
 const NavItem = ({ item, isCollectionLink = false, unreadCount, onNavigate }) => {
-    const { key, label, icon: Icon, isFunctional, emoji } = item;
+    const { key, label, icon: Icon, visibility, emoji } = item;
     const href = `/${key}`;
 
+    if (visibility === 'hidden') {
+        return null;
+    }
+
+    const isVisible = visibility === 'visible';
+
     const itemOnClick = (event) => {
-        if (!isFunctional) {
+        if (!isVisible) {
             event.preventDefault();
             return;
         }
@@ -26,16 +32,12 @@ const NavItem = ({ item, isCollectionLink = false, unreadCount, onNavigate }) =>
             href={href}
             onClick={itemOnClick}
             className={isCollectionLink ? classes.collectionLink : classes.mainLink}
-            style={{ opacity: isFunctional ? 1 : 0.5, cursor: isFunctional ? 'pointer' : 'not-allowed' }}
+            style={{ opacity: isVisible ? 1 : 0.5, cursor: isVisible ? 'pointer' : 'not-allowed' }}
         >
             <div className={classes.mainLinkInner}>
-                {isCollectionLink ? (
-                    <Box component="span" mr={9} fz="1.75rem">
-                        {emoji}
-                    </Box>
-                ) : (
-                    Icon && <Icon size={28} className={classes.mainLinkIcon} stroke={1.5} />
-                )}
+                <Box component="span" mr={9} fz="1.75rem">
+                    {emoji}
+                </Box>
                 <span>{label}</span>
             </div>
             {key === 'messages' && unreadCount > 0 && (
@@ -46,7 +48,7 @@ const NavItem = ({ item, isCollectionLink = false, unreadCount, onNavigate }) =>
         </Link>
     );
 
-    if (!isFunctional) {
+    if (!isVisible) {
         return (
             <Tooltip label="Coming soon!" position="right" withArrow openDelay={300} withinPortal>
                 {content}

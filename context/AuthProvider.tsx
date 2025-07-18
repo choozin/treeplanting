@@ -125,14 +125,27 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setLoading(true);
             setUser(currentUser);
-            const uData = await fetchCurrentUserData(currentUser);
-            if (currentUser && uData) {
-                const storedCampID = Cookies.get(`campID_${currentUser.uid}`);
-                if (storedCampID && uData.assignedCamps?.[storedCampID]) {
-                    setCampIDState(storedCampID);
+            if (currentUser) {
+                const uData = await fetchCurrentUserData(currentUser);
+                if (uData) {
+                    // If a user exists but doesn't have a profile, create a default one.
+                    if (!uData.profile) {
+                        uData.profile = {
+                            name: uData.name || currentUser.displayName || currentUser.email,
+                            nickname: uData.name || currentUser.displayName || currentUser.email,
+                        };
+                    }
+                    const storedCampID = Cookies.get(`campID_${currentUser.uid}`);
+                    if (storedCampID && uData.assignedCamps?.[storedCampID]) {
+                        setCampIDState(storedCampID);
+                    } else {
+                        setCampIDState(null);
+                        Cookies.remove(`campID_${currentUser.uid}`);
+                    }
                 } else {
-                    setCampIDState(null);
-                    Cookies.remove(`campID_${currentUser.uid}`);
+                    // This case might happen for a brand new user.
+                    // We can trigger a refresh after a short delay to get the new data.
+                    setTimeout(() => fetchCurrentUserData(currentUser), 1000);
                 }
             } else {
                 setUserData(null);

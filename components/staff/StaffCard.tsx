@@ -16,9 +16,12 @@ interface StaffCardProps {
     user: {
         id: string;
         name: string;
+        email: string; // Added email
         profileImageURL?: string;
         profile?: {
             nickname?: string;
+            bio?: string; // Added bio for placement
+            isEmailVisible?: boolean; // Added isEmailVisible
         };
     };
 }

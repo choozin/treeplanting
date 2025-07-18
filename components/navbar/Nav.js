@@ -269,20 +269,11 @@ export default function Nav() {
                                         </Link>
                                         <Divider my="xs" />
                                         <div className={classes.mainLinks}>{mainLinks}</div>
+                                        {campID && <div className={classes.collections}>{collectionLinks}</div>}
                                     </div>
 
-                                    {campID && (
-                                        <div className={classes.navSection}>
-                                            <Group className={classes.collectionsHeader} justify="space-between">
-                                                <Text size="sm" fw={500} c="dimmed">
-                                                    Camp Tools
-                                                </Text>
-                                            </Group>
-                                            <div className={classes.collections}>{collectionLinks}</div>
-                                        </div>
-                                    )}
-
                                     <div className={classes.navSection}>
+                                        <Text size="xs" c="dimmed" ta="center" mb="sm">v0.1.0</Text>
                                         <Button
                                             fullWidth
                                             variant="light"

@@ -45,6 +45,10 @@ const registerUser = async (email, password, name) => {
             name: name,
             role: 1, // Default global role set to 1
             createdAt: new Date().toISOString(),
+            profile: {
+                name: name,
+                nickname: name,
+            },
             // Default assignment for new users
             assignedCamps: {
                 scooter: {

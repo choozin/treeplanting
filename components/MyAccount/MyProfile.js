@@ -11,7 +11,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import { IconUpload } from '@tabler/icons-react';
 
-const MyAccount = () => {
+const MyProfile = () => {
     const { user, userData, refreshUserData, loading: authLoading } = useAuth();
     const fileInputRef = useRef(null);
 
@@ -20,6 +20,7 @@ const MyAccount = () => {
         nickname: '',
         birthday: '',
         isFullNameVisible: false,
+        isEmailVisible: false,
         isBirthdayVisible: false,
         bio: '',
         firstAidLevel: '',
@@ -144,7 +145,7 @@ const MyAccount = () => {
             </Modal>
 
             <Paper withBorder shadow="md" p="xl" radius="md" maw={600} mx="auto">
-                <Title order={2} ta="center" mb="xl">Account Settings</Title>
+                <Title order={2} ta="center" mb="xl">My Profile</Title>
                 <Stack>
                     <Group justify="center">
                         <Avatar
@@ -182,6 +183,17 @@ const MyAccount = () => {
                         onChange={(e) => handleProfileChange('isFullNameVisible', e.currentTarget.checked)}
                     />
                     <TextInput
+                        label="Email Address"
+                        value={user?.email || ''}
+                        readOnly
+                        disabled
+                    />
+                    <Switch
+                        label="Make email visible to others"
+                        checked={profile.isEmailVisible || false}
+                        onChange={(e) => handleProfileChange('isEmailVisible', e.currentTarget.checked)}
+                    />
+                    <TextInput
                         label="Nickname"
                         description="How you'd like to be referred to in the app."
                         placeholder="Enter a nickname"
@@ -206,7 +218,7 @@ const MyAccount = () => {
                         onChange={(e) => handleProfileChange('isBirthdayVisible', e.currentTarget.checked)}
                     />
                     <TextInput
-                        label="First Aid Level"
+                        label="First Aid Level (if applicable)"
                         placeholder="e.g., OFA 3, WFA, etc."
                         value={profile.firstAidLevel || ''}
                         onChange={(e) => handleProfileChange('firstAidLevel', e.currentTarget.value)}
@@ -265,4 +277,4 @@ const MyAccount = () => {
     );
 };
 
-export default MyAccount;
+export default MyProfile;

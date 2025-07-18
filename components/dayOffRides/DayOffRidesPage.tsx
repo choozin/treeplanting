@@ -389,7 +389,9 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     }
 
     try {
-      const newPassengers = { ...(offer.passengers || {}), [user.uid]: profile.name };
+      // Ensure passengerName is always a valid string
+      const passengerName = profile?.name || profile?.nickname || user.email || user.uid; // Prioritize name/nickname, fallback to email then UID
+      const newPassengers = { ...(offer.passengers || {}), [user.uid]: passengerName };
       await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
         passengers: newPassengers,
         availableSeats: offer.availableSeats - 1,
