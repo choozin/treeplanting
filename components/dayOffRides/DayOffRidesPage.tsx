@@ -929,7 +929,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                                   const name = passengerUser?.profile?.nickname || passengerUser?.profile?.name || 'Name N/A';
                                   return numPeople > 1 ? `${name} (+${numPeople - 1})` : name;
                                 })
-                                .join(', ')}}
+                                .join(', ')}
                             </Text>
                           ) : (
                             <Text size="sm" c="dimmed">
