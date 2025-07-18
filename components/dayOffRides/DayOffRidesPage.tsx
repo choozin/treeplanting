@@ -726,8 +726,8 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     if (sortKey) {
       return [...filteredData].sort((a, b) => {
-        let aVal = a[sortKey];
-        let bVal = b[sortKey];
+        let aVal = a[sortKey!];
+        let bVal = b[sortKey!];
 
         // Handle date sorting specifically if the sortKey is a date field
         if (sortKey === 'departureDate' || sortKey === 'requestDate') {
@@ -775,11 +775,16 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     pastSortOrder
   );
 
-  const userCrewIds = Array.isArray(userData?.assignedCamps?.[campID]?.crewId)
-    ? userData.assignedCamps[campID].crewId
-    : userData?.assignedCamps?.[campID]?.crewId
-      ? [userData.assignedCamps[campID].crewId]
-      : [];
+  const userCrewIds = useMemo(() => {
+    if (!userData || !campID) {
+      return [];
+    }
+    const assignedCamp = userData.assignedCamps?.[campID];
+    if (!assignedCamp || !assignedCamp.crewId) {
+      return [];
+    }
+    return Array.isArray(assignedCamp.crewId) ? assignedCamp.crewId : [assignedCamp.crewId];
+  }, [userData, campID]);
 
   const isDriverCrew = userCrewIds.some((crewId) => {
     const crew = crews.find((c) => c.id === crewId);
