@@ -2,15 +2,15 @@ import '@mantine/core/styles.css';
 import './globals.css'; // Ensure globals.css is imported
 
 import React from 'react';
+import { Nunito } from 'next/font/google';
 import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
-import { Nunito } from 'next/font/google';
-import { theme } from '../theme';
-import WeatherProvider from '../context/WeatherProvider';
-import AuthProvider from '../context/AuthProvider';
-import Nav from '../components/navbar/Nav';
 import FeedbackModalWrapper from '../components/feedback/FeedbackModalWrapper';
+import Nav from '../components/navbar/Nav';
+import AuthProvider from '../context/AuthProvider';
+import WeatherProvider from '../context/WeatherProvider';
+import { theme } from '../theme';
 
 const nunito = Nunito({
   weight: ['400', '600', '700'],
@@ -26,7 +26,11 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: any }) {
   return (
-    <html lang="en" className={nunito.variable}>
+    <html
+      lang="en"
+      className={nunito.variable}
+      data-mantine-color-scheme={theme.defaultColorScheme}
+    >
       <head>
         <ColorSchemeScript defaultColorScheme="auto" />
         <link rel="manifest" href="/manifest.json" />

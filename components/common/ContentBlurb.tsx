@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Title, Text, Stack } from '@mantine/core';
+import React, { useEffect, useState } from 'react';
+import { Stack, Text, Title } from '@mantine/core';
 import blurbs from '@/lib/blurbs.json';
 
 interface Blurb {
@@ -43,13 +43,19 @@ const ContentBlurb = () => {
         </Stack>
       );
     case 'haiku':
-        return (
-            <Stack align="center" gap="xs">
-                <Text size="lg" ta="center" ff="monospace">{blurb.content.line1}</Text>
-                <Text size="lg" ta="center" ff="monospace">{blurb.content.line2}</Text>
-                <Text size="lg" ta="center" ff="monospace">{blurb.content.line3}</Text>
-            </Stack>
-        )
+      return (
+        <Stack align="center" gap="xs">
+          <Text size="lg" ta="center" ff="monospace">
+            {blurb.content.line1}
+          </Text>
+          <Text size="lg" ta="center" ff="monospace">
+            {blurb.content.line2}
+          </Text>
+          <Text size="lg" ta="center" ff="monospace">
+            {blurb.content.line3}
+          </Text>
+        </Stack>
+      );
     case 'pun':
     case 'wordplay':
     default:

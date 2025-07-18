@@ -1,17 +1,74 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Button, Group, Box, Select, TextInput, Textarea, Tooltip, Stack, Radio, NumberInput, Alert, Text, Accordion, Checkbox, Divider, Card, Title, Badge, Modal, Tabs } from '@mantine/core';
-import { TimeInput, DatePickerInput } from '@mantine/dates';
-import { useAuth } from '../../hooks/useAuth';
-import { database } from '../../firebase/firebase';
-import { ref, onValue, push, update, remove, query, orderByChild, startAt, endAt, get } from 'firebase/database';
-import { IconTrash, IconPencil, IconCheck, IconX, IconClock, IconMapPin, IconCalendar, IconUser, IconCar, IconInfoCircle, IconCurrencyDollar, IconBus, IconUsers, IconNotes, IconBolt, IconPhone, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
+
+import { useEffect, useState } from 'react';
+import {
+  IconBolt,
+  IconBus,
+  IconCalendar,
+  IconCar,
+  IconCheck,
+  IconChevronDown,
+  IconChevronUp,
+  IconClock,
+  IconCurrencyDollar,
+  IconInfoCircle,
+  IconMapPin,
+  IconNotes,
+  IconPencil,
+  IconPhone,
+  IconTrash,
+  IconUser,
+  IconUsers,
+  IconX,
+} from '@tabler/icons-react';
+import {
+  addDays,
+  endOfDay,
+  formatISO,
+  isWithinInterval,
+  parseISO,
+  startOfDay,
+  subDays,
+} from 'date-fns';
+import {
+  endAt,
+  get,
+  onValue,
+  orderByChild,
+  push,
+  query,
+  ref,
+  remove,
+  startAt,
+  update,
+} from 'firebase/database';
+import {
+  Accordion,
+  Alert,
+  Badge,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  Divider,
+  Group,
+  Modal,
+  NumberInput,
+  Radio,
+  Select,
+  Stack,
+  Tabs,
+  Text,
+  Textarea,
+  TextInput,
+  Title,
+  Tooltip,
+} from '@mantine/core';
+import { DatePickerInput, TimeInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
+import { database } from '../../firebase/firebase';
+import { useAuth } from '../../hooks/useAuth';
 import { ROLES } from '../../lib/constants';
-
-import { isWithinInterval, startOfDay, endOfDay, formatISO, parseISO, addDays, subDays } from 'date-fns';
-
-
 
 interface RideOffer {
   id: string;
@@ -106,9 +163,18 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   const [trucks, setTrucks] = useState<any[]>([]);
 
   // Filtering and Sorting
-  const [offerDateRange, setOfferDateRange] = useState<[Date | null, Date | null]>([new Date(), addDays(new Date(), 30)]);
-  const [requestDateRange, setRequestDateRange] = useState<[Date | null, Date | null]>([new Date(), addDays(new Date(), 30)]);
-  const [pastDateRange, setPastDateRange] = useState<[Date | null, Date | null]>([subDays(new Date(), 30), new Date()]);
+  const [offerDateRange, setOfferDateRange] = useState<[Date | null, Date | null]>([
+    new Date(),
+    addDays(new Date(), 30),
+  ]);
+  const [requestDateRange, setRequestDateRange] = useState<[Date | null, Date | null]>([
+    new Date(),
+    addDays(new Date(), 30),
+  ]);
+  const [pastDateRange, setPastDateRange] = useState<[Date | null, Date | null]>([
+    subDays(new Date(), 30),
+    new Date(),
+  ]);
 
   const [offerSortKey, setOfferSortKey] = useState<string | null>(null);
   const [offerSortOrder, setOfferSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -128,29 +194,39 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     const unsubscribeOffers = onValue(offersRef, (snapshot) => {
       const offersVal = snapshot.val();
-      const loadedOffers: RideOffer[] = offersVal ? Object.keys(offersVal).map(key => ({ id: key, ...offersVal[key] })) : [];
-      console.log("DayOffRidesPage - campID:", campID);
-      console.log("DayOffRidesPage - Raw loadedOffers:", loadedOffers);
-      console.log("DayOffRidesPage - effectiveRole:", effectiveRole);
-      console.log("DayOffRidesPage - ROLES:", ROLES);
-      const upcoming = loadedOffers.filter(offer => parseISO(offer.departureDate) >= startOfDay(new Date()));
-      const past = loadedOffers.filter(offer => parseISO(offer.departureDate) < startOfDay(new Date()));
-      console.log("DayOffRidesPage - Upcoming offers after date filter:", upcoming);
+      const loadedOffers: RideOffer[] = offersVal
+        ? Object.keys(offersVal).map((key) => ({ id: key, ...offersVal[key] }))
+        : [];
+      console.log('DayOffRidesPage - campID:', campID);
+      console.log('DayOffRidesPage - Raw loadedOffers:', loadedOffers);
+      console.log('DayOffRidesPage - effectiveRole:', effectiveRole);
+      console.log('DayOffRidesPage - ROLES:', ROLES);
+      const upcoming = loadedOffers.filter(
+        (offer) => parseISO(offer.departureDate) >= startOfDay(new Date())
+      );
+      const past = loadedOffers.filter(
+        (offer) => parseISO(offer.departureDate) < startOfDay(new Date())
+      );
+      console.log('DayOffRidesPage - Upcoming offers after date filter:', upcoming);
       setRideOffers(upcoming);
       setPastRides(past);
     });
 
     const unsubscribeRequests = onValue(requestsRef, (snapshot) => {
       const requestsVal = snapshot.val();
-      const loadedRequests: RideRequest[] = requestsVal ? Object.keys(requestsVal).map(key => ({ id: key, ...requestsVal[key] })) : [];
-      setRideRequests(loadedRequests.filter(req => parseISO(req.requestDate) >= startOfDay(new Date())));
+      const loadedRequests: RideRequest[] = requestsVal
+        ? Object.keys(requestsVal).map((key) => ({ id: key, ...requestsVal[key] }))
+        : [];
+      setRideRequests(
+        loadedRequests.filter((req) => parseISO(req.requestDate) >= startOfDay(new Date()))
+      );
     });
 
     const unsubscribeUsers = onValue(usersRef, (snapshot) => {
       const usersVal = snapshot.val();
       const loadedUsers: any[] = [];
       if (usersVal) {
-        Object.keys(usersVal).forEach(uid => {
+        Object.keys(usersVal).forEach((uid) => {
           loadedUsers.push({ id: uid, ...usersVal[uid] });
         });
       }
@@ -159,8 +235,10 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     const unsubscribeCamps = onValue(campsRef, (snapshot) => {
       const campsVal = snapshot.val();
-      const loadedCamps: Camp[] = campsVal ? Object.keys(campsVal).map(key => ({ id: key, ...campsVal[key] })) : [];
-      setCamps(loadedCamps.filter(camp => camp.isActive));
+      const loadedCamps: Camp[] = campsVal
+        ? Object.keys(campsVal).map((key) => ({ id: key, ...campsVal[key] }))
+        : [];
+      setCamps(loadedCamps.filter((camp) => camp.isActive));
     });
 
     let unsubscribeCalendar: (() => void) | undefined;
@@ -176,14 +254,18 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       const crewsRef = ref(database, `camps/${campID}/crews`);
       unsubscribeCrews = onValue(crewsRef, (snapshot) => {
         const crewsVal = snapshot.val();
-        const loadedCrews: any[] = crewsVal ? Object.keys(crewsVal).map(key => ({ id: key, ...crewsVal[key] })) : [];
+        const loadedCrews: any[] = crewsVal
+          ? Object.keys(crewsVal).map((key) => ({ id: key, ...crewsVal[key] }))
+          : [];
         setCrews(loadedCrews);
       });
 
       const trucksRef = ref(database, `camps/${campID}/trucks`);
       unsubscribeTrucks = onValue(trucksRef, (snapshot) => {
         const trucksVal = snapshot.val();
-        const loadedTrucks: any[] = trucksVal ? Object.keys(trucksVal).map(key => ({ id: key, ...trucksVal[key] })) : [];
+        const loadedTrucks: any[] = trucksVal
+          ? Object.keys(trucksVal).map((key) => ({ id: key, ...trucksVal[key] }))
+          : [];
         setTrucks(loadedTrucks);
       });
     }
@@ -199,7 +281,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     };
   }, [user, campID]);
 
-  const campOptions = camps.map(camp => ({ value: camp.name, label: camp.name }));
+  const campOptions = camps.map((camp) => ({ value: camp.name, label: camp.name }));
 
   const openOfferModal = (offer: RideOffer | null = null) => {
     if (offer) {
@@ -214,7 +296,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       setAllowAutoJoin(offer.allowAutoJoin || false);
     } else {
       setEditingOffer(null);
-      
+
       let nextDayOff: Date | null = null;
       if (calendarData) {
         const sortedDates = Object.keys(calendarData).sort();
@@ -264,12 +346,25 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   };
 
   const handleOfferSubmit = async () => {
-    if (!user || !profile || !departureDate || !departureTime || !destination || availableSeats === '' || !selectedDriverId || !selectedTruck) {
-      notifications.show({ title: 'Error', message: 'Please fill all required offer fields.', color: 'red' });
+    if (
+      !user ||
+      !profile ||
+      !departureDate ||
+      !departureTime ||
+      !destination ||
+      availableSeats === '' ||
+      !selectedDriverId ||
+      !selectedTruck
+    ) {
+      notifications.show({
+        title: 'Error',
+        message: 'Please fill all required offer fields.',
+        color: 'red',
+      });
       return;
     }
 
-    const selectedDriver = allUsers.find(u => u.id === selectedDriverId);
+    const selectedDriver = allUsers.find((u) => u.id === selectedDriverId);
     if (!selectedDriver) {
       notifications.show({ title: 'Error', message: 'Selected driver not found.', color: 'red' });
       return;
@@ -288,29 +383,64 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       allowAutoJoin,
     };
 
-    console.log("Profile object before submit:", profile);
+    console.log('Profile object before submit:', profile);
 
     try {
       if (editingOffer) {
-        await update(ref(database, `camps/${campID}/dayOffRides/offers/${editingOffer.id}`), offerData);
-        notifications.show({ title: 'Success', message: 'Ride offer updated successfully!', color: 'green' });
+        await update(
+          ref(database, `camps/${campID}/dayOffRides/offers/${editingOffer.id}`),
+          offerData
+        );
+        notifications.show({
+          title: 'Success',
+          message: 'Ride offer updated successfully!',
+          color: 'green',
+        });
       } else {
-        await push(ref(database, `camps/${campID}/dayOffRides/offers`), { ...offerData, passengers: {}, status: 'pending', timestamp: formatISO(new Date()) });
-        notifications.show({ title: 'Success', message: 'Ride offer created successfully!', color: 'green' });
+        await push(ref(database, `camps/${campID}/dayOffRides/offers`), {
+          ...offerData,
+          passengers: {},
+          status: 'pending',
+          timestamp: formatISO(new Date()),
+        });
+        notifications.show({
+          title: 'Success',
+          message: 'Ride offer created successfully!',
+          color: 'green',
+        });
       }
       setOfferModalOpen(false);
     } catch (error: any) {
-      notifications.show({ title: 'Error', message: `Failed to save offer: ${error.message}`, color: 'red' });
+      notifications.show({
+        title: 'Error',
+        message: `Failed to save offer: ${error.message}`,
+        color: 'red',
+      });
     }
   };
 
   const handleRequestSubmit = async () => {
-    if (!user || !profile || !requestDate || !requestDepartureTime || !requestDepartureLocation || !requestDestination || numberOfPeople === '') {
-      notifications.show({ title: 'Error', message: 'Please fill all required request fields.', color: 'red' });
+    if (
+      !user ||
+      !profile ||
+      !requestDate ||
+      !requestDepartureTime ||
+      !requestDepartureLocation ||
+      !requestDestination ||
+      numberOfPeople === ''
+    ) {
+      notifications.show({
+        title: 'Error',
+        message: 'Please fill all required request fields.',
+        color: 'red',
+      });
       return;
     }
 
-    const requestData: Omit<RideRequest, 'id' | 'status' | 'offeredRideId' | 'timestamp' | 'requesterId'> & { requesterId: string } = {
+    const requestData: Omit<
+      RideRequest,
+      'id' | 'status' | 'offeredRideId' | 'timestamp' | 'requesterId'
+    > & { requesterId: string } = {
       requesterId: user.uid,
       requesterName: profile.name,
       requestDate: formatISO(requestDate, { representation: 'date' }),
@@ -323,15 +453,34 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     try {
       if (editingRequest) {
-        await update(ref(database, `camps/${campID}/dayOffRides/requests/${editingRequest.id}`), requestData);
-        notifications.show({ title: 'Success', message: 'Ride request updated successfully!', color: 'green' });
+        await update(
+          ref(database, `camps/${campID}/dayOffRides/requests/${editingRequest.id}`),
+          requestData
+        );
+        notifications.show({
+          title: 'Success',
+          message: 'Ride request updated successfully!',
+          color: 'green',
+        });
       } else {
-        await push(ref(database, `camps/${campID}/dayOffRides/requests`), { ...requestData, status: 'pending', timestamp: formatISO(new Date()) });
-        notifications.show({ title: 'Success', message: 'Ride request created successfully!', color: 'green' });
+        await push(ref(database, `camps/${campID}/dayOffRides/requests`), {
+          ...requestData,
+          status: 'pending',
+          timestamp: formatISO(new Date()),
+        });
+        notifications.show({
+          title: 'Success',
+          message: 'Ride request created successfully!',
+          color: 'green',
+        });
       }
       setRequestModalOpen(false);
     } catch (error: any) {
-      notifications.show({ title: 'Error', message: `Failed to save request: ${error.message}`, color: 'red' });
+      notifications.show({
+        title: 'Error',
+        message: `Failed to save request: ${error.message}`,
+        color: 'red',
+      });
     }
   };
 
@@ -341,7 +490,11 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
         await remove(ref(database, `camps/${campID}/dayOffRides/offers/${offerId}`));
         notifications.show({ title: 'Success', message: 'Ride offer deleted.', color: 'green' });
       } catch (error: any) {
-        notifications.show({ title: 'Error', message: `Failed to delete offer: ${error.message}`, color: 'red' });
+        notifications.show({
+          title: 'Error',
+          message: `Failed to delete offer: ${error.message}`,
+          color: 'red',
+        });
       }
     }
   };
@@ -352,17 +505,21 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
         await remove(ref(database, `camps/${campID}/dayOffRides/requests/${requestId}`));
         notifications.show({ title: 'Success', message: 'Ride request deleted.', color: 'green' });
       } catch (error: any) {
-        notifications.show({ title: 'Error', message: `Failed to delete request: ${error.message}`, color: 'red' });
+        notifications.show({
+          title: 'Error',
+          message: `Failed to delete request: ${error.message}`,
+          color: 'red',
+        });
       }
     }
   };
 
   const handleJoinRide = async (offer: RideOffer) => {
-    console.log("handleJoinRide: user", user);
-    console.log("handleJoinRide: profile", profile);
-    console.log("handleJoinRide: loading", loading);
-    console.log("handleJoinRide: offer.passengers", offer.passengers);
-    console.log("handleJoinRide: user.uid", user?.uid);
+    console.log('handleJoinRide: user', user);
+    console.log('handleJoinRide: profile', profile);
+    console.log('handleJoinRide: loading', loading);
+    console.log('handleJoinRide: offer.passengers', offer.passengers);
+    console.log('handleJoinRide: user.uid', user?.uid);
     if (loading) {
       notifications.show({
         title: 'Info',
@@ -372,19 +529,35 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       return;
     }
     if (!user || !profile) {
-      notifications.show({ title: 'Error', message: 'You must be logged in to join a ride.', color: 'red' });
+      notifications.show({
+        title: 'Error',
+        message: 'You must be logged in to join a ride.',
+        color: 'red',
+      });
       return;
     }
     if (offer.driverId === user.uid) {
-      notifications.show({ title: 'Info', message: 'You cannot join your own ride offer.', color: 'blue' });
+      notifications.show({
+        title: 'Info',
+        message: 'You cannot join your own ride offer.',
+        color: 'blue',
+      });
       return;
     }
     if (offer.availableSeats <= 0) {
-      notifications.show({ title: 'Error', message: 'No available seats on this ride.', color: 'red' });
+      notifications.show({
+        title: 'Error',
+        message: 'No available seats on this ride.',
+        color: 'red',
+      });
       return;
     }
     if (offer.passengers && offer.passengers[user.uid]) {
-      notifications.show({ title: 'Info', message: 'You have already joined this ride.', color: 'blue' });
+      notifications.show({
+        title: 'Info',
+        message: 'You have already joined this ride.',
+        color: 'blue',
+      });
       return;
     }
 
@@ -396,16 +569,28 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
         passengers: newPassengers,
         availableSeats: offer.availableSeats - 1,
       });
-      notifications.show({ title: 'Success', message: 'Joined ride successfully!', color: 'green' });
+      notifications.show({
+        title: 'Success',
+        message: 'Joined ride successfully!',
+        color: 'green',
+      });
     } catch (error: any) {
-      notifications.show({ title: 'Error', message: `Failed to join ride: ${error.message}`, color: 'red' });
+      notifications.show({
+        title: 'Error',
+        message: `Failed to join ride: ${error.message}`,
+        color: 'red',
+      });
     }
   };
 
   const handleLeaveRide = async (offer: RideOffer) => {
     if (!user || !profile) return;
     if (!offer.passengers || !offer.passengers[user.uid]) {
-      notifications.show({ title: 'Info', message: 'You are not a passenger on this ride.', color: 'blue' });
+      notifications.show({
+        title: 'Info',
+        message: 'You are not a passenger on this ride.',
+        color: 'blue',
+      });
       return;
     }
 
@@ -417,37 +602,64 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
           passengers: newPassengers,
           availableSeats: offer.availableSeats + 1,
         });
-        notifications.show({ title: 'Success', message: 'Left ride successfully!', color: 'green' });
+        notifications.show({
+          title: 'Success',
+          message: 'Left ride successfully!',
+          color: 'green',
+        });
       } catch (error: any) {
-        notifications.show({ title: 'Error', message: `Failed to leave ride: ${error.message}`, color: 'red' });
+        notifications.show({
+          title: 'Error',
+          message: `Failed to leave ride: ${error.message}`,
+          color: 'red',
+        });
       }
     }
   };
 
   const handleMatchRequest = async (offer: RideOffer, request: RideRequest) => {
     if (offer.availableSeats < request.numberOfPeople) {
-      notifications.show({ title: 'Error', message: 'Not enough seats available in the offer for this request.', color: 'red' });
+      notifications.show({
+        title: 'Error',
+        message: 'Not enough seats available in the offer for this request.',
+        color: 'red',
+      });
       return;
     }
 
-    if (window.confirm(`Match request from ${request.requesterName} (${request.numberOfPeople} people) with your ride offer?`)) {
+    if (
+      window.confirm(
+        `Match request from ${request.requesterName} (${request.numberOfPeople} people) with your ride offer?`
+      )
+    ) {
       try {
         // Update offer: reduce seats, add request as passenger (simplified for now)
-        const newPassengers = { ...(offer.passengers || {}), [request.requesterId]: request.requesterName };
+        const newPassengers = {
+          ...(offer.passengers || {}),
+          [request.requesterId]: request.requesterName,
+        };
         await update(ref(database, `camps/${campID}/dayOffRides/offers/${offer.id}`), {
           availableSeats: offer.availableSeats - request.numberOfPeople,
           passengers: newPassengers, // This assumes a single requester fills multiple spots, might need refinement
-          status: offer.availableSeats - request.numberOfPeople === 0 ? 'confirmed' : 'pending'
+          status: offer.availableSeats - request.numberOfPeople === 0 ? 'confirmed' : 'pending',
         });
 
         // Update request: set status to confirmed, link to offer
         await update(ref(database, `camps/${campID}/dayOffRides/requests/${request.id}`), {
           status: 'confirmed',
-          offeredRideId: offer.id
+          offeredRideId: offer.id,
         });
-        notifications.show({ title: 'Success', message: 'Request matched successfully!', color: 'green' });
+        notifications.show({
+          title: 'Success',
+          message: 'Request matched successfully!',
+          color: 'green',
+        });
       } catch (error: any) {
-        notifications.show({ title: 'Error', message: `Failed to match request: ${error.message}`, color: 'red' });
+        notifications.show({
+          title: 'Error',
+          message: `Failed to match request: ${error.message}`,
+          color: 'red',
+        });
       }
     }
   };
@@ -458,18 +670,21 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   };
 
   const getPassengerContact = (passengerId: string) => {
-    const passengerUser = allUsers.find(u => u.id === passengerId);
+    const passengerUser = allUsers.find((u) => u.id === passengerId);
     return passengerUser ? passengerUser.phoneNumber || passengerUser.email || 'N/A' : 'N/A';
   };
 
-  
-
-  const filterAndSort = (data: any[], dateRange: [Date | null, Date | null], sortKey: string | null, sortOrder: 'asc' | 'desc') => {
+  const filterAndSort = (
+    data: any[],
+    dateRange: [Date | null, Date | null],
+    sortKey: string | null,
+    sortOrder: 'asc' | 'desc'
+  ) => {
     const [startDate, endDate] = dateRange;
     let filteredData = data;
 
     if (startDate && endDate) {
-      filteredData = data.filter(item => {
+      filteredData = data.filter((item) => {
         const itemDate = parseISO(item.departureDate || item.requestDate);
         return isWithinInterval(itemDate, { start: startOfDay(startDate), end: endOfDay(endDate) });
       });
@@ -503,29 +718,47 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     return filteredData;
   };
 
-
-  const filteredAndSortedOffers = filterAndSort(rideOffers, offerDateRange, offerSortKey, offerSortOrder);
-  const filteredAndSortedRequests = filterAndSort(rideRequests, requestDateRange, requestSortKey, requestSortOrder);
-  const filteredAndSortedPastRides = filterAndSort(pastRides, pastDateRange, pastSortKey, pastSortOrder);
+  const filteredAndSortedOffers = filterAndSort(
+    rideOffers,
+    offerDateRange,
+    offerSortKey,
+    offerSortOrder
+  );
+  const filteredAndSortedRequests = filterAndSort(
+    rideRequests,
+    requestDateRange,
+    requestSortKey,
+    requestSortOrder
+  );
+  const filteredAndSortedPastRides = filterAndSort(
+    pastRides,
+    pastDateRange,
+    pastSortKey,
+    pastSortOrder
+  );
 
   const userCrewIds = Array.isArray(userData?.assignedCamps?.[campID]?.crewId)
     ? userData.assignedCamps[campID].crewId
-    : (userData?.assignedCamps?.[campID]?.crewId ? [userData.assignedCamps[campID].crewId] : []);
+    : userData?.assignedCamps?.[campID]?.crewId
+      ? [userData.assignedCamps[campID].crewId]
+      : [];
 
-  const isDriverCrew = userCrewIds.some(crewId => {
-    const crew = crews.find(c => c.id === crewId);
-    return crew?.crewType === "Drivers";
+  const isDriverCrew = userCrewIds.some((crewId) => {
+    const crew = crews.find((c) => c.id === crewId);
+    return crew?.crewType === 'Drivers';
   });
   const isCrewModerator = effectiveRole === ROLES.CrewModerator;
   const isCrewBoss = effectiveRole === ROLES.CrewBoss;
 
   const canCreateRideOffer = isDriverCrew || isCrewModerator || isCrewBoss;
 
-  console.log("DayOffRidesPage - filteredAndSortedOffers:", filteredAndSortedOffers);
+  console.log('DayOffRidesPage - filteredAndSortedOffers:', filteredAndSortedOffers);
 
   return (
     <Box style={{ padding: '20px' }}>
-      <Title order={2} mb="lg">Day Off Ride Board</Title>
+      <Title order={2} mb="lg">
+        Day Off Ride Board
+      </Title>
 
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
@@ -541,10 +774,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
               disabled={canCreateRideOffer}
               withArrow
             >
-              <Button
-                onClick={() => openOfferModal()}
-                disabled={!canCreateRideOffer}
-              >
+              <Button onClick={() => openOfferModal()} disabled={!canCreateRideOffer}>
                 Create New Ride Offer
               </Button>
             </Tooltip>
@@ -586,20 +816,23 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             {filteredAndSortedOffers.length === 0 ? (
               <Text>No ride offers available for the selected dates.</Text>
             ) : (
-              <Accordion defaultValue={null} >
+              <Accordion defaultValue={null}>
                 {filteredAndSortedOffers.map((offer) => (
                   <Accordion.Item key={offer.id} value={offer.id}>
                     <Accordion.Control>
                       <Group justify="space-between">
                         <Text fw={700}>
-                          {offer.departureDate} | {offer.departureTime} from {offer.departureLocation} to {offer.destination}
+                          {offer.departureDate} | {offer.departureTime} from{' '}
+                          {offer.departureLocation} to {offer.destination}
                         </Text>
                         <Group>
                           <Badge color={offer.availableSeats > 0 ? 'green' : 'red'}>
                             Seats: {offer.availableSeats}
                           </Badge>
                           {user && offer.passengers && offer.passengers[user.uid] && (
-                            <Badge color="blue" variant="filled">Joined</Badge>
+                            <Badge color="blue" variant="filled">
+                              Joined
+                            </Badge>
                           )}
                         </Group>
                       </Group>
@@ -607,26 +840,33 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                     <Accordion.Panel>
                       <Stack gap="sm">
                         <Group>
-                          <IconUser size={16} /><Text size="sm">Driver: {offer.driverName}</Text>
+                          <IconUser size={16} />
+                          <Text size="sm">Driver: {offer.driverName}</Text>
                         </Group>
                         <Group>
-                          <IconCalendar size={16} /><Text size="sm">Date: {offer.departureDate}</Text>
+                          <IconCalendar size={16} />
+                          <Text size="sm">Date: {offer.departureDate}</Text>
                         </Group>
                         <Group>
-                          <IconClock size={16} /><Text size="sm">Time: {offer.departureTime}</Text>
+                          <IconClock size={16} />
+                          <Text size="sm">Time: {offer.departureTime}</Text>
                         </Group>
                         <Group>
-                          <IconMapPin size={16} /><Text size="sm">From: {offer.departureLocation}</Text>
+                          <IconMapPin size={16} />
+                          <Text size="sm">From: {offer.departureLocation}</Text>
                         </Group>
                         <Group>
-                          <IconMapPin size={16} /><Text size="sm">To: {offer.destination}</Text>
+                          <IconMapPin size={16} />
+                          <Text size="sm">To: {offer.destination}</Text>
                         </Group>
                         <Group>
-                          <IconUsers size={16} /><Text size="sm">Available Seats: {offer.availableSeats}</Text>
+                          <IconUsers size={16} />
+                          <Text size="sm">Available Seats: {offer.availableSeats}</Text>
                         </Group>
                         {offer.notes && (
                           <Group>
-                            <IconNotes size={16} /><Text size="sm">Notes: {offer.notes}</Text>
+                            <IconNotes size={16} />
+                            <Text size="sm">Notes: {offer.notes}</Text>
                           </Group>
                         )}
                         <Group>
@@ -634,22 +874,51 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                           {offer.passengers && Object.keys(offer.passengers).length > 0 ? (
                             <Text size="sm">{Object.values(offer.passengers).join(', ')}</Text>
                           ) : (
-                            <Text size="sm" c="dimmed">None yet.</Text>
+                            <Text size="sm" c="dimmed">
+                              None yet.
+                            </Text>
                           )}
                         </Group>
 
                         <Group mt="md">
                           {user && offer.driverId === user.uid ? (
                             <>
-                              <Button leftSection={<IconPencil size={16} />} onClick={() => openOfferModal(offer)} size="sm">Edit Offer</Button>
-                              <Button leftSection={<IconTrash size={16} />} color="red" onClick={() => handleDeleteOffer(offer.id)} size="sm">Delete Offer</Button>
+                              <Button
+                                leftSection={<IconPencil size={16} />}
+                                onClick={() => openOfferModal(offer)}
+                                size="sm"
+                              >
+                                Edit Offer
+                              </Button>
+                              <Button
+                                leftSection={<IconTrash size={16} />}
+                                color="red"
+                                onClick={() => handleDeleteOffer(offer.id)}
+                                size="sm"
+                              >
+                                Delete Offer
+                              </Button>
                             </>
                           ) : (
                             <>
                               {user && offer.passengers && offer.passengers[user.uid] ? (
-                                <Button leftSection={<IconX size={16} />} color="orange" onClick={() => handleLeaveRide(offer)} size="sm">Leave Ride</Button>
+                                <Button
+                                  leftSection={<IconX size={16} />}
+                                  color="orange"
+                                  onClick={() => handleLeaveRide(offer)}
+                                  size="sm"
+                                >
+                                  Leave Ride
+                                </Button>
                               ) : (
-                                <Button leftSection={<IconCheck size={16} />} onClick={() => handleJoinRide(offer)} size="sm" disabled={offer.availableSeats <= 0}>Join Ride</Button>
+                                <Button
+                                  leftSection={<IconCheck size={16} />}
+                                  onClick={() => handleJoinRide(offer)}
+                                  size="sm"
+                                  disabled={offer.availableSeats <= 0}
+                                >
+                                  Join Ride
+                                </Button>
                               )}
                             </>
                           )}
@@ -658,18 +927,53 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                         {user && offer.driverId === user.uid && (
                           <Box mt="md">
                             <Title order={5}>Matching Requests:</Title>
-                            {rideRequests.filter(req => req.destination === offer.destination && req.requestDate === offer.departureDate && req.status === 'pending').length === 0 ? (
-                              <Text size="sm" c="dimmed">No pending requests matching this offer's destination and date.</Text>
+                            {rideRequests.filter(
+                              (req) =>
+                                req.destination === offer.destination &&
+                                req.requestDate === offer.departureDate &&
+                                req.status === 'pending'
+                            ).length === 0 ? (
+                              <Text size="sm" c="dimmed">
+                                No pending requests matching this offer's destination and date.
+                              </Text>
                             ) : (
                               <Stack>
-                                {rideRequests.filter(req => req.destination === offer.destination && req.requestDate === offer.departureDate && req.status === 'pending').map(req => (
-                                  <Card key={req.id} shadow="sm" padding="sm" radius="md" withBorder>
-                                    <Text size="sm" fw={500}>{req.requesterName} ({req.numberOfPeople} people) from {req.departureLocation}</Text>
-                                    <Text size="xs" c="dimmed">{req.requestDate} at {req.departureTime}</Text>
-                                    {req.notes && <Text size="xs" c="dimmed">Notes: {req.notes}</Text>}
-                                    <Button size="xs" mt="xs" onClick={() => handleMatchRequest(offer, req)}>Match Request</Button>
-                                  </Card>
-                                ))}
+                                {rideRequests
+                                  .filter(
+                                    (req) =>
+                                      req.destination === offer.destination &&
+                                      req.requestDate === offer.departureDate &&
+                                      req.status === 'pending'
+                                  )
+                                  .map((req) => (
+                                    <Card
+                                      key={req.id}
+                                      shadow="sm"
+                                      padding="sm"
+                                      radius="md"
+                                      withBorder
+                                    >
+                                      <Text size="sm" fw={500}>
+                                        {req.requesterName} ({req.numberOfPeople} people) from{' '}
+                                        {req.departureLocation}
+                                      </Text>
+                                      <Text size="xs" c="dimmed">
+                                        {req.requestDate} at {req.departureTime}
+                                      </Text>
+                                      {req.notes && (
+                                        <Text size="xs" c="dimmed">
+                                          Notes: {req.notes}
+                                        </Text>
+                                      )}
+                                      <Button
+                                        size="xs"
+                                        mt="xs"
+                                        onClick={() => handleMatchRequest(offer, req)}
+                                      >
+                                        Match Request
+                                      </Button>
+                                    </Card>
+                                  ))}
                               </Stack>
                             )}
                           </Box>
@@ -730,7 +1034,8 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                     <Accordion.Control>
                       <Group justify="space-between">
                         <Text fw={700}>
-                          {request.requestDate} | {request.departureTime} for {request.numberOfPeople} people to {request.destination}
+                          {request.requestDate} | {request.departureTime} for{' '}
+                          {request.numberOfPeople} people to {request.destination}
                         </Text>
                         <Badge color={request.status === 'pending' ? 'orange' : 'green'}>
                           {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
@@ -740,36 +1045,58 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                     <Accordion.Panel>
                       <Stack gap="sm">
                         <Group>
-                          <IconUser size={16} /><Text size="sm">Requester: {request.requesterName}</Text>
+                          <IconUser size={16} />
+                          <Text size="sm">Requester: {request.requesterName}</Text>
                         </Group>
                         <Group>
-                          <IconCalendar size={16} /><Text size="sm">Date: {request.requestDate}</Text>
+                          <IconCalendar size={16} />
+                          <Text size="sm">Date: {request.requestDate}</Text>
                         </Group>
                         <Group>
-                          <IconClock size={16} /><Text size="sm">Time: {request.departureTime}</Text>
+                          <IconClock size={16} />
+                          <Text size="sm">Time: {request.departureTime}</Text>
                         </Group>
                         <Group>
-                          <IconMapPin size={16} /><Text size="sm">From: {request.departureLocation}</Text>
+                          <IconMapPin size={16} />
+                          <Text size="sm">From: {request.departureLocation}</Text>
                         </Group>
                         <Group>
-                          <IconMapPin size={16} /><Text size="sm">To: {request.destination}</Text>
+                          <IconMapPin size={16} />
+                          <Text size="sm">To: {request.destination}</Text>
                         </Group>
                         <Group>
-                          <IconUsers size={16} /><Text size="sm">Number of People: {request.numberOfPeople}</Text>
+                          <IconUsers size={16} />
+                          <Text size="sm">Number of People: {request.numberOfPeople}</Text>
                         </Group>
                         {request.notes && (
                           <Group>
-                            <IconNotes size={16} /><Text size="sm">Notes: {request.notes}</Text>
+                            <IconNotes size={16} />
+                            <Text size="sm">Notes: {request.notes}</Text>
                           </Group>
                         )}
                         <Group mt="md">
                           {user && request.requesterId === user.uid ? (
                             <>
-                              <Button leftSection={<IconPencil size={16} />} onClick={() => openRequestModal(request)} size="sm">Edit Request</Button>
-                              <Button leftSection={<IconTrash size={16} />} color="red" onClick={() => handleDeleteRequest(request.id)} size="sm">Delete Request</Button>
+                              <Button
+                                leftSection={<IconPencil size={16} />}
+                                onClick={() => openRequestModal(request)}
+                                size="sm"
+                              >
+                                Edit Request
+                              </Button>
+                              <Button
+                                leftSection={<IconTrash size={16} />}
+                                color="red"
+                                onClick={() => handleDeleteRequest(request.id)}
+                                size="sm"
+                              >
+                                Delete Request
+                              </Button>
                             </>
                           ) : (
-                            <Text size="sm" c="dimmed">Contact {request.requesterName} to offer a ride.</Text>
+                            <Text size="sm" c="dimmed">
+                              Contact {request.requesterName} to offer a ride.
+                            </Text>
                           )}
                         </Group>
                       </Stack>
@@ -825,14 +1152,17 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                     <Accordion.Control>
                       <Group justify="space-between">
                         <Text fw={700}>
-                          {offer.departureDate} | {offer.departureTime} from {offer.departureLocation} to {offer.destination}
+                          {offer.departureDate} | {offer.departureTime} from{' '}
+                          {offer.departureLocation} to {offer.destination}
                         </Text>
                         <Group>
                           <Badge color={offer.availableSeats > 0 ? 'green' : 'red'}>
                             Seats: {offer.availableSeats}
                           </Badge>
                           {user && offer.passengers && offer.passengers[user.uid] && (
-                            <Badge color="blue" variant="filled">Joined</Badge>
+                            <Badge color="blue" variant="filled">
+                              Joined
+                            </Badge>
                           )}
                         </Group>
                       </Group>
@@ -840,34 +1170,52 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                     <Accordion.Panel>
                       <Stack gap="sm">
                         <Group>
-                          <IconUser size={16} /><Text size="sm">Driver: {offer.driverName}</Text>
+                          <IconUser size={16} />
+                          <Text size="sm">Driver: {offer.driverName}</Text>
                         </Group>
                         <Group>
-                          <IconCalendar size={16} /><Text size="sm">Date: {offer.departureDate}</Text>
+                          <IconCalendar size={16} />
+                          <Text size="sm">Date: {offer.departureDate}</Text>
                         </Group>
                         <Group>
-                          <IconClock size={16} /><Text size="sm">Time: {offer.departureTime}</Text>
+                          <IconClock size={16} />
+                          <Text size="sm">Time: {offer.departureTime}</Text>
                         </Group>
                         <Group>
-                          <IconMapPin size={16} /><Text size="sm">From: {offer.departureLocation}</Text>
+                          <IconMapPin size={16} />
+                          <Text size="sm">From: {offer.departureLocation}</Text>
                         </Group>
                         <Group>
-                          <IconMapPin size={16} /><Text size="sm">To: {offer.destination}</Text>
+                          <IconMapPin size={16} />
+                          <Text size="sm">To: {offer.destination}</Text>
                         </Group>
                         <Group>
-                          <IconUsers size={16} /><Text size="sm">Original Seats: {offer.availableSeats + Object.keys(offer.passengers || {}).length}</Text>
+                          <IconUsers size={16} />
+                          <Text size="sm">
+                            Original Seats:{' '}
+                            {offer.availableSeats + Object.keys(offer.passengers || {}).length}
+                          </Text>
                         </Group>
                         {offer.notes && (
                           <Group>
-                            <IconNotes size={16} /><Text size="sm">Notes: {offer.notes}</Text>
+                            <IconNotes size={16} />
+                            <Text size="sm">Notes: {offer.notes}</Text>
                           </Group>
                         )}
                         <Group>
                           <Text size="sm">Passengers:</Text>
                           {Object.keys(offer.passengers || {}).length > 0 ? (
-                            <Button variant="light" size="xs" onClick={() => showPassengerDetails(offer.passengers)}>View Passengers</Button>
+                            <Button
+                              variant="light"
+                              size="xs"
+                              onClick={() => showPassengerDetails(offer.passengers)}
+                            >
+                              View Passengers
+                            </Button>
                           ) : (
-                            <Text size="sm" c="dimmed">None.</Text>
+                            <Text size="sm" c="dimmed">
+                              None.
+                            </Text>
                           )}
                         </Group>
                       </Stack>
@@ -881,7 +1229,11 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       </Tabs>
 
       {/* Ride Offer Modal */}
-      <Modal opened={offerModalOpen} onClose={() => setOfferModalOpen(false)} title={editingOffer ? "Edit Ride Offer" : "Create New Ride Offer"}>
+      <Modal
+        opened={offerModalOpen}
+        onClose={() => setOfferModalOpen(false)}
+        title={editingOffer ? 'Edit Ride Offer' : 'Create New Ride Offer'}
+      >
         <Stack>
           <DatePickerInput
             label="Departure Date"
@@ -901,15 +1253,19 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             label="Driver"
             placeholder="Select a driver"
             data={(() => {
-              const driverUsers = allUsers.filter(u => {
-                const userCrewIds = Array.isArray(u.assignedCamps?.[campID]?.crewId)
-                  ? u.assignedCamps[campID].crewId
-                  : (u.assignedCamps?.[campID]?.crewId ? [u.assignedCamps[campID].crewId] : []);
-                return userCrewIds.some(crewId => {
-                  const crew = crews.find(c => c.id === crewId);
-                  return crew?.crewType === "Drivers";
-                });
-              }).map(u => ({ value: u.id, label: u.profile?.nickname || u.name }));
+              const driverUsers = allUsers
+                .filter((u) => {
+                  const userCrewIds = Array.isArray(u.assignedCamps?.[campID]?.crewId)
+                    ? u.assignedCamps[campID].crewId
+                    : u.assignedCamps?.[campID]?.crewId
+                      ? [u.assignedCamps[campID].crewId]
+                      : [];
+                  return userCrewIds.some((crewId) => {
+                    const crew = crews.find((c) => c.id === crewId);
+                    return crew?.crewType === 'Drivers';
+                  });
+                })
+                .map((u) => ({ value: u.id, label: u.profile?.nickname || u.name }));
               return driverUsers;
             })()}
             value={selectedDriverId}
@@ -919,12 +1275,12 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
           <Select
             label="Truck"
             placeholder="Select a truck"
-            data={trucks.map(truck => ({ value: truck.id, label: truck.name }))}
+            data={trucks.map((truck) => ({ value: truck.id, label: truck.name }))}
             value={selectedTruck}
             onChange={(value) => setSelectedTruck(value || '')}
             required
           />
-          
+
           <TextInput
             label="Destination"
             placeholder="e.g. Town, City, Home"
@@ -951,7 +1307,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             checked={allowAutoJoin}
             onChange={(event) => setAllowAutoJoin(event.currentTarget.checked)}
           />
-          
+
           <Textarea
             label="Notes (optional)"
             placeholder="Any additional information, e.g., 'Will stop in ABC town', 'Luggage space limited'"
@@ -959,14 +1315,22 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             onChange={(event) => setOfferNotes(event.currentTarget.value)}
           />
           <Group justify="flex-end" mt="md">
-            <Button variant="outline" onClick={() => setOfferModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleOfferSubmit}>{editingOffer ? "Update Offer" : "Create Offer"}</Button>
+            <Button variant="outline" onClick={() => setOfferModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleOfferSubmit}>
+              {editingOffer ? 'Update Offer' : 'Create Offer'}
+            </Button>
           </Group>
         </Stack>
       </Modal>
 
       {/* Ride Request Modal */}
-      <Modal opened={requestModalOpen} onClose={() => setRequestModalOpen(false)} title={editingRequest ? "Edit Ride Request" : "Create New Ride Request"}>
+      <Modal
+        opened={requestModalOpen}
+        onClose={() => setRequestModalOpen(false)}
+        title={editingRequest ? 'Edit Ride Request' : 'Create New Ride Request'}
+      >
         <Stack>
           <DatePickerInput
             label="Request Date"
@@ -991,7 +1355,10 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             getCreateLabel={(query) => `+ Create ${query}`}
             onCreate={(query) => {
               const item = { value: query, label: query };
-              setCamps((current) => [...current, { id: query, name: query, location: query, isActive: true }]);
+              setCamps((current) => [
+                ...current,
+                { id: query, name: query, location: query, isActive: true },
+              ]);
               return item;
             }}
             value={requestDepartureLocation}
@@ -1020,14 +1387,22 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
             onChange={(event) => setRequestNotes(event.currentTarget.value)}
           />
           <Group justify="flex-end" mt="md">
-            <Button variant="outline" onClick={() => setRequestModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleRequestSubmit}>{editingRequest ? "Update Request" : "Create Request"}</Button>
+            <Button variant="outline" onClick={() => setRequestModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRequestSubmit}>
+              {editingRequest ? 'Update Request' : 'Create Request'}
+            </Button>
           </Group>
         </Stack>
       </Modal>
 
       {/* Passenger Details Modal */}
-      <Modal opened={passengerDetailsModalOpen} onClose={() => setPassengerDetailsModalOpen(false)} title="Passenger Details">
+      <Modal
+        opened={passengerDetailsModalOpen}
+        onClose={() => setPassengerDetailsModalOpen(false)}
+        title="Passenger Details"
+      >
         {Object.keys(currentPassengers).length === 0 ? (
           <Text>No passengers for this ride.</Text>
         ) : (
@@ -1036,7 +1411,9 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
               <Card key={id} shadow="sm" padding="sm" radius="md" withBorder>
                 <Group justify="space-between">
                   <Text fw={500}>{name}</Text>
-                  <Text size="sm" c="dimmed">Contact: {getPassengerContact(id)}</Text>
+                  <Text size="sm" c="dimmed">
+                    Contact: {getPassengerContact(id)}
+                  </Text>
                 </Group>
               </Card>
             ))}

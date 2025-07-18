@@ -1,12 +1,41 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Tabs, Button, Modal, Tooltip, Group, TextInput, NumberInput, Alert, Text, Table, Title, UnstyledButton } from '@mantine/core';
+
+import { useEffect, useState } from 'react';
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconInfoCircle,
+  IconQuestionMark,
+} from '@tabler/icons-react';
+import {
+  endAt,
+  onValue,
+  orderByChild,
+  push,
+  query,
+  ref,
+  remove,
+  startAt,
+  update,
+} from 'firebase/database';
+import {
+  Alert,
+  Button,
+  Group,
+  Modal,
+  NumberInput,
+  Table,
+  Tabs,
+  Text,
+  TextInput,
+  Title,
+  Tooltip,
+  UnstyledButton,
+} from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { IconQuestionMark, IconInfoCircle, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
-import { useAuth } from '../../hooks/useAuth';
-import { database } from '../../firebase/firebase';
-import { ref, onValue, push, update, remove, query, orderByChild, startAt, endAt } from 'firebase/database';
 import { notifications } from '@mantine/notifications';
+import { database } from '../../firebase/firebase';
+import { useAuth } from '../../hooks/useAuth';
 
 interface PartialTreeEntry {
   id?: string;
@@ -48,13 +77,17 @@ const TreeTrackerPage = () => {
         const calendarData = snapshot.val();
         const partials: PartialTreeEntry[] = [];
         if (calendarData) {
-          Object.keys(calendarData).forEach(dateStr => {
+          Object.keys(calendarData).forEach((dateStr) => {
             const entryDate = new Date(dateStr);
             if (entryDate >= fourWeeksAgo) {
               const dayData = calendarData[dateStr];
               if (dayData.treeTracking && dayData.treeTracking.partials) {
-                Object.keys(dayData.treeTracking.partials).forEach(partialId => {
-                  partials.push({ id: partialId, date: dateStr, ...dayData.treeTracking.partials[partialId] });
+                Object.keys(dayData.treeTracking.partials).forEach((partialId) => {
+                  partials.push({
+                    id: partialId,
+                    date: dateStr,
+                    ...dayData.treeTracking.partials[partialId],
+                  });
                 });
               }
             }
@@ -68,11 +101,14 @@ const TreeTrackerPage = () => {
   useEffect(() => {
     if (user && date) {
       const dateString = date.toISOString().split('T')[0];
-      const dailyEntriesRef = ref(database, `users/${user.uid}/calendar/${dateString}/treeTracking/entries`);
+      const dailyEntriesRef = ref(
+        database,
+        `users/${user.uid}/calendar/${dateString}/treeTracking/entries`
+      );
       onValue(dailyEntriesRef, (snapshot) => {
         const entries: any[] = [];
         if (snapshot.exists()) {
-          snapshot.forEach(childSnapshot => {
+          snapshot.forEach((childSnapshot) => {
             entries.push({ id: childSnapshot.key, ...childSnapshot.val() });
           });
         }
@@ -92,7 +128,7 @@ const TreeTrackerPage = () => {
       onValue(userCalendarRef, (snapshot) => {
         const data: any[] = [];
         if (snapshot.exists()) {
-          snapshot.forEach(dateSnapshot => {
+          snapshot.forEach((dateSnapshot) => {
             const dateStr = dateSnapshot.key;
             const entryDate = new Date(dateStr);
 
@@ -100,8 +136,12 @@ const TreeTrackerPage = () => {
             if (entryDate >= startDate && entryDate <= endDate) {
               const dayData = dateSnapshot.val();
               if (dayData.treeTracking && dayData.treeTracking.entries) {
-                Object.keys(dayData.treeTracking.entries).forEach(entryId => {
-                  data.push({ id: entryId, date: dateStr, ...dayData.treeTracking.entries[entryId] });
+                Object.keys(dayData.treeTracking.entries).forEach((entryId) => {
+                  data.push({
+                    id: entryId,
+                    date: dateStr,
+                    ...dayData.treeTracking.entries[entryId],
+                  });
                 });
               }
             }
@@ -123,12 +163,18 @@ const TreeTrackerPage = () => {
 
   const handleSubmit = (isPartial: boolean) => {
     if (!user) {
-      notifications.show({ title: 'Error', message: 'You must be logged in to submit data.', color: 'red' });
+      notifications.show({
+        title: 'Error',
+        message: 'You must be logged in to submit data.',
+        color: 'red',
+      });
       return;
     }
 
     const dateString = date.toISOString().split('T')[0];
-        const path = isPartial ? `users/${user.uid}/calendar/${dateString}/treeTracking/partials` : `users/${user.uid}/calendar/${dateString}/treeTracking/entries`;
+    const path = isPartial
+      ? `users/${user.uid}/calendar/${dateString}/treeTracking/partials`
+      : `users/${user.uid}/calendar/${dateString}/treeTracking/entries`;
     const entryRef = ref(database, path);
 
     const entryData: PartialTreeEntry = {
@@ -143,21 +189,34 @@ const TreeTrackerPage = () => {
       entryData.note = `Includes partial numbers from ${claimingPartial.date}`;
     }
 
-    push(entryRef, entryData).then(() => {
-      if (claimingPartial) {
-        const oldPartialRef = ref(database, `users/${user.uid}/calendar/${claimingPartial.date}/treeTracking/partials/${claimingPartial.id}`);
-        remove(oldPartialRef);
-        setClaimingPartial(null);
-      }
-      notifications.show({ title: 'Success', message: 'Tree data submitted successfully.', color: 'green' });
-      // Reset form
-      setSpecies('');
-      setStickerCode('');
-      setPayRate(0.15);
-      setNumTrees('');
-    }).catch(error => {
-      notifications.show({ title: 'Error', message: `Failed to submit data: ${error.message}`, color: 'red' });
-    });
+    push(entryRef, entryData)
+      .then(() => {
+        if (claimingPartial) {
+          const oldPartialRef = ref(
+            database,
+            `users/${user.uid}/calendar/${claimingPartial.date}/treeTracking/partials/${claimingPartial.id}`
+          );
+          remove(oldPartialRef);
+          setClaimingPartial(null);
+        }
+        notifications.show({
+          title: 'Success',
+          message: 'Tree data submitted successfully.',
+          color: 'green',
+        });
+        // Reset form
+        setSpecies('');
+        setStickerCode('');
+        setPayRate(0.15);
+        setNumTrees('');
+      })
+      .catch((error) => {
+        notifications.show({
+          title: 'Error',
+          message: `Failed to submit data: ${error.message}`,
+          color: 'red',
+        });
+      });
 
     if (isPartial) {
       setIsModalOpen(false);
@@ -165,7 +224,10 @@ const TreeTrackerPage = () => {
   };
 
   const totalTrees = dailyEntries.reduce((acc, entry) => acc + Number(entry.numTrees), 0);
-  const totalEarnings = dailyEntries.reduce((acc, entry) => acc + (Number(entry.numTrees) * Number(entry.payRate)), 0);
+  const totalEarnings = dailyEntries.reduce(
+    (acc, entry) => acc + Number(entry.numTrees) * Number(entry.payRate),
+    0
+  );
 
   const sortedSummaryData = [...summaryData].sort((a, b) => {
     if (!sortKey) return 0;
@@ -185,11 +247,23 @@ const TreeTrackerPage = () => {
     }
   };
 
-  const Th = ({ children, sorted, reversed, onSort }: { children: React.ReactNode, sorted: boolean, reversed: boolean, onSort: () => void }) => (
+  const Th = ({
+    children,
+    sorted,
+    reversed,
+    onSort,
+  }: {
+    children: React.ReactNode;
+    sorted: boolean;
+    reversed: boolean;
+    onSort: () => void;
+  }) => (
     <th>
-      <UnstyledButton onClick={onSort} >
+      <UnstyledButton onClick={onSort}>
         <Group justify="space-between">
-          <Text fw={500} fz="sm">{children}</Text>
+          <Text fw={500} fz="sm">
+            {children}
+          </Text>
           {sorted && (reversed ? <IconChevronUp /> : <IconChevronDown />)}
         </Group>
       </UnstyledButton>
@@ -205,22 +279,28 @@ const TreeTrackerPage = () => {
 
       <Tabs.Panel value="enter-data">
         {unclaimedPartials.length > 0 && (
-          <Alert icon={<IconInfoCircle size="1rem" />} title="Unclaimed Partials" color="orange" withCloseButton onClose={() => setUnclaimedPartials([])}>
+          <Alert
+            icon={<IconInfoCircle size="1rem" />}
+            title="Unclaimed Partials"
+            color="orange"
+            withCloseButton
+            onClose={() => setUnclaimedPartials([])}
+          >
             <Text>You have unclaimed partials from previous days:</Text>
-            {unclaimedPartials.map(p => (
+            {unclaimedPartials.map((p) => (
               <Group key={p.id} mt="sm">
-                <Text size="sm">{p.date}: {p.numTrees} {p.species} trees</Text>
-                <Button size="xs" variant="outline" onClick={() => handleClaimPartial(p)}>Complete & Claim</Button>
+                <Text size="sm">
+                  {p.date}: {p.numTrees} {p.species} trees
+                </Text>
+                <Button size="xs" variant="outline" onClick={() => handleClaimPartial(p)}>
+                  Complete & Claim
+                </Button>
               </Group>
             ))}
           </Alert>
         )}
 
-        <DatePickerInput
-          label="Date"
-          value={date}
-          onChange={(d) => setDate(d || new Date())}
-        />
+        <DatePickerInput label="Date" value={date} onChange={(d) => setDate(d || new Date())} />
         <TextInput
           label="Species"
           placeholder="e.g. Black Spruce"
@@ -237,7 +317,7 @@ const TreeTrackerPage = () => {
           label="Pay Rate"
           value={payRate}
           onChange={(val) => setPayRate(val as number)}
-        // Removed precision and step props due to Mantine update
+          // Removed precision and step props due to Mantine update
         />
         <NumberInput
           label="Number of Trees Planted"
@@ -247,13 +327,17 @@ const TreeTrackerPage = () => {
         />
         <Group mt="md">
           <Button onClick={() => handleSubmit(false)}>Submit Planted Tree Numbers</Button>
-          <Button variant="outline" onClick={() => setIsModalOpen(true)}>Record Unclaimed Partial Numbers</Button>
+          <Button variant="outline" onClick={() => setIsModalOpen(true)}>
+            Record Unclaimed Partial Numbers
+          </Button>
           <Tooltip label="Record trees that you haven't finished planting yet.">
             <IconQuestionMark size={18} />
           </Tooltip>
         </Group>
 
-        <Title order={4} mt="xl">Daily Totals for {date.toLocaleDateString()}</Title>
+        <Title order={4} mt="xl">
+          Daily Totals for {date.toLocaleDateString()}
+        </Title>
         <Table>
           <thead>
             <tr>
@@ -264,7 +348,7 @@ const TreeTrackerPage = () => {
             </tr>
           </thead>
           <tbody>
-            {dailyEntries.map(entry => (
+            {dailyEntries.map((entry) => (
               <tr key={entry.id}>
                 <td>{entry.species}</td>
                 <td>${entry.payRate.toFixed(2)}</td>
@@ -296,16 +380,40 @@ const TreeTrackerPage = () => {
         <Table mt="md">
           <thead>
             <tr>
-              <Th sorted={sortKey === 'date'} reversed={sortOrder === 'desc'} onSort={() => handleSort('date')}>Date</Th>
-              <Th sorted={sortKey === 'species'} reversed={sortOrder === 'desc'} onSort={() => handleSort('species')}>Species</Th>
-              <Th sorted={sortKey === 'stickerCode'} reversed={sortOrder === 'desc'} onSort={() => handleSort('stickerCode')}>Sticker Code</Th>
-              <Th sorted={sortKey === 'payRate'} reversed={sortOrder === 'desc'} onSort={() => handleSort('payRate')}>Pay Rate</Th>
+              <Th
+                sorted={sortKey === 'date'}
+                reversed={sortOrder === 'desc'}
+                onSort={() => handleSort('date')}
+              >
+                Date
+              </Th>
+              <Th
+                sorted={sortKey === 'species'}
+                reversed={sortOrder === 'desc'}
+                onSort={() => handleSort('species')}
+              >
+                Species
+              </Th>
+              <Th
+                sorted={sortKey === 'stickerCode'}
+                reversed={sortOrder === 'desc'}
+                onSort={() => handleSort('stickerCode')}
+              >
+                Sticker Code
+              </Th>
+              <Th
+                sorted={sortKey === 'payRate'}
+                reversed={sortOrder === 'desc'}
+                onSort={() => handleSort('payRate')}
+              >
+                Pay Rate
+              </Th>
               <th>Number of Trees</th>
               <th>Total</th>
             </tr>
           </thead>
           <tbody>
-            {sortedSummaryData.map(entry => (
+            {sortedSummaryData.map((entry) => (
               <tr key={entry.id}>
                 <td>{entry.date}</td>
                 <td>{entry.species}</td>
@@ -318,8 +426,15 @@ const TreeTrackerPage = () => {
           </tbody>
         </Table>
         <Group mt="md">
-          <Text>Total Trees: {summaryData.reduce((acc, entry) => acc + Number(entry.numTrees), 0)}</Text>
-          <Text>Total Earnings: ${summaryData.reduce((acc, entry) => acc + (Number(entry.numTrees) * Number(entry.payRate)), 0).toFixed(2)}</Text>
+          <Text>
+            Total Trees: {summaryData.reduce((acc, entry) => acc + Number(entry.numTrees), 0)}
+          </Text>
+          <Text>
+            Total Earnings: $
+            {summaryData
+              .reduce((acc, entry) => acc + Number(entry.numTrees) * Number(entry.payRate), 0)
+              .toFixed(2)}
+          </Text>
         </Group>
       </Tabs.Panel>
 
@@ -328,9 +443,16 @@ const TreeTrackerPage = () => {
         onClose={() => setIsModalOpen(false)}
         title="Record Unclaimed Partial Numbers"
       >
-        <p>By clicking this button, the numbers for the entry you're submitting will not be added to your daily totals. Instead, it will be added to a list of "Unclaimed Partials" that you will have the ability to finish in the future. This will help you make sure you don't forget about it.</p>
+        <p>
+          By clicking this button, the numbers for the entry you're submitting will not be added to
+          your daily totals. Instead, it will be added to a list of "Unclaimed Partials" that you
+          will have the ability to finish in the future. This will help you make sure you don't
+          forget about it.
+        </p>
         <Group mt="md">
-          <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => handleSubmit(true)}>Record Partials</Button>
         </Group>
       </Modal>
