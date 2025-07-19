@@ -27,21 +27,9 @@ import {
 } from '@mantine/core';
 import classes from './Staff.module.css';
 
-interface ProfileModalProps {
-  user: any;
-  crewName: string;
-  opened: boolean;
-  onClose: () => void;
-  onMessage: (user: any) => void;
-}
 
-const ProfileModal: React.FC<ProfileModalProps> = ({
-  user,
-  crewName,
-  opened,
-  onClose,
-  onMessage,
-}) => {
+
+const ProfileModal = ({ user, crewName, opened, onClose, onMessage, }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   if (!user) {
@@ -49,7 +37,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   }
 
   const displayName = user.profile?.nickname || user.name;
-  const roleTitle = ROLES[user.role as keyof typeof ROLES] || 'Unknown Role';
+  const roleTitle = ROLES[user.role] || 'Unknown Role';
 
   const socialLinks = [
     { platform: 'instagram', icon: IconBrandInstagram, base_url: 'https://instagram.com/' },

@@ -91,7 +91,7 @@ const NotificationSettings = () => {
     }
   };
 
-  const handlePrefChange = (field: string, value: any) => {
+  const handlePrefChange = (field, value) => {
     setPrefs((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -106,7 +106,7 @@ const NotificationSettings = () => {
         message: 'Your notification settings have been updated.',
         color: 'green',
       });
-    } catch (err: any) {
+    } catch (err) {
       notifications.show({
         title: 'Error',
         message: 'Could not save your preferences: ' + err.message,

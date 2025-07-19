@@ -27,40 +27,23 @@ import { database } from '../../firebase/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { ROLES } from '../../lib/constants';
 
-// --- TypeScript Interfaces ---
-interface Crew {
-  id: string;
-  crewName: string;
-  crewType?: string;
-  crewBosses?: Record<string, boolean>;
-  members?: Record<string, boolean>;
-}
 
-interface AppUser {
-  id: string;
-  name: string;
-  email: string;
-  role: number;
-  assignedCamps?: Record<string, { campName: string; role: number; crewId?: string | string[] }>;
-}
-
-// --- Main Component ---
 const CrewManagement = () => {
   const { user, campID, effectiveRole } = useAuth();
   const modals = useModals();
 
-  const [crews, setCrews] = useState<Crew[]>([]);
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [crews, setCrews] = useState([]);
+  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
-  const [editingCrew, setEditingCrew] = useState<Crew | null>(null);
+  const [editingCrew, setEditingCrew] = useState(null);
 
   const [crewName, setCrewName] = useState('');
   const [crewType, setCrewType] = useState('');
-  const [selectedBosses, setSelectedBosses] = useState<string[]>([]);
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [selectedBosses, setSelectedBosses] = useState([]);
+  const [selectedMembers, setSelectedMembers] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -72,7 +55,7 @@ const CrewManagement = () => {
     const crewsRef = ref(database, `camps/${campID}/crews`);
     const usersRef = ref(database, 'users');
 
-    const unsubs: (() => void)[] = [];
+    const unsubs = [];
 
     unsubs.push(
       onValue(crewsRef, (snapshot) => {
@@ -112,10 +95,10 @@ const CrewManagement = () => {
     return filteredUsers;
   }, [users, campID]);
 
-  const getUserName = (userId: string) =>
+  const getUserName = (userId) =>
     users.find((u) => u.id === userId)?.name || 'Unknown User';
 
-  const openModal = (mode: 'add' | 'edit', crew: Crew | null = null) => {
+  const openModal = (mode, crew = null) => {
     setModalMode(mode);
     if (mode === 'edit' && crew) {
       setEditingCrew(crew);
@@ -172,13 +155,13 @@ const CrewManagement = () => {
 
     const crewId =
       (modalMode === 'add' && firebasePush(ref(database, `camps/${campID}/crews`)).key) ||
-      editingCrew!.id;
+      editingCrew.id;
     const crewRef = ref(database, `camps/${campID}/crews/${crewId}`);
 
     // Ensure crew bosses are also considered members for assignment purposes
     const allSelectedMembers = Array.from(new Set([...selectedMembers, ...selectedBosses]));
 
-    const memberUpdates: Record<string, any> = {};
+    const memberUpdates = {};
     for (const u of usersInCamp) {
       if (campID) {
         // Fetch the latest user data to avoid stale state issues
@@ -218,7 +201,7 @@ const CrewManagement = () => {
         await update(ref(database), memberUpdates);
       }
       setIsModalOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       notifications.show({
         title: 'Error',
         message: 'Error saving crew: ' + error.message,
@@ -227,7 +210,7 @@ const CrewManagement = () => {
     }
   };
 
-  const openDeleteModal = (crew: Crew) => {
+  const openDeleteModal = (crew) => {
     modals.openConfirmModal({
       title: `Delete ${crew.crewName}`,
       centered: true,
@@ -245,7 +228,7 @@ const CrewManagement = () => {
         }
         try {
           await remove(ref(database, `camps/${campID}/crews/${crew.id}`));
-          const memberUpdates: Record<string, any> = {};
+          const memberUpdates = {};
           for (const u of usersInCamp) {
             if (campID) {
               // Fetch the latest user data to avoid stale state issues
@@ -272,7 +255,7 @@ const CrewManagement = () => {
           if (Object.keys(memberUpdates).length > 0) {
             await update(ref(database), memberUpdates);
           }
-        } catch (error: any) {
+        } catch (error) {
           notifications.show({
             title: 'Error',
             message: 'Error deleting crew: ' + error.message,

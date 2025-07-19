@@ -25,29 +25,18 @@ import { useAuth } from '../../hooks/useAuth';
 import { ROLES } from '../../lib/constants';
 import classes from '../../components/staff/Staff.module.css';
 
-interface AppUser {
-  id: string;
-  name: string;
-  email: string;
-  role: number;
-  profileImageURL?: string;
-  assignedCamps?: Record<string, { campName: string; role: number; crewId?: string }>;
-  profile?: {
-    nickname?: string;
-  };
-  effectiveRole?: number;
-}
+
 
 const StaffPage = () => {
   const { campID, user, openComposeModal } = useAuth();
-  const [usersInCamp, setUsersInCamp] = useState<AppUser[]>([]);
-  const [crews, setCrews] = useState<Record<string, string>>({});
+  const [usersInCamp, setUsersInCamp] = useState([]);
+  const [crews, setCrews] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [crewFilter, setCrewFilter] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [crewFilter, setCrewFilter] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [viewMode, setViewMode] = useState('grid');
 
   useEffect(() => {
     if (!campID) {
@@ -83,7 +72,6 @@ const StaffPage = () => {
           acc[crewId] = crewsData[crewId].crewName;
           return acc;
         },
-        {} as Record<string, string>
       );
       setCrews(crewsMap);
     });
@@ -94,7 +82,7 @@ const StaffPage = () => {
     };
   }, [campID]);
 
-  const calculateUserEffectiveRole = (user: AppUser) => {
+  const calculateUserEffectiveRole = (user) => {
     if (!campID) {
       return user.role;
     }
@@ -115,16 +103,16 @@ const StaffPage = () => {
         u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (u.profile?.nickname &&
           u.profile.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
-      const crewMatch = !crewFilter || u.assignedCamps?.[campID!]?.crewId === crewFilter;
+      const crewMatch = !crewFilter || u.assignedCamps?.[campID]?.crewId === crewFilter;
       return nameMatch && crewMatch;
     });
   }, [usersWithEffectiveRoles, searchTerm, crewFilter, campID]);
 
   const crewOptions = useMemo(() => {
-    return Object.entries(crews).map(([id, name]) => ({ value: id, label: name as string }));
+    return Object.entries(crews).map(([id, name]) => ({ value: id, label: name }));
   }, [crews]);
 
-  const handleMessageUser = (targetUser: AppUser) => {
+  const handleMessageUser = (targetUser) => {
     openComposeModal({
       recipientId: targetUser.id,
       recipientName: targetUser.profile?.nickname || targetUser.name,
@@ -170,7 +158,7 @@ const StaffPage = () => {
             />
             <SegmentedControl
               value={viewMode}
-              onChange={(value) => setViewMode(value as 'grid' | 'list')}
+              onChange={(value) => setViewMode(value)}
               data={[
                 {
                   label: (
@@ -238,9 +226,9 @@ const StaffPage = () => {
                   >
                     <Table.Td>{u.profile?.nickname || u.name}</Table.Td>
                     <Table.Td>
-                      {crews[u.assignedCamps?.[campID!]?.crewId || ''] || 'No Crew'}
+                      {crews[u.assignedCamps?.[campID]?.crewId || ''] || 'No Crew'}
                     </Table.Td>
-                    <Table.Td>{(ROLES as any)[u.effectiveRole]}</Table.Td>
+                    <Table.Td>{(ROLES)[u.effectiveRole]}</Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
@@ -251,9 +239,9 @@ const StaffPage = () => {
         <ProfileModal
           user={selectedUser}
           crewName={
-            selectedUser && selectedUser.assignedCamps?.[campID!] // Ensure assignedCamps and campID exist
+            selectedUser && selectedUser.assignedCamps?.[campID] // Ensure assignedCamps and campID exist
               ? (() => {
-                  const assignedCamp = selectedUser.assignedCamps[campID!];
+                  const assignedCamp = selectedUser.assignedCamps[campID];
                   const crewId = assignedCamp.crewId; // This can be string | undefined
 
                   if (crewId === undefined) {
@@ -261,7 +249,7 @@ const StaffPage = () => {
                   }
 
                   if (Array.isArray(crewId)) {
-                    return (crewId as string[])
+                    return (crewId)
                       .map((id) => crews[id] || 'Unknown Crew')
                       .join(', ');
                   } else {

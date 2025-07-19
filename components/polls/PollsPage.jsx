@@ -53,60 +53,9 @@ import {
 } from '@mantine/core';
 import { database } from '../../firebase/firebase';
 
-// --- TypeScript Interfaces ---
-interface PollOption {
-  text: string;
-  createdByUserID: string;
-  isInitialOption: boolean;
-  isApproved: boolean;
-  voteCount: number;
-  submittedAt?: number | object;
-  approvedByUserID?: string;
-  optionApprovedAt?: number | object;
-  isRejected?: boolean;
-}
 
-interface Poll {
-  id: string;
-  questionText: string;
-  description?: string;
-  pollType: 'standard' | 'ranked_ballot';
-  options: Record<string, PollOption>;
-  closesAt?: string | null;
-  allowUserOptionSubmissions: boolean;
-  resultsVisibility: 'always_visible' | 'after_voting' | 'after_close' | 'admin_only';
-  tags?: string[];
-  createdByUserID: string;
-  creatorRoleAtCreation: number;
-  createdAt: number | object;
-  lastUpdatedAt: number | object;
-  isApprovedForDisplay: boolean;
-  approvedByUserID?: string | null;
-  approvedAt?: number | object | null;
-  isRejectedForDisplay: boolean;
-  isOpenForVoting: boolean;
-  usersVoted: Record<string, string | string[] | boolean>;
-  maxVotesPerUser: number;
-}
 
-interface RankedVoteRound {
-  round: number;
-  voteCounts: Record<string, number>;
-  eliminated: string | null;
-  winner: string | null;
-  exhaustedBallots: number;
-}
-
-interface PollsPageProps {
-  user: User | null;
-  campID: string | null;
-  userData: any; // Consider creating a more specific UserData type
-  effectiveRole: number;
-}
-
-// --- Helper Components & Functions ---
-
-const formatDate = (isoStringOrTimestamp?: string | number | object): string => {
+const formatDate = (isoStringOrTimestamp) => {
   if (!isoStringOrTimestamp || typeof isoStringOrTimestamp === 'object') return 'N/A';
   try {
     const date = new Date(isoStringOrTimestamp);
@@ -123,7 +72,7 @@ const formatDate = (isoStringOrTimestamp?: string | number | object): string => 
   }
 };
 
-const pollItemStyle = (isClosedOrPending: boolean): React.CSSProperties => ({
+const pollItemStyle = (isClosedOrPending) => ({
   padding: '1rem',
   border: '1px solid #e0e0e0',
   borderRadius: '8px',
@@ -140,11 +89,6 @@ const PollListItem = React.memo(
     isClosed,
     onSelect,
     usersDataMap,
-  }: {
-    poll: Poll;
-    isClosed: boolean;
-    onSelect: (p: Poll) => void;
-    usersDataMap: Record<string, string>;
   }) => (
     <motion.div
       className="poll-list-item"
@@ -171,7 +115,7 @@ const PollListItem = React.memo(
 );
 PollListItem.displayName = 'PollListItem';
 
-const RankedVoteHelpModal: FC<{ opened: boolean; onClose: () => void }> = ({ opened, onClose }) => (
+const RankedVoteHelpModal = ({ opened, onClose }) => (
   <Modal
     opened={opened}
     onClose={onClose}
@@ -221,11 +165,8 @@ const RankedVoteHelpModal: FC<{ opened: boolean; onClose: () => void }> = ({ ope
   </Modal>
 );
 
-const RankedVoteInterface: FC<{ poll: Poll; onVote: (rankedOrder: string[]) => void }> = ({
-  poll,
-  onVote,
-}) => {
-  const [rankedOrder, setRankedOrder] = useState<string[]>([]);
+const RankedVoteInterface = ({ poll, onVote, }) => {
+  const [rankedOrder, setRankedOrder] = useState([]);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   const availableOptions = useMemo(
@@ -236,15 +177,15 @@ const RankedVoteInterface: FC<{ poll: Poll; onVote: (rankedOrder: string[]) => v
     [poll.options, rankedOrder]
   );
 
-  const handleSelectOption = (optionId: string) => {
+  const handleSelectOption = (optionId) => {
     setRankedOrder((prev) => [...prev, optionId]);
   };
 
-  const handleRemoveOption = (optionId: string) => {
+  const handleRemoveOption = (optionId) => {
     setRankedOrder((prev) => prev.filter((id) => id !== optionId));
   };
 
-  const moveOption = (index: number, direction: number) => {
+  const moveOption = (index, direction) => {
     const newOrder = [...rankedOrder];
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= newOrder.length) return;
@@ -343,18 +284,18 @@ const RankedVoteInterface: FC<{ poll: Poll; onVote: (rankedOrder: string[]) => v
 };
 
 const calculateRankedChoiceWinner = (
-  poll: Poll
-): { rounds: RankedVoteRound[]; winner: string | null; error?: string } => {
+  poll
+) => {
   if (!poll.usersVoted || Object.keys(poll.usersVoted).length === 0) {
     return { rounds: [], winner: null, error: 'No votes have been cast yet.' };
   }
   const ballots = Object.values(poll.usersVoted).filter(
     (vote) => Array.isArray(vote) && vote.length > 0
-  ) as string[][];
+  );
   let activeOptions = Object.keys(poll.options || {}).filter(
     (optId) => poll.options[optId]?.isApproved
   );
-  const rounds: RankedVoteRound[] = [];
+  const rounds = [];
   const totalVoters = ballots.length;
   if (totalVoters === 0) {
     return { rounds: [], winner: null, error: 'No valid ranked ballots were found.' };
@@ -362,7 +303,7 @@ const calculateRankedChoiceWinner = (
   while (activeOptions.length > 1) {
     const voteCounts = activeOptions.reduce(
       (acc, optId) => ({ ...acc, [optId]: 0 }),
-      {} as Record<string, number>
+      {}
     );
     let exhaustedBallots = 0;
     for (const ballot of ballots) {
@@ -378,7 +319,7 @@ const calculateRankedChoiceWinner = (
         exhaustedBallots++;
       }
     }
-    const currentRound: RankedVoteRound = {
+    const currentRound = {
       round: rounds.length + 1,
       voteCounts: { ...voteCounts },
       eliminated: null,
@@ -429,7 +370,7 @@ const calculateRankedChoiceWinner = (
   return { rounds, winner: finalWinner };
 };
 
-const RankedResultsDisplay: FC<{ poll: Poll }> = ({ poll }) => {
+const RankedResultsDisplay = ({ poll }) => {
   const { rounds, winner, error } = useMemo(() => calculateRankedChoiceWinner(poll), [poll]);
   if (error) {
     return (
@@ -490,22 +431,20 @@ const RankedResultsDisplay: FC<{ poll: Poll }> = ({ poll }) => {
   );
 };
 
-const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }) => {
-  const [polls, setPolls] = useState<Poll[]>([]);
-  const [usersDataMap, setUsersDataMap] = useState<Record<string, string>>({});
-  const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
-  const [userVotes, setUserVotes] = useState<Record<string, string | string[] | boolean>>({});
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+const PollsPage = ({ user, campID, userData, effectiveRole }) => {
+  const [polls, setPolls] = useState([]);
+  const [usersDataMap, setUsersDataMap] = useState({});
+  const [selectedPoll, setSelectedPoll] = useState(null);
+  const [userVotes, setUserVotes] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [selectedOption, setSelectedOption] = useState<string>('');
-  const [newOptionText, setNewOptionText] = useState<string>('');
-  const [optionSubmissionMessage, setOptionSubmissionMessage] = useState<string>('');
+  const [selectedOption, setSelectedOption] = useState('');
+  const [newOptionText, setNewOptionText] = useState('');
+  const [optionSubmissionMessage, setOptionSubmissionMessage] = useState('');
 
-  const [pollCreationStep, setPollCreationStep] = useState<
-    'type_selection' | 'form_details' | null
-  >(null);
-  const [newPollType, setNewPollType] = useState<'standard' | 'ranked_ballot'>('standard');
+  const [pollCreationStep, setPollCreationStep] = useState(null);
+  const [newPollType, setNewPollType] = useState('standard');
   const [newPollData, setNewPollData] = useState({
     questionText: '',
     description: '',
@@ -513,8 +452,8 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     closesAtDate: '',
     closesAtTime: '',
     allowUserOptionSubmissions: true,
-    resultsVisibility: 'after_voting' as Poll['resultsVisibility'],
-    tags: [] as string[],
+    resultsVisibility: 'after_voting',
+    tags: [],
   });
 
   // --- Permission Helpers ---
@@ -531,7 +470,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
       (snapshot) => {
         if (snapshot.exists()) {
           const users = snapshot.val();
-          const map: Record<string, string> = {};
+          const map = {};
           for (const uid in users) {
             map[uid] = users[uid].name || 'Unknown User';
           }
@@ -566,7 +505,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
       async (snapshot) => {
         const pollsData = snapshot.val();
         if (pollsData) {
-          const pollsArray: Poll[] = [];
+          const pollsArray = [];
           const voteCheckPromises = [];
 
           for (const pollId in pollsData) {
@@ -581,7 +520,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
           }
 
           pollsArray.sort(
-            (a, b) => ((b.createdAt as number) || 0) - ((a.createdAt as number) || 0)
+            (a, b) => ((b.createdAt) || 0) - ((a.createdAt) || 0)
           );
           setPolls(pollsArray);
 
@@ -591,8 +530,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
               acc[voteInfo.pollId] = voteInfo.voteData;
               return acc;
             },
-            {} as Record<string, any>
-          );
+            {});
           setUserVotes(newUserVotes);
           setError(null);
         } else {
@@ -614,7 +552,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     return () => unsubscribePolls();
   }, [campID, user]);
 
-  const handlePollSelect = (poll: Poll) => {
+  const handlePollSelect = (poll) => {
     setSelectedPoll(poll);
     setSelectedOption('');
     setNewOptionText('');
@@ -623,11 +561,11 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
 
   const handleCloseModal = () => setSelectedPoll(null);
 
-  const handleNewPollInputChange = (field: string, value: any) => {
+  const handleNewPollInputChange = (field, value) => {
     setNewPollData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNewPollOptionChange = (index: number, value: string) => {
+  const handleNewPollOptionChange = (index, value) => {
     const updatedOptions = [...newPollData.options];
     updatedOptions[index] = value;
     setNewPollData((prev) => ({ ...prev, options: updatedOptions }));
@@ -636,7 +574,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
   const addPollOptionField = () =>
     setNewPollData((prev) => ({ ...prev, options: [...prev.options, ''] }));
 
-  const removePollOptionField = (index: number) => {
+  const removePollOptionField = (index) => {
     if (newPollData.options.length <= 2) {
       notifications.show({
         title: 'Error',
@@ -681,14 +619,14 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
       return;
     }
 
-    let combinedClosesAt: string | null = null;
+    let combinedClosesAt = null;
     if (newPollData.closesAtDate) {
       const timePart = newPollData.closesAtTime || '00:00';
       combinedClosesAt = new Date(`${newPollData.closesAtDate}T${timePart}`).toISOString();
     }
 
     const isCreatorAdmin = effectiveRole >= 3;
-    const pollObject: Omit<Poll, 'id'> = {
+    const pollObject = {
       questionText: newPollData.questionText.trim(),
       description: newPollData.description.trim() || undefined,
       pollType: newPollType,
@@ -703,8 +641,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
           };
           return obj;
         },
-        {} as Record<string, PollOption>
-      ),
+        {}),
       closesAt: combinedClosesAt,
       allowUserOptionSubmissions:
         newPollType === 'standard' ? newPollData.allowUserOptionSubmissions : false,
@@ -735,7 +672,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         color: 'green',
       });
       handleCloseCreatePoll();
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: 'Failed to create poll: ' + e.message,
@@ -744,12 +681,12 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     }
   };
 
-  const handlePollDisplayApproval = async (pollId: string, approve: boolean) => {
+  const handlePollDisplayApproval = async (pollId, approve) => {
     if (!user) return;
     const pollToUpdate = polls.find((p) => p.id === pollId);
     if (!pollToUpdate) return;
 
-    const updates: any = {};
+    const updates = {};
     if (approve) {
       updates[`isApprovedForDisplay`] = true;
       updates[`isOpenForVoting`] =
@@ -771,7 +708,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         message: `Poll ${approve ? 'approved' : 'rejected'} successfully.`,
         color: 'green',
       });
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: `Failed to ${approve ? 'approve' : 'reject'} poll: ${e.message}`,
@@ -781,12 +718,12 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
   };
 
   const handleSubmittedOptionApproval = async (
-    pollId: string,
-    optionId: string,
-    approve: boolean
+    pollId,
+    optionId,
+    approve
   ) => {
     if (!user) return;
-    const optionUpdates: any = {};
+    const optionUpdates = {};
     if (approve) {
       optionUpdates[`isApproved`] = true;
       optionUpdates[`approvedByUserID`] = user.uid;
@@ -810,7 +747,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         message: `Option ${approve ? 'approved' : 'rejected'} successfully.`,
         color: 'green',
       });
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: `Failed to ${approve ? 'approve' : 'reject'} option: ${e.message}`,
@@ -819,7 +756,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     }
   };
 
-  const handleVoteSubmit = async (voteData: string | string[]) => {
+  const handleVoteSubmit = async (voteData) => {
     const finalVoteData = selectedPoll?.pollType === 'ranked_ballot' ? voteData : selectedOption;
 
     if (
@@ -845,7 +782,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
       return;
     }
 
-    const updates: any = {};
+    const updates = {};
     updates[`camps/${campID}/polls/${selectedPoll.id}/usersVoted/${user.uid}`] = finalVoteData;
     updates[`camps/${campID}/polls/${selectedPoll.id}/lastUpdatedAt`] = serverTimestamp();
 
@@ -857,7 +794,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     try {
       await update(firebaseDatabaseRef(database), updates);
       setUserVotes((prev) => ({ ...prev, [selectedPoll.id]: finalVoteData }));
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: 'Failed to submit vote: ' + e.message,
@@ -879,7 +816,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     const newOptionRef = push(
       firebaseDatabaseRef(database, `camps/${campID}/polls/${selectedPoll.id}/options`)
     );
-    const optionData: Omit<PollOption, 'voteCount'> & { voteCount?: number; submittedAt: object } =
+    const optionData = 
       {
         text: newOptionText.trim(),
         createdByUserID: user.uid,
@@ -890,7 +827,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
       };
     optionData.voteCount = 0;
 
-    const updates: any = {};
+    const updates = {};
     updates[`camps/${campID}/polls/${selectedPoll.id}/options/${newOptionRef.key}`] = optionData;
     updates[`camps/${campID}/polls/${selectedPoll.id}/lastUpdatedAt`] = serverTimestamp();
 
@@ -900,7 +837,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
         "Option submitted, awaiting approval. If you'd like to vote for this option, please wait until it has been approved, then vote for it from the updated list. You may continue to submit additional option suggestions."
       );
       setNewOptionText('');
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: 'Error submitting option: ' + e.message,
@@ -909,7 +846,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     }
   };
 
-  const calculateTotalVotes = (poll: Poll) => {
+  const calculateTotalVotes = (poll) => {
     if (!poll || !poll.options) return 0;
     return Object.values(poll.options)
       .filter((opt) => opt.isApproved)
@@ -932,8 +869,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
       }
       return acc;
     },
-    [] as (PollOption & { optionId: string; pollId: string; pollQuestion: string })[]
-  );
+    []);
 
   const openAndApprovedPolls = polls.filter(
     (p) => p.isApprovedForDisplay && !p.isRejectedForDisplay && p.isOpenForVoting
@@ -942,14 +878,14 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     (p) => p.isApprovedForDisplay && !p.isRejectedForDisplay && !p.isOpenForVoting
   );
 
-  const listContainerStyle: React.CSSProperties = {
+  const listContainerStyle = {
     display: 'flex',
     flexDirection: 'column',
     gap: '1rem',
     marginBottom: '2rem',
   };
 
-  const modalOverlayStyle: React.CSSProperties = {
+  const modalOverlayStyle = {
     position: 'fixed',
     top: 0,
     left: 0,
@@ -961,7 +897,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     justifyContent: 'center',
     zIndex: 1050,
   };
-  const modalContentStyle: React.CSSProperties = {
+  const modalContentStyle = {
     backgroundColor: 'var(--mantine-color-body)',
     padding: '2rem',
     borderRadius: '12px',
@@ -972,14 +908,14 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
     flexDirection: 'column',
     boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
   };
-  const modalHeaderStyle: React.CSSProperties = {
+  const modalHeaderStyle = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '1rem',
   };
-  const modalBodyStyle: React.CSSProperties = { flexGrow: 1, minHeight: 0 };
-  const adminSectionStyle: React.CSSProperties = {
+  const modalBodyStyle = { flexGrow: 1, minHeight: 0 };
+  const adminSectionStyle = {
     padding: '1rem',
     marginBottom: '2rem',
     border: '1px dashed var(--mantine-color-gray-4)',
@@ -1127,7 +1063,7 @@ const PollsPage: FC<PollsPageProps> = ({ user, campID, userData, effectiveRole }
               label="Results Visibility"
               value={newPollData.resultsVisibility}
               onChange={(value) =>
-                handleNewPollInputChange('resultsVisibility', value as Poll['resultsVisibility'])
+                handleNewPollInputChange('resultsVisibility', value)
               }
               required
               mt="sm"

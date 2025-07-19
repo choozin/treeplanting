@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FC, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   IconCalendar,
   IconChevronDown,
@@ -36,17 +36,14 @@ import { notifications } from '@mantine/notifications';
 import { database } from '../../firebase/firebase';
 import { ROLES } from '../../lib/constants'; // Import ROLES
 
-interface CampManagementProps {
-  campID: string | null;
-  effectiveRole: number;
-}
 
-const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
-  const [campData, setCampData] = useState<any>(null);
+
+const CampManagement = ({ campID, effectiveRole }) => {
+  const [campData, setCampData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [allUsers, setAllUsers] = useState<any[]>([]); // State to store all users
-  const [campUserUids, setCampUserUids] = useState<Set<string>>(new Set()); // State to store UIDs of users in the current camp
+  const [error, setError] = useState(null);
+  const [allUsers, setAllUsers] = useState([]); // State to store all users
+  const [campUserUids, setCampUserUids] = useState(new Set()); // State to store UIDs of users in the current camp
 
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(String(currentYear));
@@ -57,23 +54,23 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
   const [blockModalOpened, { open: openBlockModal, close: closeBlockModal }] = useDisclosure(false);
   const [truckModalOpened, { open: openTruckModal, close: closeTruckModal }] = useDisclosure(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
-  const [editingLocation, setEditingLocation] = useState<any>(null); // For both primary and secondary
-  const [editingTruck, setEditingTruck] = useState<any>(null);
+  const [editingLocation, setEditingLocation] = useState(null); // For both primary and secondary
+  const [editingTruck, setEditingTruck] = useState(null);
 
   // Form state
   const [locationName, setLocationName] = useState('');
-  const [latitude, setLatitude] = useState<string | number>('');
-  const [longitude, setLongitude] = useState<string | number>('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [truckName, setTruckName] = useState('');
-  const [truckCapacity, setTruckCapacity] = useState<number | string>(1);
+  const [truckCapacity, setTruckCapacity] = useState(1);
 
   // Calendar state
-  const [seasonStartDate, setSeasonStartDate] = useState<Date | null>(null);
-  const [seasonEndDate, setSeasonEndDate] = useState<Date | null>(null);
-  const [locationStartDate, setLocationStartDate] = useState<Date | null>(null);
-  const [locationEndDate, setLocationEndDate] = useState<Date | null>(null);
-  const [shiftLength, setShiftLength] = useState<number | string>(3);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [seasonStartDate, setSeasonStartDate] = useState(null);
+  const [seasonEndDate, setSeasonEndDate] = useState(null);
+  const [locationStartDate, setLocationStartDate] = useState(null);
+  const [locationEndDate, setLocationEndDate] = useState(null);
+  const [shiftLength, setShiftLength] = useState(3);
+  const [selectedLocationId, setSelectedLocationId] = useState(null);
 
   const modals = useModals();
 
@@ -104,7 +101,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         }
         setLoading(false);
       },
-      (err: any) => {
+      (err) => {
         notifications.show({
           title: 'Error',
           message: 'Error fetching camp data: ' + err.message,
@@ -124,7 +121,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
           setCampUserUids(new Set());
         }
       },
-      (err: any) => {
+      (err) => {
         notifications.show({
           title: 'Error',
           message: 'Error fetching users in camp: ' + err.message,
@@ -153,7 +150,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
           setAllUsers([]);
         }
       },
-      (err: any) => {
+      (err) => {
         notifications.show({
           title: 'Error',
           message: 'Error fetching users: ' + err.message,
@@ -206,7 +203,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     );
   }, [selectedLocationId, campData, selectedYear, locationStartDate, locationEndDate]);
 
-  const handleRemoveUserFromCamp = (userUid: string, userName: string) => {
+  const handleRemoveUserFromCamp = (userUid, userName) => {
     modals.openConfirmModal({
       title: `Remove ${userName} from Camp`,
       centered: true,
@@ -229,7 +226,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
             message: `${userName} has been removed from this camp's assigned camps.`,
             color: 'green',
           });
-        } catch (e: any) {
+        } catch (e) {
           notifications.show({
             title: 'Error',
             message: `Failed to remove user from camp: ${e.message}`,
@@ -241,7 +238,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
   };
 
   // --- Handlers for Primary Locations ---
-  const handleOpenPrimaryModal = (mode: string, location: any = null) => {
+  const handleOpenPrimaryModal = (mode, location = null) => {
     setModalMode(mode);
     setEditingLocation(location);
     if (mode === 'edit' && location) {
@@ -268,8 +265,8 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     const locationData = {
       campLocationName: locationName,
       latLong: {
-        latitude: parseFloat(latitude as string),
-        longitude: parseFloat(longitude as string),
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
       },
     };
 
@@ -283,16 +280,15 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         color: 'green',
       });
       closePrimaryModal();
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: 'Failed to save primary location: ' + e.message,
         color: 'red',
       });
-    }
-  };
+    };
 
-  const handleSetAsPrimary = async (locationId: string) => {
+  const handleSetAsPrimary = async (locationId) => {
     try {
       await update(ref(database, `camps/${campID}`), { activeLocationId: locationId });
       notifications.show({
@@ -300,20 +296,19 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         message: 'Active location updated successfully.',
         color: 'green',
       });
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: 'Failed to set active location: ' + e.message,
         color: 'red',
       });
     }
-  };
 
   const openDeleteConfirmModal = (
-    type: string,
-    id: string,
-    name: string,
-    primaryLocationId: string | null = null
+    type,
+    id,
+    name,
+    primaryLocationId = null
   ) => {
     modals.openConfirmModal({
       title: `Delete ${name}`,
@@ -346,7 +341,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
   };
 
   // --- Handlers for Block (Secondary) Locations ---
-  const handleOpenBlockModal = (primaryLocationId: string, mode: string, block: any = null) => {
+  const handleOpenBlockModal = (primaryLocationId, mode, block = null) => {
     setModalMode(mode);
     setEditingLocation({ primaryId: primaryLocationId, ...(block || {}) });
     if (mode === 'edit' && block) {
@@ -373,8 +368,8 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     const blockData = {
       name: locationName,
       latLong: {
-        latitude: parseFloat(latitude as string),
-        longitude: parseFloat(longitude as string),
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
       },
     };
     const path = `camps/${campID}/campLocations/${selectedYear}/${editingLocation.primaryId}/secondaryLocations/${modalMode === 'add' ? firebasePush(ref(database, `camps/${campID}/campLocations/${selectedYear}/${editingLocation.primaryId}/secondaryLocations`)).key : editingLocation.id}`;
@@ -386,7 +381,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         color: 'green',
       });
       closeBlockModal();
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: 'Failed to save block location: ' + e.message,
@@ -418,7 +413,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         message: 'Season dates saved successfully.',
         color: 'green',
       });
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: 'Failed to save season dates: ' + e.message,
@@ -427,7 +422,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     }
   };
 
-  const handleUpdateCalendar = async (locationId: string) => {
+  const handleUpdateCalendar = async (locationId) => {
     if (!campID || !locationStartDate || !locationEndDate || !shiftLength) {
       notifications.show({
         title: 'Error',
@@ -444,7 +439,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     const newEndDate = locationEndDate.toISOString().split('T')[0];
     const newShiftLength = typeof shiftLength === 'string' ? parseInt(shiftLength, 10) : shiftLength;
 
-    let calendarToUpdate: { [key: string]: any } = {};
+    let calendarToUpdate = {};
     let startingShiftDay = 1;
     let startDateForGeneration = new Date(locationStartDate);
 
@@ -544,7 +539,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         message: `Calendar ${isExtending ? 'extended' : 'generated'} successfully!`,
         color: 'green',
       });
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: `Failed to ${isExtending ? 'extend' : 'generate'} calendar: ${e.message}`,
@@ -553,7 +548,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
     }
   };
 
-  const handleAccordionChange = (value: string | null) => {
+  const handleAccordionChange = (value) => {
     setSelectedLocationId(value);
     if (value && campData?.campLocations?.[selectedYear]?.[value]?.calendarConfig) {
       const config = campData.campLocations[selectedYear][value].calendarConfig;
@@ -568,7 +563,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
   };
 
   // --- Truck Handlers ---
-  const handleOpenTruckModal = (mode: string, truck: any = null) => {
+  const handleOpenTruckModal = (mode, truck = null) => {
     setModalMode(mode);
     setEditingTruck(truck);
     if (mode === 'edit' && truck) {
@@ -606,7 +601,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
         color: 'green',
       });
       closeTruckModal();
-    } catch (e: any) {
+    } catch (e) {
       notifications.show({
         title: 'Error',
         message: 'Failed to save truck: ' + e.message,
@@ -669,7 +664,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
           </Paper>
 
           <Accordion chevron={<IconChevronDown />} mt="lg" onChange={handleAccordionChange}>
-            {Object.entries(locationsForYear).map(([id, loc]: [string, any]) => (
+            {Object.entries(locationsForYear).map(([id, loc]) => (
               <Accordion.Item key={id} value={id}>
                 <Accordion.Control>
                   <Group justify="space-between">
@@ -756,7 +751,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
                         Block Locations
                       </Title>
                       {Object.entries(loc.secondaryLocations || {}).map(
-                        ([blockId, block]: [string, any]) => (
+                        ([blockId, block]) => (
                           <Paper key={blockId} p="xs" withBorder mb="xs">
                             <Group justify="space-between">
                               <Text>
@@ -854,7 +849,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
               {trucks.length === 0 ? (
                 <Text c="dimmed">No trucks added yet.</Text>
               ) : (
-                trucks.map((truck: any) => (
+                trucks.map((truck) => (
                   <Paper key={truck.id} p="xs" withBorder>
                     <Group justify="space-between">
                       <Text>
@@ -896,7 +891,7 @@ const CampManagement: FC<CampManagementProps> = ({ campID, effectiveRole }) => {
               {campUsers.length === 0 ? (
                 <Text c="dimmed">No users assigned to this camp.</Text>
               ) : (
-                campUsers.map((user: any) => (
+                campUsers.map((user) => (
                   <Paper key={user.uid} p="xs" withBorder>
                     <Group justify="space-between">
                       <Text>

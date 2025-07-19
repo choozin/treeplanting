@@ -36,50 +36,21 @@ import { ROLES } from '../../lib/constants';
 import AdminUserList from './AdminUserList';
 import CrewManagement from './CrewManagement';
 
-// --- TypeScript Interfaces ---
-interface AppUser {
-  id: string;
-  name: string;
-  email: string;
-  role: number;
-  assignedCamps?: Record<string, { campName: string; role: number; crewId?: string }>;
-  managesCompany?: string;
-  effectiveRoleInContext?: number;
-}
 
-interface Camp {
-  campName: string;
-  companyId: string;
-  users?: Record<string, { name: string; role: number }>;
-}
-
-interface EditedUserData {
-  name: string;
-  email: string;
-  globalRole: number;
-  campRoles: Record<string, number>;
-}
-
-// --- Helper Functions ---
 const getRoleName = (level: number) => ROLES[level as keyof typeof ROLES] || 'Unknown Role';
 
 // --- Main Component ---
-const UserManagement: FC<{
-  currentUser: FirebaseUser;
-  campID: string | null;
-  effectiveRole: number;
-  globalRole: number;
-}> = ({ currentUser, campID, effectiveRole, globalRole }) => {
-  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
-  const [allCamps, setAllCamps] = useState<Record<string, Camp>>({});
+const UserManagement = ({ currentUser, campID, effectiveRole, globalRole }) => {
+  const [allUsers, setAllUsers] = useState([]);
+  const [allCamps, setAllCamps] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
+  const [error, setError] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editedUserData, setEditedUserData] = useState<Partial<EditedUserData>>({});
+  const [editedUserData, setEditedUserData] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string[]>([]);
+  const [roleFilter, setRoleFilter] = useState([]);
   const [activeTab, setActiveTab] = useState('employees');
 
   useEffect(() => {
@@ -90,10 +61,10 @@ const UserManagement: FC<{
     const unsubUsers = onValue(
       usersRef,
       (snapshot) => {
-        setAllUsers(Object.entries(snapshot.val() || {}).map(([id, d]) => ({ id, ...(d as any) })));
+        setAllUsers(Object.entries(snapshot.val() || {}).map(([id, d]) => ({ id, ...d })));
         setIsLoading(false);
       },
-      (err: Error) => setError(`Failed to load users: ${err.message}`)
+      (err) => setError(`Failed to load users: ${err.message}`)
     );
 
     const unsubCamps = onValue(campsRef, (snapshot) => {
@@ -106,7 +77,7 @@ const UserManagement: FC<{
     };
   }, []);
 
-  const calculateUserEffectiveRole = (user: AppUser, contextCampID: string | null) => {
+  const calculateUserEffectiveRole = (user, contextCampID) => {
     if (!contextCampID) return user.role || 0;
     const campRole = user.assignedCamps?.[contextCampID]?.role || 0;
     return Math.max(user.role || 0, campRole);
@@ -128,16 +99,15 @@ const UserManagement: FC<{
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [allUsers, campID, searchTerm, roleFilter, effectiveRole]);
 
-  const handleOpenEditModal = (user: AppUser) => {
+  const handleOpenEditModal = (user) => {
     setSelectedUser(user);
     const campRoles = user.assignedCamps
       ? Object.keys(user.assignedCamps).reduce(
           (acc, cId) => {
-            acc[cId] = allCamps[cId]?.users?.[user.id]?.role || user.assignedCamps![cId].role || 0;
+            acc[cId] = allCamps[cId]?.users?.[user.id]?.role || user.assignedCamps[cId].role || 0;
             return acc;
           },
-          {} as Record<string, number>
-        )
+          {}
       : {};
 
     setEditedUserData({
@@ -155,7 +125,7 @@ const UserManagement: FC<{
     }
     setIsSaving(true);
 
-    const updates: Record<string, any> = {};
+    const updates = {};
     updates[`/users/${selectedUser.id}/name`] = editedUserData.name;
 
     if (effectiveRole >= 9) {

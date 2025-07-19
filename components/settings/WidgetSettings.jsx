@@ -47,7 +47,7 @@ const WidgetSettings = () => {
     }
   }, [userData]);
 
-  const handleToggleWidget = (widgetId: string, checked: boolean) => {
+  const handleToggleWidget = (widgetId, checked) => {
     if (checked) {
       setLayout((prev) => [...prev, widgetId]);
     } else {
@@ -55,7 +55,7 @@ const WidgetSettings = () => {
     }
   };
 
-  const handleMove = (index: number, direction: 'up' | 'down') => {
+  const handleMove = (index, direction) => {
     const newLayout = [...layout];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= newLayout.length) return;
@@ -71,7 +71,7 @@ const WidgetSettings = () => {
     setIsSaving(true);
     try {
       // **FIX:** Explicitly define the type for the 'updates' object.
-      const updates: { [key: string]: any } = {};
+      const updates = {};
       updates[`users/${user.uid}/dashboardPreferences/layout`] = layout;
       await update(ref(database), updates);
       await refreshUserData();
@@ -80,7 +80,7 @@ const WidgetSettings = () => {
         message: 'Your dashboard layout has been saved.',
         color: 'green',
       });
-    } catch (err: any) {
+    } catch (err) {
       notifications.show({
         title: 'Save Failed',
         message: 'Error saving dashboard layout: ' + err.message,
