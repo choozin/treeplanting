@@ -136,13 +136,6 @@ const AppFeedbackModal = ({ opened, onClose }) => {
       <Stepper
         active={active}
         onStepClick={setActive}
-        allowNext={(active) => {
-          if (active === 0)
-            return (
-              feedbackType !== null && (feedbackType === 'newIdea' || isCurrentPageRelated !== null)
-            );
-          return true;
-        }}
       >
         <Stepper.Step label="Type" description="What kind of feedback?">
           <Radio.Group

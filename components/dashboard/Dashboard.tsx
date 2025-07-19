@@ -9,11 +9,12 @@ import AnnouncementsWidget from '../annoucements/AnnouncementsWidget';
 import BirthdaysWidget from '../Birthdays/BirthdaysWidget';
 import CustomLoader from '../common/CustomLoader';
 import PollsWidget from '../polls/PollsWidget';
+import QuoteWidget from './QuoteWidget';
 import WidgetSettings from '../settings/WidgetSettings';
 import WeatherWidget from '../weather/WeatherWidget';
 
 // Define a specific type for our widget IDs for better type safety
-type WidgetId = 'announcements' | 'weather' | 'birthdays' | 'polls';
+type WidgetId = 'announcements' | 'weather' | 'birthdays' | 'polls' | 'quote';
 
 // Widget Registry now uses the specific WidgetId type
 const WIDGET_MAP: Record<WidgetId, React.ComponentType> = {
@@ -21,19 +22,25 @@ const WIDGET_MAP: Record<WidgetId, React.ComponentType> = {
   weather: WeatherWidget,
   birthdays: BirthdaysWidget,
   polls: PollsWidget,
+  quote: QuoteWidget,
 };
 
-const DEFAULT_LAYOUT: WidgetId[] = ['announcements', 'weather', 'birthdays', 'polls'];
+const DEFAULT_LAYOUT: WidgetId[] = ['announcements', 'weather', 'birthdays', 'polls', 'quote'];
 
 const Dashboard = () => {
   const { userData, loading } = useAuth();
   const [opened, { open, close }] = useDisclosure(false);
 
   const userLayout = useMemo(() => {
-    // Ensure the layout from user data is valid and contains only known widget IDs
     const savedLayout = userData?.dashboardPreferences?.layout;
     if (Array.isArray(savedLayout)) {
-      return savedLayout.filter((widgetId) => widgetId in WIDGET_MAP) as WidgetId[];
+      const newLayout = [...savedLayout];
+      DEFAULT_LAYOUT.forEach((widgetId) => {
+        if (!newLayout.includes(widgetId)) {
+          newLayout.push(widgetId);
+        }
+      });
+      return newLayout.filter((widgetId) => widgetId in WIDGET_MAP) as WidgetId[];
     }
     return DEFAULT_LAYOUT;
   }, [userData]);

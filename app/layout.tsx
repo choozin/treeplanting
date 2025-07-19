@@ -31,7 +31,6 @@ export default function RootLayout({ children }: { children: any }) {
       className={nunito.variable}
     >
       <head>
-        <ColorSchemeScript defaultColorScheme="auto" />
         <link rel="manifest" href="/manifest.json" />
         <meta
           name="viewport"
@@ -39,7 +38,7 @@ export default function RootLayout({ children }: { children: any }) {
         />
       </head>
       <body>
-        <MantineProvider theme={theme} defaultColorScheme="auto">
+        <MantineProvider theme={theme}>
           <ModalsProvider>
             <Notifications position="top-right" />
             <WeatherProvider>

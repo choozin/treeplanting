@@ -24,6 +24,7 @@ const ALL_WIDGETS = [
   { id: 'weather', label: 'Weather' },
   { id: 'birthdays', label: 'Upcoming Birthdays' },
   { id: 'polls', label: 'Active Poll' },
+  { id: 'quote', label: 'Quote' },
 ];
 
 const WidgetSettings = () => {
