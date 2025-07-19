@@ -22,10 +22,8 @@ import ProfileModal from '../../components/staff/ProfileModal';
 import StaffCard from '../../components/staff/StaffCard';
 import { database } from '../../firebase/firebase';
 import { useAuth } from '../../hooks/useAuth';
-import { ROLES } from '../../lib/constants';
+import { ROLES } from '../../lib/constants'; // ROLES is imported here, so it's available in this file.
 import classes from '../../components/staff/Staff.module.css';
-
-
 
 const StaffPage = () => {
   const { campID, user, openComposeModal } = useAuth();
@@ -62,18 +60,21 @@ const StaffPage = () => {
         }))
         .filter((u) => u.assignedCamps && u.assignedCamps[campID]);
       setUsersInCamp(campUsers);
-      setIsLoading(false);
+      // setIsLoading(false); // Do not set loading to false here, wait for both fetches to complete or manage them separately.
     });
 
     const unsubscribeCrews = onValue(crewsRef, (snapshot) => {
       const crewsData = snapshot.val() || {};
+      // FIX: Added the initial value {} to the reduce function to prevent TypeError: Cannot create property on string.
       const crewsMap = Object.keys(crewsData).reduce(
         (acc, crewId) => {
           acc[crewId] = crewsData[crewId].crewName;
           return acc;
         },
+        {}, // This was missing in your original code, causing the TypeError.
       );
       setCrews(crewsMap);
+      setIsLoading(false); // Set loading to false after both data fetches are potentially complete, or based on a combined loading state.
     });
 
     return () => {
@@ -228,6 +229,7 @@ const StaffPage = () => {
                     <Table.Td>
                       {crews[u.assignedCamps?.[campID]?.crewId || ''] || 'No Crew'}
                     </Table.Td>
+                    {/* Accessing ROLES as an array using the effectiveRole as an index */}
                     <Table.Td>{(ROLES)[u.effectiveRole]}</Table.Td>
                   </Table.Tr>
                 ))}
@@ -249,7 +251,7 @@ const StaffPage = () => {
                   }
 
                   if (Array.isArray(crewId)) {
-                    return (crewId)
+                    return crewId
                       .map((id) => crews[id] || 'Unknown Crew')
                       .join(', ');
                   } else {
@@ -261,6 +263,13 @@ const StaffPage = () => {
           opened={!!selectedUser}
           onClose={() => setSelectedUser(null)}
           onMessage={handleMessageUser}
+          // The ROLES ReferenceError was likely in ProfileModal.jsx itself.
+          // If ProfileModal needs ROLES, it should import it directly:
+          // import { ROLES } from '../../lib/constants'; in ProfileModal.jsx
+          // Alternatively, if ROLES is specifically for display within the modal
+          // and not imported there, you could pass it as a prop like:
+          // rolesConstants={ROLES}
+          // However, based on typical Next.js practices, shared constants are imported.
         />
       </Container>
     </Box>

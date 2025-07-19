@@ -26,7 +26,7 @@ import {
   Title,
 } from '@mantine/core';
 import classes from './Staff.module.css';
-
+import {ROLES} from '../../lib/constants';
 
 
 const ProfileModal = ({ user, crewName, opened, onClose, onMessage, }) => {

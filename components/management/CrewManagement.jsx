@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { IconPencil, IconPlus, IconTrash, IconUsers } from '@tabler/icons-react';
-import { push as firebasePush, onValue, ref, remove, set, update } from 'firebase/database';
+import { push as firebasePush, onValue, ref, remove, get, set, update } from 'firebase/database';
 import {
   Accordion,
   Box,
@@ -22,6 +22,7 @@ import {
   ThemeIcon,
   Title,
 } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { useModals } from '@mantine/modals';
 import { database } from '../../firebase/firebase';
 import { useAuth } from '../../hooks/useAuth';
@@ -70,11 +71,6 @@ const CrewManagement = () => {
         const usersData = snapshot.val() || {};
         const usersArray = Object.keys(usersData).map((id) => ({ id, ...usersData[id] }));
         setUsers(usersArray);
-        notifications.show({
-          title: 'Debug Info',
-          message: `CrewManagement - users: ${JSON.stringify(usersArray)}`,
-          color: 'blue',
-        });
       })
     );
 
@@ -87,11 +83,6 @@ const CrewManagement = () => {
       return [];
     }
     const filteredUsers = users.filter((u) => u.assignedCamps && u.assignedCamps[campID]);
-    notifications.show({
-      title: 'Debug Info',
-      message: `CrewManagement - usersInCamp: ${JSON.stringify(filteredUsers)}`,
-      color: 'blue',
-    });
     return filteredUsers;
   }, [users, campID]);
 
@@ -309,16 +300,7 @@ const CrewManagement = () => {
                 : [];
             return userCrewIds.includes(crew.id);
           });
-          notifications.show({
-            title: 'Debug Info',
-            message: `Crew ${crew.crewName} - crewBosses: ${JSON.stringify(crewBosses)}`,
-            color: 'blue',
-          });
-          notifications.show({
-            title: 'Debug Info',
-            message: `Crew ${crew.crewName} - crewMembers: ` + JSON.stringify(crewMembers),
-            color: 'blue',
-          });
+          
           const isUserCrewBoss = crewBosses.includes(user?.uid || '');
 
           return (

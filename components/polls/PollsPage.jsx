@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  IconAlertCircle,
   IconArrowDown,
   IconArrowUp,
   IconChartBar,
@@ -51,6 +52,7 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { database } from '../../firebase/firebase';
 
 
@@ -628,7 +630,8 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
     const isCreatorAdmin = effectiveRole >= 3;
     const pollObject = {
       questionText: newPollData.questionText.trim(),
-      description: newPollData.description.trim() || undefined,
+      // Fix: Only include description if it's not an empty string
+      ...(newPollData.description.trim() !== '' && { description: newPollData.description.trim() }),
       pollType: newPollType,
       options: validOptions.reduce(
         (obj, optionText, index) => {
@@ -674,6 +677,7 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
       handleCloseCreatePoll();
     } catch (e) {
       notifications.show({
+        title: 'Error',
         title: 'Error',
         message: 'Failed to create poll: ' + e.message,
         color: 'red',
@@ -816,7 +820,7 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
     const newOptionRef = push(
       firebaseDatabaseRef(database, `camps/${campID}/polls/${selectedPoll.id}/options`)
     );
-    const optionData = 
+    const optionData =
       {
         text: newOptionText.trim(),
         createdByUserID: user.uid,
@@ -1426,16 +1430,16 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                                 </ActionIcon>
                               }
                             />
+                            {optionSubmissionMessage && (
+                              <Text
+                                c={optionSubmissionMessage.startsWith('Failed') ? 'red' : 'green'}
+                                size="xs"
+                                mt="xs"
+                              >
+                                {optionSubmissionMessage}
+                              </Text>
+                            )}
                           </Group>
-                          {optionSubmissionMessage && (
-                            <Text
-                              c={optionSubmissionMessage.startsWith('Failed') ? 'red' : 'green'}
-                              size="xs"
-                              mt="xs"
-                            >
-                              {optionSubmissionMessage}
-                            </Text>
-                          )}
                         </div>
                       )}
 

@@ -37,7 +37,7 @@ import AdminUserList from './AdminUserList';
 import CrewManagement from './CrewManagement';
 
 
-const getRoleName = (level: number) => ROLES[level as keyof typeof ROLES] || 'Unknown Role';
+const getRoleName = (level) => ROLES[level] || 'Unknown Role';
 
 // --- Main Component ---
 const UserManagement = ({ currentUser, campID, effectiveRole, globalRole }) => {
@@ -103,12 +103,12 @@ const UserManagement = ({ currentUser, campID, effectiveRole, globalRole }) => {
     setSelectedUser(user);
     const campRoles = user.assignedCamps
       ? Object.keys(user.assignedCamps).reduce(
-          (acc, cId) => {
-            acc[cId] = allCamps[cId]?.users?.[user.id]?.role || user.assignedCamps[cId].role || 0;
-            return acc;
-          },
-          {}
-      : {};
+        (acc, cId) => {
+          acc[cId] = allCamps[cId]?.users?.[user.id]?.role || user.assignedCamps[cId].role || 0;
+          return acc;
+        },
+        {})
+      : {}; // Added empty object for initialization if user.assignedCamps is falsy
 
     setEditedUserData({
       name: user.name,
@@ -143,12 +143,14 @@ const UserManagement = ({ currentUser, campID, effectiveRole, globalRole }) => {
     try {
       await update(ref(database), updates);
       setIsEditModalOpen(false);
-    } catch (e: any) {
+      setIsSaving(false); // Set saving to false on success
+    } catch (e) { // Removed type annotation ': any'
       notifications.show({
         title: 'Error',
         message: 'Failed to save changes: ' + e.message,
         color: 'red',
       });
+      setIsSaving(false); // Set saving to false on error
     }
   };
 
@@ -237,7 +239,7 @@ const UserManagement = ({ currentUser, campID, effectiveRole, globalRole }) => {
                       <Table.Td>{user.name}</Table.Td>
                       <Table.Td>{user.email}</Table.Td>
                       <Table.Td>
-                        {getRoleName(user.effectiveRoleInContext!)} ({user.effectiveRoleInContext})
+                        {getRoleName(user.effectiveRoleInContext)} ({user.effectiveRoleInContext})
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs">
@@ -254,7 +256,7 @@ const UserManagement = ({ currentUser, campID, effectiveRole, globalRole }) => {
                           onClick={() => handleOpenEditModal(user)}
                           variant="subtle"
                           title="Edit User"
-                          disabled={effectiveRole <= user.effectiveRoleInContext!}
+                          disabled={effectiveRole <= user.effectiveRoleInContext}
                         >
                           <IconPencil size={16} />
                         </ActionIcon>

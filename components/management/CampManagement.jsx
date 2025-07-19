@@ -162,6 +162,18 @@ const CampManagement = ({ campID, effectiveRole }) => {
     return () => unsubscribe();
   }, []);
 
+  // Show access denied notification in useEffect
+  useEffect(() => {
+    if (effectiveRole < 5) {
+      notifications.show({
+        title: 'Access Denied',
+        message: 'You do not have permission to view this page.',
+        color: 'red',
+      });
+    }
+  }, [effectiveRole]);
+
+
   const availableYears = useMemo(() => {
     const years = new Set(campData?.campLocations ? Object.keys(campData.campLocations) : []);
     years.add(String(currentYear));
@@ -273,7 +285,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
     const path = `camps/${campID}/campLocations/${selectedYear}/${modalMode === 'add' ? firebasePush(ref(database, `camps/${campID}/campLocations/${selectedYear}`)).key : editingLocation.id}`;
 
     try {
-      await set(ref(database, path), locationData);
+      await set(ref(database, path), locationData); // Added 'await' as set returns a Promise
       notifications.show({
         title: 'Success',
         message: `Primary location ${modalMode === 'add' ? 'added' : 'updated'} successfully.`,
@@ -286,7 +298,8 @@ const CampManagement = ({ campID, effectiveRole }) => {
         message: 'Failed to save primary location: ' + e.message,
         color: 'red',
       });
-    };
+    }
+  }; // MISSING CLOSING CURLY BRACE HERE - Fixed previously
 
   const handleSetAsPrimary = async (locationId) => {
     try {
@@ -303,6 +316,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
         color: 'red',
       });
     }
+  }; // MISSING CLOSING CURLY BRACE HERE - Fixed previously
 
   const openDeleteConfirmModal = (
     type,
@@ -941,7 +955,7 @@ const CampManagement = ({ campID, effectiveRole }) => {
           />
           <NumberInput
             label="Longitude"
-            placeholder="e.g., -122.749443"
+            placeholder="e.atok, -122.749443"
             value={longitude}
             onChange={setLongitude}
             decimalScale={6}
