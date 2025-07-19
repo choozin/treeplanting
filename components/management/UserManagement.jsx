@@ -334,5 +334,4 @@ const UserManagement = ({ currentUser, campID, effectiveRole, globalRole }) => {
     </Container>
   );
 };
-
 export default UserManagement;
