@@ -49,66 +49,24 @@ import { database } from '../../firebase/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { ROLES } from '../../lib/constants';
 
-interface RideOffer {
-  id: string;
-  driverId: string;
-  driverName: string;
-  departureDate: string;
-  departureTime: string;
-  destination: string;
-  availableSeats: number;
-  notes?: string;
-  truckId?: string;
-  requiredReturnTime?: string;
-  allowAutoJoin?: boolean;
-  passengers: { [key: string]: number }; // passengerId: numberOfPeople
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  timestamp: string;
-}
 
-interface RideRequest {
-  id: string;
-  requesterId: string;
-  requesterName: string;
-  requestDate: string;
-  departureTime: string;
-  destination: string;
-  numberOfPeople: number;
-  notes?: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  offeredRideId?: string; // If matched with an offer
-  timestamp: string;
-}
 
-interface Camp {
-  id: string;
-  name: string;
-  location: string;
-  isActive: boolean;
-}
-
-// Define the props interface for DayOffRidesPage
-interface DayOffRidesPageProps {
-  campID: string | null;
-  effectiveRole: number;
-}
-
-const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
+const DayOffRidesPage = ({ campID, effectiveRole }) => {
   const { user, userData, loading } = useAuth(); // Changed from `profile` to `userData`
   const modals = useModals();
   const profile = userData?.profile; // Access profile from userData
-  const [activeTab, setActiveTab] = useState<string | null>('ride-offers');
+  const [activeTab, setActiveTab] = useState('ride-offers');
   const [offerModalOpen, setOfferModalOpen] = useState(false);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
 
   // Ride Offer State
-  const [departureDate, setDepartureDate] = useState<Date | null>(null);
+  const [departureDate, setDepartureDate] = useState(null);
   const [departureTime, setDepartureTime] = useState('');
   const [destination, setDestination] = useState('');
-  const [availableSeats, setAvailableSeats] = useState<number | ''>('');
+  const [availableSeats, setAvailableSeats] = useState('');
   const [offerNotes, setOfferNotes] = useState('');
-  const [editingOffer, setEditingOffer] = useState<RideOffer | null>(null);
-  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [editingOffer, setEditingOffer] = useState(null);
+  const [selectedDriverId, setSelectedDriverId] = useState(null);
   const [selectedTruck, setSelectedTruck] = useState('');
   const [requiredReturnTime, setRequiredReturnTime] = useState('');
   const [allowAutoJoin, setAllowAutoJoin] = useState(false);
@@ -116,49 +74,49 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
   // Join Modal State
   const [joinModalOpen, setJoinModalOpen] = useState(false);
   const [joinModalStep, setJoinModalStep] = useState('initial'); // 'initial' or 'withOthers'
-  const [otherPeopleJoining, setOtherPeopleJoining] = useState<number | ''>('');
-  const [selectedOfferToJoin, setSelectedOfferToJoin] = useState<RideOffer | null>(null);
+  const [otherPeopleJoining, setOtherPeopleJoining] = useState('');
+  const [selectedOfferToJoin, setSelectedOfferToJoin] = useState(null);
 
   // Ride Request State
-  const [requestDate, setRequestDate] = useState<Date | null>(null);
+  const [requestDate, setRequestDate] = useState(null);
   const [requestDepartureTime, setRequestDepartureTime] = useState('');
   const [requestDestination, setRequestDestination] = useState('');
-  const [numberOfPeople, setNumberOfPeople] = useState<number | ''>('');
+  const [numberOfPeople, setNumberOfPeople] = useState('');
   const [requestNotes, setRequestNotes] = useState('');
   
 
   // Data lists
-  const [rideOffers, setRideOffers] = useState<RideOffer[]>([]);
-  const [rideRequests, setRideRequests] = useState<RideRequest[]>([]);
-  const [pastRides, setPastRides] = useState<RideOffer[]>([]);
+  const [rideOffers, setRideOffers] = useState([]);
+  const [rideRequests, setRideRequests] = useState([]);
+  const [pastRides, setPastRides] = useState([]);
   const [passengerDetailsModalOpen, setPassengerDetailsModalOpen] = useState(false);
-  const [currentPassengers, setCurrentPassengers] = useState<{ [key: string]: string }>({});
-  const [allUsers, setAllUsers] = useState<any[]>([]); // To get user names for passengers
-  const [camps, setCamps] = useState<Camp[]>([]);
-  const [calendarData, setCalendarData] = useState<any>(null);
-  const [crews, setCrews] = useState<any[]>([]);
-  const [trucks, setTrucks] = useState<any[]>([]);
+  const [currentPassengers, setCurrentPassengers] = useState({});
+  const [allUsers, setAllUsers] = useState([]); // To get user names for passengers
+  const [camps, setCamps] = useState([]);
+  const [calendarData, setCalendarData] = useState(null);
+  const [crews, setCrews] = useState([]);
+  const [trucks, setTrucks] = useState([]);
 
   // Filtering and Sorting
-  const [offerDateRange, setOfferDateRange] = useState<[Date | null, Date | null]>([
+  const [offerDateRange, setOfferDateRange] = useState([
     new Date(),
     addDays(new Date(), 30),
   ]);
-  const [requestDateRange, setRequestDateRange] = useState<[Date | null, Date | null]>([
+  const [requestDateRange, setRequestDateRange] = useState([
     new Date(),
     addDays(new Date(), 30),
   ]);
-  const [pastDateRange, setPastDateRange] = useState<[Date | null, Date | null]>([
+  const [pastDateRange, setPastDateRange] = useState([
     subDays(new Date(), 30),
     new Date(),
   ]);
 
-  const [offerSortKey, setOfferSortKey] = useState<string | null>(null);
-  const [offerSortOrder, setOfferSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [requestSortKey, setRequestSortKey] = useState<string | null>(null);
-  const [requestSortOrder, setRequestSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [pastSortKey, setPastSortKey] = useState<string | null>(null);
-  const [pastSortOrder, setPastSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [offerSortKey, setOfferSortKey] = useState(null);
+  const [offerSortOrder, setOfferSortOrder] = useState('asc');
+  const [requestSortKey, setRequestSortKey] = useState(null);
+  const [requestSortOrder, setRequestSortOrder] = useState('asc');
+  const [pastSortKey, setPastSortKey] = useState(null);
+  const [pastSortOrder, setPastSortOrder] = useState('asc');
 
   useEffect(() => {
     if (!user) {
@@ -172,7 +130,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     const unsubscribeOffers = onValue(offersRef, (snapshot) => {
       const offersVal = snapshot.val();
-      const loadedOffers: RideOffer[] = offersVal
+      const loadedOffers = offersVal
         ? Object.keys(offersVal).map((key) => ({ id: key, ...offersVal[key] }))
         : [];
       const upcoming = loadedOffers.filter(
@@ -187,7 +145,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     const unsubscribeRequests = onValue(requestsRef, (snapshot) => {
       const requestsVal = snapshot.val();
-      const loadedRequests: RideRequest[] = requestsVal
+      const loadedRequests = requestsVal
         ? Object.keys(requestsVal).map((key) => ({ id: key, ...requestsVal[key] }))
         : [];
       setRideRequests(
@@ -197,7 +155,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
     const unsubscribeUsers = onValue(usersRef, (snapshot) => {
       const usersVal = snapshot.val();
-      const loadedUsers: any[] = [];
+      const loadedUsers = [];
       if (usersVal) {
         Object.keys(usersVal).forEach((uid) => {
           loadedUsers.push({ id: uid, ...usersVal[uid] });
@@ -214,9 +172,9 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       setCamps(loadedCamps.filter((camp) => camp.isActive));
     });
 
-    let unsubscribeCalendar: (() => void) | undefined;
-    let unsubscribeCrews: (() => void) | undefined;
-    let unsubscribeTrucks: (() => void) | undefined;
+    let unsubscribeCalendar;
+    let unsubscribeCrews;
+    let unsubscribeTrucks;
 
     if (campID) {
       const calendarRef = ref(database, `camps/${campID}/calendar`);
@@ -256,7 +214,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
 
   const campOptions = camps.map((camp) => ({ value: camp.name, label: camp.name }));
 
-  const openOfferModal = (offer: RideOffer | null = null) => {
+  const openOfferModal = (offer = null) => {
     if (offer) {
       setEditingOffer(offer);
       setDepartureDate(parseISO(offer.departureDate));
@@ -342,7 +300,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       return;
     }
 
-    const offerData: Omit<RideOffer, 'id' | 'passengers' | 'status' | 'timestamp'> = {
+    const offerData = {
       driverId: selectedDriverId,
       driverName: selectedDriver.name,
       departureDate: formatISO(departureDate, { representation: 'date' }),
@@ -406,10 +364,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
       return;
     }
 
-    const requestData: Omit<
-      RideRequest,
-      'id' | 'status' | 'offeredRideId' | 'timestamp' | 'requesterId'
-    > & { requesterId: string } = {
+    const requestData = {
       requesterId: user.uid,
       requesterName: profile.name,
       requestDate: formatISO(requestDate, { representation: 'date' }),
@@ -440,7 +395,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     }
   };
 
-  const handleDeleteOffer = async (offerId: string) => {
+  const handleDeleteOffer = async (offerId) => {
     modals.openConfirmModal({
       title: 'Delete Ride Offer',
       children: (
@@ -465,7 +420,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     });
   };
 
-  const handleDeleteRequest = async (request: RideRequest) => {
+  const handleDeleteRequest = async (request) => {
     modals.openConfirmModal({
       title: 'Delete Ride Request',
       children: (
@@ -513,7 +468,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     });
   };
 
-  const handleJoinRide = async (offer: RideOffer) => {
+  const handleJoinRide = async (offer) => {
     if (loading) {
       notifications.show({
         title: 'Info',
@@ -561,7 +516,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     setJoinModalOpen(true);
   };
 
-  const handleLeaveRide = async (offer: RideOffer) => {
+  const handleLeaveRide = async (offer) => {
     if (!user || !profile) {
       return;
     }
@@ -603,7 +558,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     });
   };
 
-  const handleMatchRequest = async (offer: RideOffer, request: RideRequest) => {
+  const handleMatchRequest = async (offer, request) => {
     if (offer.availableSeats < request.numberOfPeople) {
       notifications.show({
         title: 'Error',
@@ -656,7 +611,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     });
   };
 
-  const handleConfirmJoin = async (offer: RideOffer, additionalPeople: number) => {
+  const handleConfirmJoin = async (offer, additionalPeople) => {
     if (!user || !profile) {
       notifications.show({
         title: 'Error',
@@ -698,21 +653,21 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     }
   };
 
-  const showPassengerDetails = (passengers: { [key: string]: string }) => {
+  const showPassengerDetails = (passengers) => {
     setCurrentPassengers(passengers);
     setPassengerDetailsModalOpen(true);
   };
 
-  const getPassengerContact = (passengerId: string) => {
+  const getPassengerContact = (passengerId) => {
     const passengerUser = allUsers.find((u) => u.id === passengerId);
     return passengerUser ? passengerUser.phoneNumber || passengerUser.email || 'N/A' : 'N/A';
   };
 
   const filterAndSort = (
-    data: any[],
-    dateRange: [Date | null, Date | null],
-    sortKey: string | null,
-    sortOrder: 'asc' | 'desc'
+    data,
+    dateRange,
+    sortKey,
+    sortOrder
   ) => {
     const [startDate, endDate] = dateRange;
     let filteredData = data;
@@ -779,7 +734,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
     if (!userData || campID === null) {
       return [];
     }
-    const currentCampId = campID as string; // Explicitly cast to string
+    const currentCampId = campID; // Explicitly cast to string
     const assignedCamp = userData.assignedCamps && userData.assignedCamps[currentCampId];
     if (!assignedCamp || !assignedCamp.crewId) {
       return [];
@@ -862,7 +817,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                 { value: 'desc', label: 'Descending' },
               ]}
               value={offerSortOrder}
-              onChange={(value) => setOfferSortOrder(value as 'asc' | 'desc')}
+              onChange={(value) => setOfferSortOrder(value)}
               clearable
             />
           </Group>
@@ -1076,7 +1031,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                 { value: 'desc', label: 'Descending' },
               ]}
               value={requestSortOrder}
-              onChange={(value) => setRequestSortOrder(value as 'asc' | 'desc')}
+              onChange={(value) => setRequestSortOrder(value)}
               clearable
             />
           </Group>
@@ -1183,7 +1138,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }: DayOffRidesPageProps) => {
                 { value: 'desc', label: 'Descending' },
               ]}
               value={pastSortOrder}
-              onChange={(value) => setPastSortOrder(value as 'asc' | 'desc')}
+              onChange={(value) => setPastSortOrder(value)}
               clearable
             />
           </Group>
