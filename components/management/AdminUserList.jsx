@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React from 'react';
 import { IconTrash } from '@tabler/icons-react';
 import { ref, remove } from 'firebase/database';
 import { ActionIcon, Badge, Group, Paper, Stack, Table, Text, Title } from '@mantine/core';
@@ -6,30 +6,14 @@ import { useModals } from '@mantine/modals';
 import { database } from '../../firebase/firebase';
 import { ROLES } from '../../lib/constants';
 
-interface AppUser {
-  id: string;
-  name: string;
-  email: string;
-  role: number; // Global role
-  assignedCamps?: Record<string, { campName: string; role: number; crewId?: string }>;
-}
 
-interface Camp {
-  campName: string;
-  companyId: string;
-}
 
-interface AdminUserListProps {
-  allUsers: AppUser[];
-  allCamps: Record<string, Camp>;
-}
+const getRoleName = (level) => ROLES[level] || 'Unknown Role';
 
-const getRoleName = (level: number) => ROLES[level as keyof typeof ROLES] || 'Unknown Role';
-
-const AdminUserList: FC<AdminUserListProps> = ({ allUsers, allCamps }) => {
+const AdminUserList = ({ allUsers, allCamps }) => {
   const modals = useModals();
 
-  const handleDeleteUser = (user: AppUser) => {
+  const handleDeleteUser = (user) => {
     modals.openConfirmModal({
       title: `Delete ${user.name}`,
       centered: true,
@@ -79,7 +63,7 @@ const AdminUserList: FC<AdminUserListProps> = ({ allUsers, allCamps }) => {
               color: 'red',
             });
           }
-        } catch (e: any) {
+        } catch (e) {
           notifications.show({
             title: 'Error',
             message: `An error occurred during user deletion: ${e.message}`,
