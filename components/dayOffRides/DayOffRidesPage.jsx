@@ -185,7 +185,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
       const crewsRef = ref(database, `camps/${campID}/crews`);
       unsubscribeCrews = onValue(crewsRef, (snapshot) => {
         const crewsVal = snapshot.val();
-        const loadedCrews: any[] = crewsVal
+        const loadedCrews = crewsVal
           ? Object.keys(crewsVal).map((key) => ({ id: key, ...crewsVal[key] }))
           : [];
         setCrews(loadedCrews);
@@ -194,7 +194,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
       const trucksRef = ref(database, `camps/${campID}/trucks`);
       unsubscribeTrucks = onValue(trucksRef, (snapshot) => {
         const trucksVal = snapshot.val();
-        const loadedTrucks: any[] = trucksVal
+        const loadedTrucks = trucksVal
           ? Object.keys(trucksVal).map((key) => ({ id: key, ...trucksVal[key] }))
           : [];
         setTrucks(loadedTrucks);
@@ -227,7 +227,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
     } else {
       setEditingOffer(null);
 
-      let nextDayOff: Date | null = null;
+      let nextDayOff = null;
       if (calendarData) {
         const sortedDates = Object.keys(calendarData).sort();
         const today = startOfDay(new Date());
@@ -254,7 +254,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
   };
 
   const openRequestModal = () => {
-    let nextDayOff: Date | null = null;
+    let nextDayOff = null;
     if (calendarData) {
       const sortedDates = Object.keys(calendarData).sort();
       const today = startOfDay(new Date());
@@ -338,7 +338,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
         });
       }
       setOfferModalOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       notifications.show({
         title: 'Error',
         message: `Failed to save offer: ${error.message}`,
@@ -386,7 +386,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
         color: 'green',
       });
       setRequestModalOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       notifications.show({
         title: 'Error',
         message: `Failed to save request: ${error.message}`,
@@ -409,7 +409,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
         try {
           await remove(ref(database, `camps/${campID}/dayOffRides/offers/${offerId}`));
           notifications.show({ title: 'Success', message: 'Ride offer deleted.', color: 'green' });
-        } catch (error: any) {
+        } catch (error) {
           notifications.show({
             title: 'Error',
             message: `Failed to delete offer: ${error.message}`,
@@ -436,7 +436,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
             // Fetch the associated ride offer
             const offerSnapshot = await get(ref(database, `camps/${campID}/dayOffRides/offers/${request.offeredRideId}`));
             if (offerSnapshot.exists()) {
-              const offer: RideOffer = offerSnapshot.val();
+              const offer = offerSnapshot.val();
               const newPassengers = { ...offer.passengers };
               delete newPassengers[request.requesterId];
 
@@ -457,7 +457,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
             message: 'Ride request deleted.',
             color: 'green',
           });
-        } catch (error: any) {
+        } catch (error) {
           notifications.show({
             title: 'Error',
             message: `Failed to delete request: ${error.message}`,
@@ -547,7 +547,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
             message: 'Left ride successfully!',
             color: 'green',
           });
-        } catch (error: any) {
+        } catch (error) {
           notifications.show({
             title: 'Error',
             message: `Failed to leave ride: ${error.message}`,
@@ -600,7 +600,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
             message: 'Request matched successfully!',
             color: 'green',
           });
-        } catch (error: any) {
+        } catch (error) {
           notifications.show({
             title: 'Error',
             message: `Failed to match request: ${error.message}`,
@@ -644,7 +644,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
         color: 'green',
       });
       setJoinModalOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       notifications.show({
         title: 'Error',
         message: `Failed to join ride: ${error.message}`,
@@ -681,8 +681,8 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
 
     if (sortKey) {
       return [...filteredData].sort((a, b) => {
-        let aVal = a[sortKey!];
-        let bVal = b[sortKey!];
+        let aVal = a[sortKey];
+        let bVal = b[sortKey];
 
         // Handle date sorting specifically if the sortKey is a date field
         if (sortKey === 'departureDate' || sortKey === 'requestDate') {
