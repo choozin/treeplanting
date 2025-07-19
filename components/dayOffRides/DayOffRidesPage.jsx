@@ -166,7 +166,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
 
     const unsubscribeCamps = onValue(campsRef, (snapshot) => {
       const campsVal = snapshot.val();
-      const loadedCamps: Camp[] = campsVal
+      const loadedCamps = campsVal
         ? Object.keys(campsVal).map((key) => ({ id: key, ...campsVal[key] }))
         : [];
       setCamps(loadedCamps.filter((camp) => camp.isActive));
