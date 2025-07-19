@@ -4,15 +4,20 @@ import { getAuth } from 'firebase-admin/auth';
 
 // Initialize Firebase Admin SDK only if not already initialized
 if (!getApps().length) {
-    // IMPORTANT: Replace with your Firebase service account key
-    // You should store this securely, e.g., in an environment variable
-    // For Vercel, you can add it as an environment variable (e.g., FIREBASE_SERVICE_ACCOUNT)
-    // and parse it as JSON.
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!serviceAccountString) {
+        throw new Error('The FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please add it to your Vercel project settings.');
+    }
 
-    initializeApp({
-        credential: cert(serviceAccount),
-    });
+    try {
+        const serviceAccount = JSON.parse(serviceAccountString);
+        initializeApp({
+            credential: cert(serviceAccount),
+        });
+    } catch (e) {
+        console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT:', e);
+        throw new Error('Failed to parse the FIREBASE_SERVICE_ACCOUNT. Make sure it is a valid JSON string.');
+    }
 }
 
 export async function POST(request) {
