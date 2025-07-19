@@ -9,19 +9,16 @@ import { notifications } from '@mantine/notifications';
 import { database } from '../../firebase/firebase';
 import { useAuth } from '../../hooks/useAuth';
 
-interface AppFeedbackModalProps {
-  opened: boolean;
-  onClose: () => void;
-}
 
-const AppFeedbackModal: React.FC<AppFeedbackModalProps> = ({ opened, onClose }) => {
+
+const AppFeedbackModal = ({ opened, onClose }) => {
   // Added a comment to trigger re-compilation
 
   const { user, userData } = useAuth();
   const pathname = usePathname();
   const [active, setActive] = useState(0);
-  const [feedbackType, setFeedbackType] = useState<string | null>(null);
-  const [isCurrentPageRelated, setIsCurrentPageRelated] = useState<string | null>(null);
+  const [feedbackType, setFeedbackType] = useState(null);
+  const [isCurrentPageRelated, setIsCurrentPageRelated] = useState(null);
 
   const form = useForm({
     initialValues: {
@@ -111,7 +108,7 @@ const AppFeedbackModal: React.FC<AppFeedbackModalProps> = ({ opened, onClose }) 
       setIsCurrentPageRelated(null);
       setActive(0);
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       notifications.show({
         title: 'Error',
         message: 'Error submitting feedback: ' + error.message,
