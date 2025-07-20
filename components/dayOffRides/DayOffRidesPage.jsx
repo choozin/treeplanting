@@ -773,7 +773,7 @@ const DayOffRidesPage = ({ campID, effectiveRole }) => {
         <Tabs.List>
           <Tabs.Tab value="ride-offers">Ride Offers</Tabs.Tab>
           <Tabs.Tab value="ride-requests">Ride Requests</Tabs.Tab>
-          {effectiveRole >= 5 && (
+          {effectiveRole >= 4 && (
             <Tabs.Tab value="past-rides">Past Rides</Tabs.Tab>
           )}
         </Tabs.List>

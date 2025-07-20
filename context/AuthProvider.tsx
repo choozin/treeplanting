@@ -83,7 +83,6 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setUserData(uData);
         return uData;
       } catch (error) {
-        console.error('Error fetching user data:', error);
         setUserData(null);
         return null;
       }
@@ -110,6 +109,9 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
       setCampIDState(newCampID);
       window.dispatchEvent(new Event('campChange'));
+      // Update lastActiveCampID in the database
+      update(ref(database, `users/${user.uid}`), { lastActiveCampID: newCampID });
+      refreshUserData(); // Refresh user data after setting camp ID
     },
     [user]
   );
@@ -147,8 +149,26 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
             };
           }
           const storedCampID = Cookies.get(`campID_${currentUser.uid}`);
+          let initialCampID = null;
+
           if (storedCampID && uData.assignedCamps?.[storedCampID]) {
-            setCampIDState(storedCampID);
+            initialCampID = storedCampID;
+          } else if (uData.lastActiveCampID && uData.assignedCamps?.[uData.lastActiveCampID]) {
+            initialCampID = uData.lastActiveCampID;
+          }
+
+          if (initialCampID) {
+            // Verify if the user is actually listed under this camp's users node
+            const campUserRef = ref(database, `camps/${initialCampID}/users/${currentUser.uid}`);
+            const campUserSnapshot = await get(campUserRef);
+
+            if (campUserSnapshot.exists()) {
+              setCampIDState(initialCampID);
+            } else {
+              // User is not listed in the camp's user node, so don't set this camp as active
+              setCampIDState(null);
+              Cookies.remove(`campID_${currentUser.uid}`); // Also clear the cookie if it led to an invalid camp
+            }
           } else {
             setCampIDState(null);
             Cookies.remove(`campID_${currentUser.uid}`);

@@ -55,7 +55,8 @@ const registerUser = async (email, password, name) => {
                     campName: "Scooter's Camp",
                     role: 2
                 }
-            }
+            },
+            lastActiveCampID: 'scooter' // Set default last active camp
         };
         updates[`/users/${user.uid}`] = userData;
         updates[`/camps/scooter/users/${user.uid}`] = {
@@ -64,7 +65,7 @@ const registerUser = async (email, password, name) => {
 
         await update(ref(database), updates);
 
-        return user;
+        return { user, defaultCampId: 'scooter' };
     } catch (error) {
         console.error("Registration error:", error.message);
         throw error;

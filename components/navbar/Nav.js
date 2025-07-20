@@ -261,7 +261,7 @@ export default function Nav() {
                                     />
 
                                     <div className={classes.navSection}>
-                                        <Link href="/dashboard" onClick={handleNavigation} className={classes.dashboardLink}>
+                                        <Link href="/" onClick={handleNavigation} className={classes.dashboardLink}>
                                             <div className={classes.mainLinkInner}>
                                                 <IconLayoutDashboard size={28} className={classes.mainLinkIcon} stroke={1.5} />
                                                 <span>Dashboard</span>

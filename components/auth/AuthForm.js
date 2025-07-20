@@ -119,7 +119,7 @@ const PrintDBButton = () => {
     );
 };
 
-const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData }) => {
+const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData, setCampID }) => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [name, setName] = useState("");
@@ -130,8 +130,11 @@ const SelfRegistrationAndLogin = ({ user, setUser, userData, setUserData }) => {
         e.preventDefault();
         if (isRegistering) {
             try {
-                const user = await registerUser(email, password, name);
+                const { user, defaultCampId } = await registerUser(email, password, name);
                 setUser(user);
+                if (defaultCampId) {
+                    setCampID(defaultCampId);
+                }
                 try {
                     const userDataRef = ref(database, `users/${user.uid}`);
                     const snapshot = await get(userDataRef);
@@ -712,6 +715,7 @@ const AuthForm = ({ user, setUser, userData, setUserData, campID, setCampID }) =
         <div>
             test
             <PrintDBButton />
+            <SelfRegistrationAndLogin user={user} setUser={setUser} userData={userData} setUserData={setUserData} setCampID={setCampID} />
             <UserManagement currentUserRole={userData ? userData.role : 9} />
             <CampSelector user={user} userData={userData} campID={campID} onCampSelect={setCampID} />
         </div>
