@@ -53,6 +53,8 @@ import {
   Tooltip,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
+import { DatePickerInput } from '@mantine/dates';
+import { TimeInput } from '@mantine/core';
 import { database } from '../../firebase/firebase';
 
 
@@ -91,29 +93,67 @@ const PollListItem = React.memo(
     isClosed,
     onSelect,
     usersDataMap,
-  }) => (
-    <motion.div
-      className="poll-list-item"
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
-      style={pollItemStyle(isClosed)}
-      onClick={() => onSelect(poll)}
-      role="button"
-      tabIndex={0}
-      onKeyPress={(e) => e.key === 'Enter' && onSelect(poll)}
-    >
-      <Text fw={500} size="lg" mb={4}>
-        {poll.questionText}
-      </Text>
-      <Text size="xs" c="dimmed">
-        {poll.closesAt && <>Closes on: {formatDate(poll.closesAt)} &bull; </>}
-        Created by: {usersDataMap[poll.createdByUserID] || 'Unknown'}
-      </Text>
-    </motion.div>
-  )
+    currentUserId,
+    effectiveRole,
+    onDeletePoll,
+  }) => {
+    const canDelete = useMemo(() => {
+      return (
+        (currentUserId && poll.createdByUserID === currentUserId) ||
+        effectiveRole >= 5
+      );
+    }, [currentUserId, poll.createdByUserID, effectiveRole]);
+
+    return (
+      <motion.div
+        className="poll-list-item"
+        layout
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+        style={pollItemStyle(isClosed)}
+        role="button"
+        tabIndex={0}
+        onKeyPress={(e) => e.key === 'Enter' && onSelect(poll)}
+      >
+        <Group justify="space-between" align="flex-start">
+          <Stack gap={4} style={{ flexGrow: 1 }} onClick={() => onSelect(poll)}>
+            <Text fw={500} size="lg">
+              {poll.questionText}
+            </Text>
+            {poll.description && (
+              <Text size="sm" c="dimmed" style={{ fontStyle: 'italic' }}>
+                {poll.description}
+              </Text>
+            )}
+            <Text size="xs" c="dimmed">
+              Created on: {formatDate(poll.createdAt)} &nbsp;&nbsp;&bull;&nbsp;&nbsp;&nbsp;
+              {poll.closesAt ? (
+                <>Closes on: {formatDate(poll.closesAt)} &nbsp;&nbsp;&bull;&nbsp;&nbsp; </>
+              ) : (
+                'No closing date &nbsp;&nbsp;&bull;&nbsp;&nbsp; '
+              )}
+              Created by: {usersDataMap[poll.createdByUserID] || 'Unknown'}
+            </Text>
+          </Stack>
+          {canDelete && (
+            <ActionIcon
+              color="red"
+              variant="light"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent opening poll details
+                onDeletePoll(poll.id);
+              }}
+              title="Delete poll"
+            >
+              <IconTrash size={18} />
+            </ActionIcon>
+          )}
+        </Group>
+      </motion.div>
+    );
+  }
 );
 PollListItem.displayName = 'PollListItem';
 
@@ -433,7 +473,31 @@ const RankedResultsDisplay = ({ poll }) => {
   );
 };
 
-const PollsPage = ({ user, campID, userData, effectiveRole }) => {
+  const PollsPage = ({ user, campID, userData, effectiveRole }) => {
+
+  const handleDeletePoll = async (pollId) => {
+    if (!user || !campID) return;
+
+    try {
+      await remove(firebaseDatabaseRef(database, `camps/${campID}/polls/${pollId}`));
+      notifications.show({
+        title: 'Poll Deleted',
+        message: 'Poll successfully removed.',
+        color: 'green',
+      });
+      // Close modal if the deleted poll was the one currently selected
+      if (selectedPoll && selectedPoll.id === pollId) {
+        setSelectedPoll(null);
+      }
+    } catch (e) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to delete poll: ' + e.message,
+        color: 'red',
+      });
+    }
+  };
+
   const [polls, setPolls] = useState([]);
   const [usersDataMap, setUsersDataMap] = useState({});
   const [selectedPoll, setSelectedPoll] = useState(null);
@@ -451,7 +515,7 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
     questionText: '',
     description: '',
     options: ['', ''],
-    closesAtDate: '',
+    closesAtDate: null,
     closesAtTime: '',
     allowUserOptionSubmissions: true,
     resultsVisibility: 'after_voting',
@@ -511,7 +575,10 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
           const voteCheckPromises = [];
 
           for (const pollId in pollsData) {
-            pollsArray.push({ id: pollId, ...pollsData[pollId] });
+            const poll = { id: pollId, ...pollsData[pollId] };
+            // Calculate isOpenForVoting based on closesAt
+            poll.isOpenForVoting = poll.isApprovedForDisplay && (!poll.closesAt || new Date(poll.closesAt) > new Date());
+            pollsArray.push(poll);
             const userVotePath = `${pollsPath}/${pollId}/usersVoted/${user.uid}`;
             voteCheckPromises.push(
               get(firebaseDatabaseRef(database, userVotePath)).then((voteSnap) => ({
@@ -594,7 +661,7 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
       questionText: '',
       description: '',
       options: ['', ''],
-      closesAtDate: '',
+      closesAtDate: null,
       closesAtTime: '',
       allowUserOptionSubmissions: true,
       resultsVisibility: 'after_voting',
@@ -623,8 +690,9 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
 
     let combinedClosesAt = null;
     if (newPollData.closesAtDate) {
+      const datePart = newPollData.closesAtDate.toISOString().split('T')[0]; // Get YYYY-MM-DD
       const timePart = newPollData.closesAtTime || '00:00';
-      combinedClosesAt = new Date(`${newPollData.closesAtDate}T${timePart}`).toISOString();
+      combinedClosesAt = new Date(`${datePart}T${timePart}`).toISOString();
     }
 
     const isCreatorAdmin = effectiveRole >= 3;
@@ -797,7 +865,30 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
 
     try {
       await update(firebaseDatabaseRef(database), updates);
+
+      // Optimistically update UI
+      const updatedPoll = { ...selectedPoll };
+      if (updatedPoll.pollType !== 'ranked_ballot' && typeof finalVoteData === 'string') {
+        updatedPoll.options = {
+          ...updatedPoll.options,
+          [finalVoteData]: {
+            ...updatedPoll.options[finalVoteData],
+            voteCount: (updatedPoll.options[finalVoteData]?.voteCount || 0) + 1,
+          },
+        };
+      }
+      updatedPoll.usersVoted = {
+        ...updatedPoll.usersVoted,
+        [user.uid]: finalVoteData,
+      };
+
+      setSelectedPoll(updatedPoll);
       setUserVotes((prev) => ({ ...prev, [selectedPoll.id]: finalVoteData }));
+
+      // Also update the main polls array to keep it consistent
+      setPolls((prevPolls) =>
+        prevPolls.map((p) => (p.id === updatedPoll.id ? updatedPoll : p))
+      );
     } catch (e) {
       notifications.show({
         title: 'Error',
@@ -1079,6 +1170,22 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                 <Radio value="admin_only" label="Admins Only" />
               </Group>
             </Radio.Group>
+
+            <DatePickerInput
+              label="Optional: Poll End Date"
+              placeholder="Pick date"
+              value={newPollData.closesAtDate}
+              onChange={(value) => handleNewPollInputChange('closesAtDate', value)}
+              clearable
+              mt="sm"
+            />
+            <TextInput
+              label="Optional: Poll End Time (HH:MM)"
+              placeholder="e.g., 17:00"
+              value={newPollData.closesAtTime}
+              onChange={(e) => handleNewPollInputChange('closesAtTime', e.currentTarget.value)}
+              mt="xs"
+            />
             <Button
               onClick={handleCreatePollSubmit}
               mt="md"
@@ -1193,6 +1300,9 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                 isClosed={false}
                 onSelect={handlePollSelect}
                 usersDataMap={usersDataMap}
+                currentUserId={user?.uid}
+                effectiveRole={effectiveRole}
+                onDeletePoll={handleDeletePoll}
               />
             ))}
           </div>
@@ -1217,6 +1327,9 @@ const PollsPage = ({ user, campID, userData, effectiveRole }) => {
                 isClosed={true}
                 onSelect={handlePollSelect}
                 usersDataMap={usersDataMap}
+                currentUserId={user?.uid}
+                effectiveRole={effectiveRole}
+                onDeletePoll={handleDeletePoll}
               />
             ))}
           </div>

@@ -1,6 +1,6 @@
 {
-  "name": "plantiful",
-  "version": "1.0.0",
+  "name": "plantcamp",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "npm run eslint && npm run stylelint",
     "eslint": "next lint",
-    "stylelint": "stylelint '**/*.css' --cache",
+    "stylelint": "stylelint **/*.css --cache",
     "jest": "jest",
     "jest:watch": "jest --watch",
     "prettier:check": "prettier --check \"**/*.{ts,tsx}\"",

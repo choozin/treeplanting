@@ -9,9 +9,9 @@ import AnnouncementsWidget from '../annoucements/AnnouncementsWidget';
 import BirthdaysWidget from '../Birthdays/BirthdaysWidget';
 import CustomLoader from '../common/CustomLoader';
 import PollsWidget from '../polls/PollsWidget';
-import QuoteWidget from './QuoteWidget';
 import WidgetSettings from '../settings/WidgetSettings';
 import WeatherWidget from '../weather/WeatherWidget';
+import QuoteWidget from './QuoteWidget';
 
 // Define a specific type for our widget IDs for better type safety
 type WidgetId = 'announcements' | 'weather' | 'birthdays' | 'polls' | 'quote';

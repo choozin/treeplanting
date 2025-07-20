@@ -45,7 +45,7 @@ const AppFeedbackModal = ({ opened, onClose }) => {
         if (feedbackType === 'bug' && !values.description) {
           return { description: 'Please describe the bug' };
         }
-        if (feedbackType !== 'newIdea' && !values.newFeatureIdea) {
+        if (feedbackType === 'newIdea' && !values.newFeatureIdea) {
           return { newFeatureIdea: 'Please describe your idea' };
         }
         if (feedbackType === 'help' && !values.helpNeeded) {
@@ -55,13 +55,6 @@ const AppFeedbackModal = ({ opened, onClose }) => {
       return {};
     },
   });
-
-  useEffect(() => {
-    form.setValues({
-      browserInfo: navigator.userAgent,
-      screenResolution: `${window.screen.width}x${window.screen.height}`,
-    });
-  }, []);
 
   const nextStep = () =>
     setActive((current) => {

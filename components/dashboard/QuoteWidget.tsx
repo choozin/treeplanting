@@ -1,4 +1,3 @@
-
 import { IconQuote } from '@tabler/icons-react';
 import { Group, Paper, Title } from '@mantine/core';
 import ContentBlurb from '../common/ContentBlurb';

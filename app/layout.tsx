@@ -3,7 +3,7 @@ import './globals.css'; // Ensure globals.css is imported
 
 import React from 'react';
 import { Nunito } from 'next/font/google';
-import { ColorSchemeScript, MantineProvider } from '@mantine/core';
+import { MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
 import FeedbackModalWrapper from '../components/feedback/FeedbackModalWrapper';
@@ -26,10 +26,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: any }) {
   return (
-    <html
-      lang="en"
-      className={nunito.variable}
-    >
+    <html lang="en" className={nunito.variable}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta
