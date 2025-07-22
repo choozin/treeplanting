@@ -106,14 +106,14 @@ const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         } else {
           Cookies.remove(`campID_${user.uid}`);
         }
+        // Update lastActiveCampID in the database
+        update(ref(database, `users/${user.uid}`), { lastActiveCampID: newCampID });
+        refreshUserData(); // Refresh user data after setting camp ID
       }
       setCampIDState(newCampID);
       window.dispatchEvent(new Event('campChange'));
-      // Update lastActiveCampID in the database
-      update(ref(database, `users/${user.uid}`), { lastActiveCampID: newCampID });
-      refreshUserData(); // Refresh user data after setting camp ID
     },
-    [user]
+    [user, refreshUserData]
   );
 
   const openComposeModal = useCallback((initialState: ComposeModalState = {}) => {
