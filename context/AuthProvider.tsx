@@ -10,7 +10,7 @@ import React, {
   useState,
 } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { get, onValue, ref } from 'firebase/database';
+import { get, onValue, ref, update } from 'firebase/database';
 import Cookies from 'js-cookie';
 import { auth, database } from '../firebase/firebase';
 import { ROLES } from '../lib/constants';
