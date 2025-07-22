@@ -7,7 +7,14 @@ const withPWA = withPWAInit({
 });
 
 /** @type {import('next').NextConfig} */
+const isMobileBuild = process.env.BUILD_FOR_MOBILE === 'true';
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: isMobileBuild ? 'export' : undefined,
+  images: {
+    unoptimized: isMobileBuild ? true : false,
+  },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.

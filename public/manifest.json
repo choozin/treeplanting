@@ -4,8 +4,8 @@
     "display": "standalone",
     "scope": "/",
     "start_url": "/",
-    "name": "Plantiful",
-    "short_name": "Plantiful",
+    "name": "PlantCamp",
+    "short_name": "PlantCamp",
     "description": "A planning and logistics app for tree planting camps.",
     "icons": [
         {
