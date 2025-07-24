@@ -493,8 +493,17 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const fetchWeatherForPersonalLocation = useCallback(
     (location: PersonalLocation) => {
       console.log('WeatherProvider: Fetching weather for personal location:', location);
-      fetchWeatherData(location, setPersonalWeatherData, false);
-      setPersonalWeatherData(prev => ({ ...prev, location }));
+      const personalSetter: React.Dispatch<React.SetStateAction<WeatherState>> = (newState) => {
+        if (typeof newState === 'function') {
+          setPersonalWeatherData(prev => {
+            const updatedState = newState(prev); // Apply the function from fetchWeatherData
+            return { ...updatedState, location };
+          });
+        } else {
+          setPersonalWeatherData({ ...newState, location });
+        }
+      };
+      fetchWeatherData(location, personalSetter, false);
     }, [fetchWeatherData]);
 
   const value = useMemo(
