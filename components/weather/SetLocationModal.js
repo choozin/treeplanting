@@ -75,6 +75,14 @@ const SetLocationModal = ({ opened, onClose }) => {
             return;
         }
 
+        const latNum = parseFloat(lat);
+        const lonNum = parseFloat(lon);
+
+        if (isNaN(latNum) || isNaN(lonNum)) {
+            setError('Latitude and Longitude must be valid numbers.');
+            return;
+        }
+
         if (locationScope === 'Personal' && personalLocationCount >= 5 && !canExceedPersonalLimit) {
             setError('You have reached your limit of 5 personal locations. Please delete one to add another.');
             return;

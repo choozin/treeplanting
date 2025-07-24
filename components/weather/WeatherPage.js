@@ -98,6 +98,21 @@ const WeatherLocationDisplay = ({ weatherData, locationInfo, backgroundColor, ef
     if (!weatherData) {
         return (
             <Paper p="xl" shadow="md" radius="lg" style={{ background: backgroundColor, border: '1px solid var(--mantine-color-gray-3)', minHeight: '300px' }}>
+                <Group justify="space-between" align="center" mb="lg">
+                    <Stack gap={2}>
+                        <Title order={2} style={{ color: 'var(--mantine-color-blue-9)' }}>
+                            {locationInfo?.name || 'Unknown Location'}
+                        </Title>
+                        <Group gap="xs" align="center">
+                            <Text size="sm" c="dimmed">
+                                Lat: {locationInfo?.latitude?.toFixed(4)}, Long: {locationInfo?.longitude?.toFixed(4)}
+                            </Text>
+                            <Button size="xs" variant="light" onClick={handleCopyCoordinates} compact="true"> {/* Changed compact prop */}
+                                Copy Coords
+                            </Button>
+                        </Group>
+                    </Stack>
+                </Group>
                 <Center style={{ height: '100%' }}>
                     <Text c="dimmed">No weather data available for this location.</Text>
                 </Center>
@@ -371,7 +386,7 @@ const WeatherLocationDisplay = ({ weatherData, locationInfo, backgroundColor, ef
 
 // Main WeatherPage component with tabs
 const WeatherPage = ({ effectiveRole }) => {
-    const { primary, secondary, temporary, campID, primaryLocationId, fetchTemporaryWeather, clearTemporaryWeather } = useWeather();
+    const { primary, secondary, temporary, personal, personalLocations, campID, primaryLocationId, fetchTemporaryWeather, fetchWeatherForPersonalLocation, clearTemporaryWeather } = useWeather();
     const [activeTab, setActiveTab] = useState('camp_primary');
     const [modalOpened, setModalOpened] = useState(false); // For SetLocationModal
     const [allSecondaryLocations, setAllSecondaryLocations] = useState([]);
@@ -507,7 +522,27 @@ const WeatherPage = ({ effectiveRole }) => {
             });
         }
 
-        // 4. Settings Tab (always last)
+        // 4. Personal Locations Tabs
+        console.log('WeatherPage: Personal locations:', personalLocations);
+        personalLocations.forEach(loc => {
+            tabs.push({
+                value: `personal_${loc.id}`,
+                label: loc.campLocationName,
+                colorType: 'personal',
+                data: personal.location?.id === loc.id ? personal.data : null,
+                locationInfo: {
+                    name: loc.campLocationName,
+                    latitude: loc.latLong.latitude,
+                    longitude: loc.latLong.longitude,
+                },
+                loading: personal.location?.id === loc.id ? personal.loading : false,
+                error: personal.location?.id === loc.id ? personal.error : null,
+                status: personal.location?.id === loc.id ? personal.status : 'idle',
+                id: loc.id,
+            });
+        });
+
+        // 5. Settings Tab (always last)
         tabs.push({
             value: 'settings',
             label: 'Settings ⚙️',
@@ -543,26 +578,34 @@ const WeatherPage = ({ effectiveRole }) => {
     // Determine current tab's background color
     const currentTabConfig = useMemo(() => tabsConfig.find(tab => tab.value === activeTab), [activeTab, tabsConfig]);
 
+    useEffect(() => {
+        if (activeTab.startsWith('personal_')) {
+            const locationId = activeTab.replace('personal_', '');
+            const location = personalLocations.find(l => l.id === locationId);
+            console.log('WeatherPage: Personal location tab selected:', location);
+            if (location && location.latLong) {
+                fetchWeatherForPersonalLocation({
+                    id: location.id,
+                    name: location.campLocationName,
+                    latitude: location.latLong.latitude,
+                    longitude: location.latLong.longitude
+                });
+            }
+        }
+    }, [activeTab, personalLocations, fetchWeatherForPersonalLocation]);
+
     const backgroundColors = useMemo(() => ({
         'camp': '#dcc6a4',
         'block': '#86a389',
         'custom': 'var(--mantine-color-blue-1)', // Light Mantine blue
+        'personal': 'var(--mantine-color-blue-1)',
         'settings': 'var(--mantine-color-gray-1)', // Light Mantine grey
     }), []);
 
     const currentBackgroundColor = currentTabConfig ? backgroundColors[currentTabConfig.colorType] : 'var(--mantine-color-gray-0)';
 
     // Adjust initial active tab if it's 'camp_primary' but primary.location is not yet loaded or valid
-    useEffect(() => {
-        console.log("WeatherPage: useEffect for activeTab adjustment triggered. Primary loading:", primary.loading, "Primary location:", primary.location, "Active tab:", activeTab);
-        if (!primary.loading && !primary.location && activeTab === 'camp_primary') {
-            console.log("WeatherPage: Primary not loaded/available, activeTab is primary. Setting to settings.");
-            setActiveTab('settings');
-        } else if (primary.location && activeTab === 'settings' && !temporary.data && !temporary.loading && !temporary.error) {
-            console.log("WeatherPage: Primary location available, activeTab is settings, no custom data. Setting to primary.");
-            setActiveTab('camp_primary');
-        }
-    }, [primary.loading, primary.location, activeTab, temporary.data, temporary.loading, temporary.error]);
+    
 
 
     // Show overall loading if primary data is loading or secondary locations list is loading

@@ -94,6 +94,10 @@ interface WeatherData {
   sixHourForecast?: SixHourChunk[];
 }
 
+interface PersonalLocation extends WeatherLocation {
+  id: string;
+}
+
 interface WeatherState {
   data: WeatherData | null;
   loading: boolean;
@@ -106,10 +110,13 @@ interface WeatherContextType {
   primary: WeatherState & { location: WeatherLocation | null; primaryLocationId?: string | null }; // Primary Location ID exposed
   secondary: WeatherState & { location: WeatherLocation | null };
   temporary: WeatherState;
+  personal: WeatherState & { location: PersonalLocation | null };
+  personalLocations: PersonalLocation[];
   preferences: any;
   campID: string | null;
   refresh: () => void;
   fetchTemporaryWeather: (lat: number, long: number) => void;
+  fetchWeatherForPersonalLocation: (location: PersonalLocation) => void;
   clearTemporaryWeather: () => void;
 }
 
@@ -454,6 +461,42 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
     [fetchWeatherData]
   );
 
+  const [personalLocations, setPersonalLocations] = useState<PersonalLocation[]>([]);
+  const [personalWeatherData, setPersonalWeatherData] = useState<WeatherState & { location: PersonalLocation | null }>({ ...initialWeatherState, location: null });
+
+  useEffect(() => {
+    if (!user) {
+      setPersonalLocations([]);
+      return;
+    }
+
+    const personalLocationsRef = ref(database, `users/${user.uid}/customLocations`);
+    const unsubscribe = onValue(personalLocationsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const locations = snapshot.val();
+        console.log('WeatherProvider: Personal locations raw data:', locations);
+        const personalLocations = Object.keys(locations).map((id) => ({
+          id,
+          ...locations[id],
+        }));
+        console.log('WeatherProvider: Personal locations processed:', personalLocations);
+        setPersonalLocations(personalLocations);
+      } else {
+        console.log('WeatherProvider: No personal locations found.');
+        setPersonalLocations([]);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const fetchWeatherForPersonalLocation = useCallback(
+    (location: PersonalLocation) => {
+      console.log('WeatherProvider: Fetching weather for personal location:', location);
+      fetchWeatherData(location, setPersonalWeatherData, false);
+      setPersonalWeatherData(prev => ({ ...prev, location }));
+    }, [fetchWeatherData]);
+
   const value = useMemo(
     () => ({
       primary: {
@@ -463,6 +506,8 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
       },
       secondary: { ...secondaryWeatherData, location: locations.secondary },
       temporary: temporaryWeatherData,
+      personal: personalWeatherData,
+      personalLocations,
       preferences: weatherPreferences,
       campID: campID,
       refresh: () => {
@@ -471,6 +516,7 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
           fetchWeatherData(locations.secondary, setSecondaryWeatherData, false);
       },
       fetchTemporaryWeather,
+      fetchWeatherForPersonalLocation,
       clearTemporaryWeather: () =>
         setTemporaryWeatherData({ data: null, loading: false, error: null, lastFetched: null }),
     }),
@@ -484,6 +530,9 @@ const WeatherProvider: FC<{ children: ReactNode }> = ({ children }) => {
       fetchWeatherData,
       fetchTemporaryWeather,
       activePrimaryLocationId,
+      personalWeatherData,
+      personalLocations,
+      fetchWeatherForPersonalLocation,
     ]
   );
 

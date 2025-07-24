@@ -44,7 +44,7 @@ const AuthFlow = ({ setNavIsOpen }) => {
         });
         setNavIsOpen(false);
         if (pathname === '/') {
-            router.push('/dashboard');
+            router.push('/');
         }
     };
 
