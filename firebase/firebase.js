@@ -11,7 +11,7 @@ import {
     onAuthStateChanged,
     updateProfile
 } from "firebase/auth";
-import { getDatabase, ref, set, update } from "firebase/database";
+import { getDatabase, ref, set, update, get } from "firebase/database";
 import { getStorage } from "firebase/storage";
 
 // Firebase config
@@ -105,7 +105,14 @@ const registerOtherUser = async (email, name, role) => {
 const loginUser = async (email, password) => {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        return userCredential.user;
+        const user = userCredential.user;
+        const userRef = ref(database, `users/${user.uid}`);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+            const userData = snapshot.val();
+            user.activeCamp = userData.activeCamp;
+        }
+        return user;
     } catch (error) {
         console.error("Login error:", error.message);
         throw error;

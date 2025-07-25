@@ -24,7 +24,18 @@ export const metadata = {
   description: 'A planning and logistics app for tree planting camps.',
 };
 
+import { StatusBar } from '@capacitor/status-bar';
+
+// ... (rest of your imports)
+
 export default function RootLayout({ children }: { children: any }) {
+  // Set the status bar to not overlay the webview
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && window.Capacitor) {
+      StatusBar.setOverlaysWebView({ overlay: false });
+    }
+  }, []);
+
   return (
     <html lang="en" className={nunito.variable}>
       <head>
